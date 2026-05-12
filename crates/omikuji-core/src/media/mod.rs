@@ -197,6 +197,26 @@ fn sgdb_get<T: serde::de::DeserializeOwned>(url: reqwest::Url) -> Result<T> {
         .with_context(|| format!("parsing sgdb response from {}", url))
 }
 
+pub fn sgdb_icon_url(name: &str) -> Result<Option<String>> {
+    let Some(id) = sgdb_search(name)? else { return Ok(None); };
+    let mut url = reqwest::Url::parse(SGDB_BASE).unwrap();
+    url.path_segments_mut().unwrap().extend(["icons", "game", &id.to_string()]);
+    let resp: SgdbResponse<Vec<SgdbAsset>> = sgdb_get(url)?;
+    if !resp.success {
+        anyhow::bail!("sgdb icons api reported failure for game {}", id);
+    }
+    let Some(assets) = resp.data else { return Ok(None) };
+    let pick = assets.into_iter().find(|a| {
+        let lower = a.url.to_lowercase();
+        lower.ends_with(".png")
+            || lower.ends_with(".jpg")
+            || lower.ends_with(".jpeg")
+            || lower.ends_with(".webp")
+            || lower.ends_with(".gif")
+    });
+    Ok(pick.map(|a| a.url))
+}
+
 fn sgdb_search(name: &str) -> Result<Option<u64>> {
     let mut url = reqwest::Url::parse(SGDB_BASE).unwrap();
     url.path_segments_mut()

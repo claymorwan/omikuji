@@ -236,6 +236,16 @@ Item {
             }
 
             SettingsRow {
+                label: "Discord Rich Presence"
+                labelWidth: root.rowLabelWidth
+                width: parent.width
+                M3Switch {
+                    checked: uiSettings ? uiSettings.discordRpc : false
+                    onToggled: (val) => uiSettings.applyDiscordRpc(val)
+                }
+            }
+
+            SettingsRow {
                 label: "Unload store tabs"
                 description: "After 15s idle"
                 labelWidth: root.rowLabelWidth
