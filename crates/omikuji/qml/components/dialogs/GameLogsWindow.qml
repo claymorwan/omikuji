@@ -48,6 +48,12 @@ Window {
 
     onClosing: windowClosed()
 
+    Shortcut {
+        sequence: StandardKey.Cancel
+        context: Qt.WindowShortcut
+        onActivated: logWindow.close()
+    }
+
     component HeaderButton: Item {
         id: btn
         property string label: ""
