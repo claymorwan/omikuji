@@ -1009,6 +1009,7 @@ property real cardZoom: uiSettings.cardZoom
         gameModel: root.gameModelRef
         epicModel: epicModel
         downloadModel: downloadModel
+        defaults: defaultsBridge
         runnersVersion: root.runnersVersion
         onInstallEnqueued: {
             navTabs.currentStore = ""
@@ -1022,6 +1023,7 @@ property real cardZoom: uiSettings.cardZoom
         gameModel: root.gameModelRef
         gogModel: gogModel
         downloadModel: downloadModel
+        defaults: defaultsBridge
         runnersVersion: root.runnersVersion
         onInstallEnqueued: {
             navTabs.currentStore = ""
@@ -1034,6 +1036,7 @@ property real cardZoom: uiSettings.cardZoom
         id: gachaController
         gameModel: root.gameModelRef
         downloadModel: downloadModel
+        defaults: defaultsBridge
         runnersVersion: root.runnersVersion
         onInstallEnqueued: {
             navTabs.currentStore = ""
