@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 
 import "../widgets"
+import "../widgets/RunnerGrouping.js" as RG
 
 Item {
     id: root
@@ -226,30 +227,12 @@ Item {
         let raw = gameModel.list_runners()
         let arr = []
         try { arr = JSON.parse(raw) || [] } catch (e) { arr = [] }
-        let opts = []
-        for (let i = 0; i < arr.length; i++) {
-            let v = arr[i]
-            let label = v
-            if (v.indexOf("steam:") === 0) label = v.substring(6) + " (steam)"
-            if (v === "system") label = "System Wine"
-            opts.push({ label: label, value: v })
-        }
-        if (opts.length === 0) opts.push({ label: "System Wine", value: "system" })
+        let opts = RG.groupRunners(arr)
+        if (opts.length === 0) opts = [{ label: "System Wine", value: "system" }]
         runnerOptions = opts
 
-        // first match from the end wins, so GE-Proton-10-34 beats GE-Proton-10-10
         let prefs = (manifest && manifest.runner_preference) ? manifest.runner_preference : []
-        let pick = -1
-        outer: for (let p = 0; p < prefs.length; p++) {
-            let needle = String(prefs[p] || "").toLowerCase()
-            if (needle === "") continue
-            for (let i = opts.length - 1; i >= 0; i--) {
-                if (opts[i].value.toLowerCase().indexOf(needle) !== -1) {
-                    pick = i
-                    break outer
-                }
-            }
-        }
+        let pick = RG.pickPreferred(opts, prefs)
         runnerIndex = pick >= 0 ? pick : 0
     }
 

@@ -3,6 +3,7 @@ import QtQuick.Layouts
 
 import "."
 import "../widgets"
+import "../widgets/RunnerGrouping.js" as RG
 
 Item {
     id: root
@@ -87,17 +88,15 @@ Item {
                         // touch runnersVersion so QML re-evaluates the binding after install/delete
                         void root.runnersVersion
                         if (!gameModel) return [{ label: "Loading...", value: "" }]
-                        return JSON.parse(gameModel.list_runners()).map(v => {
-                            let label = v.startsWith("steam:") ? v.substring(6) + " (steam)" : v
-                            return { label: label, value: v }
-                        })
+                        return RG.groupRunners(JSON.parse(gameModel.list_runners()))
                     }
                     currentIndex: {
                         void root.runnersVersion
                         let v = config["wine.version"] || ""
-                        let runners = gameModel ? JSON.parse(gameModel.list_runners()) : []
-                        let idx = runners.indexOf(v)
-                        return idx >= 0 ? idx : 0
+                        let idx = RG.indexOfValue(options, v)
+                        if (idx >= 0) return idx
+                        let first = RG.firstNonHeader(options)
+                        return first >= 0 ? first : 0
                     }
                     onSelected: (val) => updateField("wine.version", val)
                 }

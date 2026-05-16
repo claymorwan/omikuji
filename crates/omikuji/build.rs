@@ -118,6 +118,7 @@ fn main() {
 
     let mut qrc_paths = icon_paths;
     qrc_paths.extend(shader_paths);
+    qrc_paths.push("qml/components/widgets/RunnerGrouping.js".to_string());
 
     let builder = CxxQtBuilder::new_qml_module(
         QmlModule::new("omikuji")

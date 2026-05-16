@@ -3,6 +3,7 @@ import QtQuick.Layouts
 
 import "."
 import "../widgets"
+import "../widgets/RunnerGrouping.js" as RG
 
 Item {
     id: root
@@ -186,19 +187,13 @@ Item {
                     width: parent.width - 32
                     options: {
                         if (!root.gameModel) return [{ label: "System default", value: "" }]
-                        let base = [{ label: "System default", value: "" }]
                         let runners = JSON.parse(root.gameModel.list_runners())
-                        return base.concat(runners.map(v => {
-                            let label = v.startsWith("steam:") ? v.substring(6) + " (steam)" : v
-                            return { label: label, value: v }
-                        }))
+                        return RG.groupRunners(runners, { includeSystemDefault: true })
                     }
                     currentIndex: {
                         let v = root.cfg["wine.version"] || ""
-                        if (!root.gameModel) return 0
-                        let runners = JSON.parse(root.gameModel.list_runners())
-                        let idx = runners.indexOf(v)
-                        return idx >= 0 ? idx + 1 : 0
+                        let idx = RG.indexOfValue(options, v)
+                        return idx >= 0 ? idx : 0
                     }
                     onSelected: (val) => root.update("wine.version", val)
                 }

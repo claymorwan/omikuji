@@ -7,7 +7,11 @@ Item {
 
     property var options: []
     property int currentIndex: 0
-    property var currentValue: options.length > 0 ? options[currentIndex].value : ""
+    property var currentValue: {
+        if (options.length === 0) return ""
+        var opt = options[currentIndex]
+        return (opt && !opt.header) ? opt.value : ""
+    }
     property string label: ""
 
     signal selected(var value)
@@ -30,11 +34,19 @@ Item {
     }
     function highlightPrev() {
         if (options.length === 0) return
-        currentIndex = (currentIndex - 1 + options.length) % options.length
+        var i = currentIndex
+        for (var c = 0; c < options.length; c++) {
+            i = (i - 1 + options.length) % options.length
+            if (!options[i].header) { currentIndex = i; return }
+        }
     }
     function highlightNext() {
         if (options.length === 0) return
-        currentIndex = (currentIndex + 1) % options.length
+        var i = currentIndex
+        for (var c = 0; c < options.length; c++) {
+            i = (i + 1) % options.length
+            if (!options[i].header) { currentIndex = i; return }
+        }
     }
 
     implicitWidth: 200
@@ -71,7 +83,11 @@ Item {
             anchors.left: parent.left
             anchors.leftMargin: 12
             anchors.verticalCenter: parent.verticalCenter
-            text: root.options.length > 0 ? root.options[root.currentIndex].label : ""
+            text: {
+                if (root.options.length === 0) return ""
+                var opt = root.options[root.currentIndex]
+                return (opt && !opt.header) ? opt.label : ""
+            }
             color: theme.text
             font.pixelSize: 14
         }
@@ -207,14 +223,30 @@ Item {
                     model: root.options
 
                     Rectangle {
+                        id: optionRow
                         required property int index
                         required property var modelData
+                        readonly property bool isHeader: modelData && modelData.header === true
                         width: col.width
-                        height: 40
+                        height: isHeader ? (index === 0 ? 22 : 28) : 40
                         radius: 6
-                        color: optionMouse.containsMouse ? theme.surfaceHover : "transparent"
+                        color: !isHeader && optionMouse.containsMouse ? theme.surfaceHover : "transparent"
+
+                        // group caption, non-interactive
+                        Text {
+                            visible: optionRow.isHeader
+                            anchors.left: parent.left
+                            anchors.leftMargin: 12
+                            anchors.bottom: parent.bottom
+                            anchors.bottomMargin: 4
+                            text: modelData.label
+                            color: theme.textMuted
+                            font.pixelSize: 14
+                            font.weight: Font.Medium
+                        }
 
                         Text {
+                            visible: !optionRow.isHeader
                             anchors.left: parent.left
                             anchors.leftMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
@@ -227,9 +259,11 @@ Item {
                         MouseArea {
                             id: optionMouse
                             anchors.fill: parent
-                            hoverEnabled: true
+                            enabled: !optionRow.isHeader
+                            hoverEnabled: !optionRow.isHeader
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
+                                if (optionRow.isHeader) return
                                 root.currentIndex = index
                                 root.selected(root.options[index].value)
                                 popup.close()
