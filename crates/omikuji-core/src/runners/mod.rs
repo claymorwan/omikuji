@@ -58,29 +58,8 @@ pub fn list_installed_runners() -> Vec<String> {
         }
     }
     
-    for ctd in crate::steam::local::iter_compat_tools_dirs() {
-        if let Ok(entries) = std::fs::read_dir(&ctd) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.is_dir() && path.join("proton").is_file()
-                    && let Some(name) = path.file_name().and_then(|n| n.to_str())
-                {
-                    runners.push(format!("steam:{name}"));
-                }
-            }
-        }
-    }
-
-    for steamapps in crate::steam::local::get_steamapps_dirs() {
-        let common = steamapps.join("common");
-        let Ok(entries) = std::fs::read_dir(&common) else { continue };
-        for entry in entries.flatten() {
-            let path = entry.path();
-            let Some(name) = path.file_name().and_then(|n| n.to_str()) else { continue };
-            if name.starts_with("Proton ") && path.join("proton").is_file() {
-                runners.push(format!("steam:{name}"));
-            }
-        }
+    for (name, _) in crate::steam::local::iter_steam_protons() {
+        runners.push(format!("steam:{name}"));
     }
 
     for name in system_wine_paths().keys() {

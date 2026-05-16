@@ -429,31 +429,42 @@ pub fn find_steam_proton_version(appid: &str) -> Option<String> {
     None
 }
 
-// checks, in order:
-//   1. compatibilitytools.d/{name}, custom protons (GE-Proton, etc.)
-//   2. steamapps/common/{name}
-//   3. steamapps/common/Proton {M.m}, derived from build IDs like "8.0-103"
-// validate like lutris, apparently steam makes folder regardless, tsk.
-pub fn find_proton_install(name: &str) -> Option<PathBuf> {
+// validate like lutris, steam makes empty placeholder folders, tsk.
+pub fn is_proton_install(path: &Path) -> bool {
+    path.join("proton").is_file()
+}
+
+pub fn iter_steam_protons() -> Vec<(String, PathBuf)> {
+    let mut out = Vec::new();
     for ctd in iter_compat_tools_dirs() {
-        let p = ctd.join(name);
-        if p.join("proton").is_file() {
-            return Some(p);
-        }
+        push_protons_from(&ctd, &mut out);
     }
     for dir in get_steamapps_dirs() {
-        let p = dir.join("common").join(name);
-        if p.join("proton").is_file() {
-            return Some(p);
+        push_protons_from(&dir.join("common"), &mut out);
+    }
+    out
+}
+
+fn push_protons_from(parent: &Path, out: &mut Vec<(String, PathBuf)>) {
+    let Ok(entries) = std::fs::read_dir(parent) else { return };
+    for e in entries.flatten() {
+        let p = e.path();
+        if is_proton_install(&p)
+            && let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+            out.push((name.to_string(), p));
         }
     }
+}
+
+pub fn find_proton_install(name: &str) -> Option<PathBuf> {
+    let all = iter_steam_protons();
+    if let Some((_, p)) = all.iter().find(|(n, _)| n == name) {
+        return Some(p.clone());
+    }
     if let Some(mm) = proton_version_major_minor(name) {
-        let dir_name = format!("Proton {}", mm);
-        for dir in get_steamapps_dirs() {
-            let p = dir.join("common").join(&dir_name);
-            if p.join("proton").is_file() {
-                return Some(p);
-            }
+        let derived = format!("Proton {}", mm);
+        if let Some((_, p)) = all.into_iter().find(|(n, _)| n == &derived) {
+            return Some(p);
         }
     }
     None
@@ -473,43 +484,15 @@ fn proton_version_major_minor(s: &str) -> Option<String> {
     Some(format!("{}.{}", major, minor_display))
 }
 
-// GE-Proton is prioritized because ge proton = cool
+// GE-Proton first, ge proton = cool
 pub fn default_proton_install() -> Option<PathBuf> {
-    let mut all: Vec<PathBuf> = Vec::new();
-    for ctd in iter_compat_tools_dirs() {
-        if let Ok(entries) = std::fs::read_dir(&ctd) {
-            for e in entries.flatten() {
-                let p = e.path();
-                if p.join("proton").is_file() {
-                    all.push(p);
-                }
-            }
-        }
-    }
-    if !all.is_empty() {
-        all.sort_by(|a, b| {
-            let an = a.file_name().unwrap_or_default().to_string_lossy().to_string();
-            let bn = b.file_name().unwrap_or_default().to_string_lossy().to_string();
-            let a_ge = an.starts_with("GE-Proton");
-            let b_ge = bn.starts_with("GE-Proton");
-            b_ge.cmp(&a_ge).then_with(|| bn.cmp(&an))
-        });
-        if let Some(p) = all.into_iter().next() {
-            return Some(p);
-        }
-    }
-    for dir in get_steamapps_dirs() {
-        let common = dir.join("common");
-        if let Ok(entries) = std::fs::read_dir(&common) {
-            for e in entries.flatten() {
-                let name = e.file_name().to_string_lossy().to_string();
-                if name.starts_with("Proton ") && e.path().join("proton").is_file() {
-                    return Some(e.path());
-                }
-            }
-        }
-    }
-    None
+    let mut all = iter_steam_protons();
+    all.sort_by(|a, b| {
+        let a_ge = a.0.starts_with("GE-Proton");
+        let b_ge = b.0.starts_with("GE-Proton");
+        b_ge.cmp(&a_ge).then_with(|| b.0.cmp(&a.0))
+    });
+    all.into_iter().next().map(|(_, p)| p)
 }
 
 pub fn resolve_or_default_proton(name: Option<&str>) -> Option<PathBuf> {

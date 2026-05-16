@@ -37,19 +37,21 @@ pub enum WineVariant {
     Proton,
 }
 
+fn looks_like_proton(s: &str) -> bool {
+    s.starts_with("GE-Proton")
+        || s.starts_with("Proton")
+        || s.starts_with("dwproton")
+        || s.starts_with("proton")
+}
+
 impl WineVariant {
     pub fn from_version(version: &str) -> Self {
         if version.is_empty() || version == "system" {
             WineVariant::System
-        } else if version.starts_with("GE-Proton") || version.starts_with("Proton") || version.starts_with("dwproton") || version.starts_with("proton") {
+        } else if looks_like_proton(version) {
             WineVariant::Proton
-        } else if version.starts_with("steam:") {
-            let steam_version = version.strip_prefix("steam:").unwrap_or(version);
-            if steam_version.starts_with("GE-Proton") || steam_version.starts_with("Proton") || steam_version.starts_with("dwproton") || steam_version.starts_with("proton") {
-                WineVariant::Proton
-            } else {
-                WineVariant::WineGE
-            }
+        } else if let Some(rest) = version.strip_prefix("steam:") {
+            if looks_like_proton(rest) { WineVariant::Proton } else { WineVariant::WineGE }
         } else {
             WineVariant::WineGE
         }
