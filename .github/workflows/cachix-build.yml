@@ -15,7 +15,7 @@ jobs:
       - uses: cachix/cachix-action@v16
         with:
           name: omikuji-claymorwan-test # omikuji
-          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN_TEST }}'
 
       - name: Update flake inputs
         run: nix flake update
