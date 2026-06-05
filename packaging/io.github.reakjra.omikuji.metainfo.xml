@@ -22,6 +22,15 @@
     </p>
   </description>
   <releases>
+    <release version="0.2.2" date="2026-06-05">
+      <description>
+        <ul>
+          <li>HoYoverse updates no longer fail when a patch's source file is missing (e.g. game-managed cutscenes); the file is skipped instead.</li>
+          <li>Added a Repair action (right-click) for HoYoverse games to refetch missing or incomplete files.</li>
+          <li>Parallelized the update patch phase for noticeably faster updates.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.2.1" date="2026-05-17">
       <description>
         <ul>

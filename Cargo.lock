@@ -1537,7 +1537,7 @@ dependencies = [
 
 [[package]]
 name = "omikuji"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "clap",
  "cxx",
@@ -1557,7 +1557,7 @@ dependencies = [
 
 [[package]]
 name = "omikuji-core"
-version = "0.2.1"
+version = "0.2.2"
 dependencies = [
  "anyhow",
  "async-trait",
