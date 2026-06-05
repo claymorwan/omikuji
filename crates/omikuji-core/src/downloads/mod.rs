@@ -50,6 +50,7 @@ pub enum DownloadKind {
     #[default]
     Install,
     Update { from_version: String },
+    Repair,
 }
 
 
@@ -227,6 +228,11 @@ pub fn manager() -> Arc<DownloadManager> {
 impl DownloadManager {
     fn next_id() -> String {
         crate::library::generate_id()
+    }
+
+    pub fn source_supports_repair(&self, key: &str) -> bool {
+        let inner = self.inner.lock().unwrap();
+        inner.sources.get(key).is_some_and(|s| s.supports_repair())
     }
 
     pub fn enqueue(&self, req: DownloadRequest) -> String {
@@ -494,6 +500,7 @@ impl DownloadManager {
             let result = match &entry.kind {
                 DownloadKind::Install => source.install(&entry).await,
                 DownloadKind::Update { .. } => source.update(&entry).await,
+                DownloadKind::Repair => source.repair(&entry).await,
             };
 
             let final_signal = {

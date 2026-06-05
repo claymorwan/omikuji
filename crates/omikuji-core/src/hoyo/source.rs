@@ -27,7 +27,9 @@ impl DownloadSource for HoyoSource {
     async fn update(&self, entry: &DownloadEntry) -> Result<()> {
         let from_version = match &entry.kind {
             DownloadKind::Update { from_version } => from_version.clone(),
-            DownloadKind::Install => return Err(anyhow!("update() called on an Install entry")),
+            DownloadKind::Install | DownloadKind::Repair => {
+                return Err(anyhow!("update() called on a non-update entry"))
+            }
         };
 
         let parsed = parse_app_id(&entry.app_id)?;
@@ -234,6 +236,15 @@ impl DownloadSource for HoyoSource {
             target_version
         );
         Ok(())
+    }
+
+    fn supports_repair(&self) -> bool {
+        true
+    }
+
+    // Rinphon crate when?
+    async fn repair(&self, entry: &DownloadEntry) -> Result<()> {
+        self.install(entry).await
     }
 }
 

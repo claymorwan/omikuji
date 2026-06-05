@@ -83,7 +83,9 @@ impl DownloadSource for EndfieldSource {
     async fn update(&self, entry: &DownloadEntry) -> Result<()> {
         let from_version = match &entry.kind {
             DownloadKind::Update { from_version } => from_version.clone(),
-            DownloadKind::Install => return Err(anyhow!("update() called on Install entry")),
+            DownloadKind::Install | DownloadKind::Repair => {
+                return Err(anyhow!("update() called on a non-update entry"))
+            }
         };
 
         let parsed = parse_endfield_app(&entry.app_id)?;

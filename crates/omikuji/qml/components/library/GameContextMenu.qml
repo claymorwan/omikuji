@@ -62,6 +62,9 @@ Item {
             if (isEpic || isGog) {
                 built.push({ text: "Check for updates", action: "check_update", accent: true })
             }
+            if (ctrl.gameModel.game_supports_repair(game.gameId)) {
+                built.push({ text: "Repair", action: "repair", accent: true })
+            }
             if (isEpic) {
                 built.push({ text: "Uninstall (Epic Games)", action: "uninstall_epic", danger: true })
             }
@@ -131,6 +134,11 @@ Item {
                         if (g.sourceKind === "gog") ctrl.gameModel.check_gog_update(g.gameId)
                         else ctrl.gameModel.check_epic_update(g.gameId)
                     }
+                    break
+                }
+                case "repair": {
+                    let g = ctrl.gameModel.get_game(idx)
+                    if (g && g.gameId) ctrl.gameModel.enqueue_game_repair(g.gameId)
                     break
                 }
             }

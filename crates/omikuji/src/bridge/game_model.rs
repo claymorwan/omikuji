@@ -249,6 +249,12 @@ pub mod qobject {
         ) -> QString;
 
         #[qinvokable]
+        fn enqueue_game_repair(self: Pin<&mut GameModel>, game_id: &QString) -> QString;
+
+        #[qinvokable]
+        fn game_supports_repair(self: &GameModel, game_id: &QString) -> bool;
+
+        #[qinvokable]
         fn browse_files(self: &GameModel, index: i32) -> bool;
 
         #[qinvokable]

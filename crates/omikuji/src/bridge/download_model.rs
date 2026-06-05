@@ -544,6 +544,7 @@ impl qobject::DownloadModel {
         let kind = match &e.kind {
             omikuji_core::downloads::DownloadKind::Install => "install",
             omikuji_core::downloads::DownloadKind::Update { .. } => "update",
+            omikuji_core::downloads::DownloadKind::Repair => "repair",
         };
 
         let payload = serde_json::json!({
