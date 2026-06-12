@@ -1,5 +1,4 @@
 #![allow(clippy::too_many_arguments)]
-// 3K LOC WHAT THEU FKC TODO: .... send help
 
 mod drains;
 mod shortcuts;
@@ -618,197 +617,158 @@ fn args_from_text(s: &str) -> Vec<String> {
     out
 }
 
-fn populate_config_map(game: &Game, m: &mut QMap<QMapPair_QString_QVariant>) {
-    macro_rules! put_str {
-        ($k:expr, $v:expr) => {
-            m.insert(QString::from($k), QVariant::from(&QString::from(&*$v)));
-        };
-    }
-    macro_rules! put_bool {
-        ($k:expr, $v:expr) => {
-            m.insert(QString::from($k), QVariant::from(&$v));
-        };
-    }
-    macro_rules! put_int {
-        ($k:expr, $v:expr) => {
-            m.insert(QString::from($k), QVariant::from(&($v as i32)));
-        };
-    }
-
-    put_str!("meta.id", game.metadata.id);
-    put_str!("meta.name", game.metadata.name);
-    put_str!("meta.sort_name", game.metadata.sort_name);
-    put_str!("meta.slug", game.metadata.slug);
-    put_str!("meta.exe", game.metadata.exe.to_string_lossy());
-    put_str!("meta.color", game.metadata.color);
-    put_str!("meta.banner", game.metadata.banner);
-    put_str!("meta.coverart", game.metadata.coverart);
-    put_str!("meta.icon", game.metadata.icon);
-    put_bool!("meta.favourite", game.metadata.favourite);
-    if let Ok(json) = serde_json::to_string(&game.metadata.categories) {
-        put_str!("meta.categories", json);
-    }
-
-    put_str!("source.kind", game.source.kind);
-    put_str!("source.app_id", game.source.app_id);
-    put_bool!("source.eos_overlay", game.source.eos_overlay);
-    put_bool!("source.cloud_saves", game.source.cloud_saves);
-    put_str!("source.save_path", game.source.save_path);
-    put_str!("source.patch", game.source.patch);
-
-    put_str!("runner.type", game.runner.runner_type);
-
-    put_str!("wine.version", game.wine.version);
-    put_str!("wine.prefix", game.wine.prefix);
-    put_str!("wine.prefix_arch", game.wine.prefix_arch);
-    put_bool!("wine.esync", game.wine.esync);
-    put_bool!("wine.fsync", game.wine.fsync);
-    put_bool!("wine.ntsync", game.wine.ntsync);
-    put_bool!("wine.dxvk", game.wine.dxvk);
-    put_str!("wine.dxvk_version", game.wine.dxvk_version);
-    put_bool!("wine.vkd3d", game.wine.vkd3d);
-    put_str!("wine.vkd3d_version", game.wine.vkd3d_version);
-    put_bool!("wine.d3d_extras", game.wine.d3d_extras);
-    put_str!("wine.d3d_extras_version", game.wine.d3d_extras_version);
-    put_bool!("wine.dxvk_nvapi", game.wine.dxvk_nvapi);
-    put_str!("wine.dxvk_nvapi_version", game.wine.dxvk_nvapi_version);
-    put_bool!("wine.fsr", game.wine.fsr);
-    put_bool!("wine.battleye", game.wine.battleye);
-    put_bool!("wine.easyanticheat", game.wine.easyanticheat);
-    put_bool!("wine.dpi_scaling", game.wine.dpi_scaling);
-    put_int!("wine.dpi", game.wine.dpi);
-    put_str!("wine.audio_driver", game.wine.audio_driver);
-    put_str!("wine.graphics_driver", game.wine.graphics_driver);
-
-    if let Ok(json) = serde_json::to_string(&game.wine.dll_overrides) {
-        put_str!("wine.dll_overrides", json);
-    }
-
-    let args_text = args_to_text(&game.launch.args);
-    put_str!("launch.args", args_text);
-    put_str!("launch.working_dir", game.launch.working_dir);
-    put_str!("launch.command_prefix", game.launch.command_prefix);
-    put_str!("launch.pre_launch_script", game.launch.pre_launch_script);
-    put_str!("launch.post_exit_script", game.launch.post_exit_script);
-    if let Ok(json) = serde_json::to_string(&game.launch.env) {
-        put_str!("launch.env", json);
-    }
-
-    put_bool!("graphics.mangohud", game.graphics.mangohud);
-    put_str!("graphics.gpu", game.graphics.gpu);
-
-    put_bool!("graphics.gamescope.enabled", game.graphics.gamescope.enabled);
-    put_int!("graphics.gamescope.width", game.graphics.gamescope.width);
-    put_int!("graphics.gamescope.height", game.graphics.gamescope.height);
-    put_int!("graphics.gamescope.game_width", game.graphics.gamescope.game_width);
-    put_int!("graphics.gamescope.game_height", game.graphics.gamescope.game_height);
-    put_int!("graphics.gamescope.fps", game.graphics.gamescope.fps);
-    put_int!("graphics.gamescope.refresh_rate", game.graphics.gamescope.refresh_rate);
-    put_bool!("graphics.gamescope.fullscreen", game.graphics.gamescope.fullscreen);
-    put_bool!("graphics.gamescope.borderless", game.graphics.gamescope.borderless);
-    put_bool!("graphics.gamescope.integer_scaling", game.graphics.gamescope.integer_scaling);
-    put_bool!("graphics.gamescope.hdr", game.graphics.gamescope.hdr);
-    put_str!("graphics.gamescope.filter", game.graphics.gamescope.filter);
-    put_int!("graphics.gamescope.fsr_sharpness", game.graphics.gamescope.fsr_sharpness);
-
-    put_bool!("system.gamemode", game.system.gamemode);
-    put_bool!("system.prevent_sleep", game.system.prevent_sleep);
-    put_bool!("system.pulse_latency", game.system.pulse_latency);
-    put_int!("system.cpu_limit", game.system.cpu_limit);
+macro_rules! field_get {
+    (str, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v)));
+    };
+    (path, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v.to_string_lossy())));
+    };
+    (bool, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&$v));
+    };
+    (int, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&($v as i32)));
+    };
+    (json, $m:ident, $key:literal, $v:expr) => {
+        if let Ok(json) = serde_json::to_string(&$v) {
+            $m.insert(QString::from($key), QVariant::from(&QString::from(&*json)));
+        }
+    };
+    (args, $m:ident, $key:literal, $v:expr) => {
+        $m.insert(QString::from($key), QVariant::from(&QString::from(&*args_to_text(&$v))));
+    };
 }
 
-fn apply_field_to_game(game: &mut Game, key: &str, value: &str) -> bool {
-    let parse_bool = |s: &str| -> bool { s == "true" };
-    let parse_u32 = |s: &str| -> u32 { s.parse().unwrap_or(0) };
-
-    match key {
-        "meta.name" => game.metadata.name = value.to_string(),
-        "meta.sort_name" => game.metadata.sort_name = value.to_string(),
-        "meta.slug" => game.metadata.slug = value.to_string(),
-        "meta.exe" => game.metadata.exe = PathBuf::from(value),
-        "meta.color" => game.metadata.color = value.to_string(),
-        "meta.banner" => game.metadata.banner = value.to_string(),
-        "meta.coverart" => game.metadata.coverart = value.to_string(),
-        "meta.icon" => game.metadata.icon = value.to_string(),
-        "meta.favourite" => game.metadata.favourite = parse_bool(value),
-        "meta.categories" => {
-            if let Ok(cats) = serde_json::from_str(value) {
-                game.metadata.categories = cats;
+macro_rules! field_set {
+    ($kind:ident readonly, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {};
+    (str, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = $value.to_string();
+            return true;
+        }
+    };
+    (path, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = PathBuf::from($value);
+            return true;
+        }
+    };
+    (bool, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = $value == "true";
+            return true;
+        }
+    };
+    (int, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = $value.parse().unwrap_or(0);
+            return true;
+        }
+    };
+    (json, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            if let Ok(parsed) = serde_json::from_str($value) {
+                $game.$($path).+ = parsed;
             }
+            return true;
+        }
+    };
+    (args, $game:ident, $key:ident, $value:ident, $lit:literal, $($path:ident).+) => {
+        if $key == $lit {
+            $game.$($path).+ = args_from_text($value);
+            return true;
+        }
+    };
+}
+
+macro_rules! game_fields {
+    ($( $key:literal => $kind:ident $($flag:ident)?, $($path:ident).+ ),* $(,)?) => {
+        fn populate_config_map(game: &Game, m: &mut QMap<QMapPair_QString_QVariant>) {
+            $( field_get!($kind, m, $key, game.$($path).+); )*
         }
 
-        "source.save_path" => game.source.save_path = value.to_string(),
-        "source.app_id" => game.source.app_id = value.to_string(),
-
-        "runner.type" => game.runner.runner_type = value.to_string(),
-
-        "wine.version" => game.wine.version = value.to_string(),
-        "wine.prefix" => game.wine.prefix = value.to_string(),
-        "wine.prefix_arch" => game.wine.prefix_arch = value.to_string(),
-        "wine.esync" => game.wine.esync = parse_bool(value),
-        "wine.fsync" => game.wine.fsync = parse_bool(value),
-        "wine.ntsync" => game.wine.ntsync = parse_bool(value),
-        "wine.dxvk" => game.wine.dxvk = parse_bool(value),
-        "wine.dxvk_version" => game.wine.dxvk_version = value.to_string(),
-        "wine.vkd3d" => game.wine.vkd3d = parse_bool(value),
-        "wine.vkd3d_version" => game.wine.vkd3d_version = value.to_string(),
-        "wine.d3d_extras" => game.wine.d3d_extras = parse_bool(value),
-        "wine.d3d_extras_version" => game.wine.d3d_extras_version = value.to_string(),
-        "wine.dxvk_nvapi" => game.wine.dxvk_nvapi = parse_bool(value),
-        "wine.dxvk_nvapi_version" => game.wine.dxvk_nvapi_version = value.to_string(),
-        "wine.fsr" => game.wine.fsr = parse_bool(value),
-        "wine.battleye" => game.wine.battleye = parse_bool(value),
-        "wine.easyanticheat" => game.wine.easyanticheat = parse_bool(value),
-        "wine.dpi_scaling" => game.wine.dpi_scaling = parse_bool(value),
-        "wine.dpi" => game.wine.dpi = parse_u32(value),
-        "wine.audio_driver" => game.wine.audio_driver = value.to_string(),
-        "wine.graphics_driver" => game.wine.graphics_driver = value.to_string(),
-        "wine.dll_overrides" => {
-            if let Ok(map) = serde_json::from_str(value) {
-                game.wine.dll_overrides = map;
-            }
+        fn apply_field_to_game(game: &mut Game, key: &str, value: &str) -> bool {
+            $( field_set!($kind $($flag)?, game, key, value, $key, $($path).+); )*
+            tracing::warn!("unknown or read-only config key: {}", key);
+            false
         }
+    };
+}
 
-        "launch.args" => game.launch.args = args_from_text(value),
-        "launch.working_dir" => game.launch.working_dir = value.to_string(),
-        "launch.command_prefix" => game.launch.command_prefix = value.to_string(),
-        "launch.pre_launch_script" => game.launch.pre_launch_script = value.to_string(),
-        "launch.post_exit_script" => game.launch.post_exit_script = value.to_string(),
-        "launch.env" => {
-            if let Ok(env) = serde_json::from_str(value) {
-                game.launch.env = env;
-            }
-        }
+game_fields! {
+    "meta.id" => str readonly, metadata.id,
+    "meta.name" => str, metadata.name,
+    "meta.sort_name" => str, metadata.sort_name,
+    "meta.slug" => str, metadata.slug,
+    "meta.exe" => path, metadata.exe,
+    "meta.color" => str, metadata.color,
+    "meta.banner" => str, metadata.banner,
+    "meta.coverart" => str, metadata.coverart,
+    "meta.icon" => str, metadata.icon,
+    "meta.favourite" => bool, metadata.favourite,
+    "meta.categories" => json, metadata.categories,
 
-        "graphics.mangohud" => game.graphics.mangohud = parse_bool(value),
-        "graphics.gpu" => game.graphics.gpu = value.to_string(),
+    "source.kind" => str readonly, source.kind,
+    "source.app_id" => str, source.app_id,
+    "source.eos_overlay" => bool readonly, source.eos_overlay,
+    "source.cloud_saves" => bool readonly, source.cloud_saves,
+    "source.save_path" => str, source.save_path,
+    "source.patch" => str readonly, source.patch,
 
-        "graphics.gamescope.enabled" => game.graphics.gamescope.enabled = parse_bool(value),
-        "graphics.gamescope.width" => game.graphics.gamescope.width = parse_u32(value),
-        "graphics.gamescope.height" => game.graphics.gamescope.height = parse_u32(value),
-        "graphics.gamescope.game_width" => game.graphics.gamescope.game_width = parse_u32(value),
-        "graphics.gamescope.game_height" => game.graphics.gamescope.game_height = parse_u32(value),
-        "graphics.gamescope.fps" => game.graphics.gamescope.fps = parse_u32(value),
-        "graphics.gamescope.refresh_rate" => game.graphics.gamescope.refresh_rate = parse_u32(value),
-        "graphics.gamescope.fullscreen" => game.graphics.gamescope.fullscreen = parse_bool(value),
-        "graphics.gamescope.borderless" => game.graphics.gamescope.borderless = parse_bool(value),
-        "graphics.gamescope.integer_scaling" => game.graphics.gamescope.integer_scaling = parse_bool(value),
-        "graphics.gamescope.hdr" => game.graphics.gamescope.hdr = parse_bool(value),
-        "graphics.gamescope.filter" => game.graphics.gamescope.filter = value.to_string(),
-        "graphics.gamescope.fsr_sharpness" => game.graphics.gamescope.fsr_sharpness = parse_u32(value),
+    "runner.type" => str, runner.runner_type,
 
-        "system.gamemode" => game.system.gamemode = parse_bool(value),
-        "system.prevent_sleep" => game.system.prevent_sleep = parse_bool(value),
-        "system.pulse_latency" => game.system.pulse_latency = parse_bool(value),
-        "system.cpu_limit" => game.system.cpu_limit = parse_u32(value),
+    "wine.version" => str, wine.version,
+    "wine.prefix" => str, wine.prefix,
+    "wine.prefix_arch" => str, wine.prefix_arch,
+    "wine.esync" => bool, wine.esync,
+    "wine.fsync" => bool, wine.fsync,
+    "wine.ntsync" => bool, wine.ntsync,
+    "wine.dxvk" => bool, wine.dxvk,
+    "wine.dxvk_version" => str, wine.dxvk_version,
+    "wine.vkd3d" => bool, wine.vkd3d,
+    "wine.vkd3d_version" => str, wine.vkd3d_version,
+    "wine.d3d_extras" => bool, wine.d3d_extras,
+    "wine.d3d_extras_version" => str, wine.d3d_extras_version,
+    "wine.dxvk_nvapi" => bool, wine.dxvk_nvapi,
+    "wine.dxvk_nvapi_version" => str, wine.dxvk_nvapi_version,
+    "wine.fsr" => bool, wine.fsr,
+    "wine.battleye" => bool, wine.battleye,
+    "wine.easyanticheat" => bool, wine.easyanticheat,
+    "wine.dpi_scaling" => bool, wine.dpi_scaling,
+    "wine.dpi" => int, wine.dpi,
+    "wine.audio_driver" => str, wine.audio_driver,
+    "wine.graphics_driver" => str, wine.graphics_driver,
+    "wine.dll_overrides" => json, wine.dll_overrides,
 
-        _ => {
-            tracing::warn!("unknown config key: {}", key);
-            return false;
-        }
-    }
+    "launch.args" => args, launch.args,
+    "launch.working_dir" => str, launch.working_dir,
+    "launch.command_prefix" => str, launch.command_prefix,
+    "launch.pre_launch_script" => str, launch.pre_launch_script,
+    "launch.post_exit_script" => str, launch.post_exit_script,
+    "launch.env" => json, launch.env,
 
-    true
+    "graphics.mangohud" => bool, graphics.mangohud,
+    "graphics.gpu" => str, graphics.gpu,
+
+    "graphics.gamescope.enabled" => bool, graphics.gamescope.enabled,
+    "graphics.gamescope.width" => int, graphics.gamescope.width,
+    "graphics.gamescope.height" => int, graphics.gamescope.height,
+    "graphics.gamescope.game_width" => int, graphics.gamescope.game_width,
+    "graphics.gamescope.game_height" => int, graphics.gamescope.game_height,
+    "graphics.gamescope.fps" => int, graphics.gamescope.fps,
+    "graphics.gamescope.refresh_rate" => int, graphics.gamescope.refresh_rate,
+    "graphics.gamescope.fullscreen" => bool, graphics.gamescope.fullscreen,
+    "graphics.gamescope.borderless" => bool, graphics.gamescope.borderless,
+    "graphics.gamescope.integer_scaling" => bool, graphics.gamescope.integer_scaling,
+    "graphics.gamescope.hdr" => bool, graphics.gamescope.hdr,
+    "graphics.gamescope.filter" => str, graphics.gamescope.filter,
+    "graphics.gamescope.fsr_sharpness" => int, graphics.gamescope.fsr_sharpness,
+
+    "system.gamemode" => bool, system.gamemode,
+    "system.prevent_sleep" => bool, system.prevent_sleep,
+    "system.pulse_latency" => bool, system.pulse_latency,
+    "system.cpu_limit" => int, system.cpu_limit,
 }
 
 impl qobject::GameModel {
