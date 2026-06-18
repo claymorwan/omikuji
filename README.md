@@ -43,7 +43,7 @@ flatpak install omikuji.flatpak
 
 #### Manual building
 
-Requires Rust (2024 edition), Qt 6.7+, plus `pkgconf` and `cmake`. Or skip all this and grab the AUR build below.
+Requires Rust (2024 edition), Qt 6.7+, plus `pkgconf` and `cmake`.
 
 ```sh
 git clone https://github.com/reakjra/omikuji.git
