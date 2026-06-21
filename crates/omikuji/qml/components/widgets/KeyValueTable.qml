@@ -123,7 +123,7 @@ Item {
             Layout.fillWidth: true
             Layout.preferredHeight: 40
             radius: theme.radius.sm
-            color: addArea.containsMouse ? theme.surfaceHover : "transparent"
+            color: addArea.containsMouse ? theme.stateHover : theme.alpha(theme.text, 0)
             border.width: 1
             border.color: theme.surfaceBorder
 

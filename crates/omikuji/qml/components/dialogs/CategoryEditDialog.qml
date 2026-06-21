@@ -32,7 +32,19 @@ DialogCard {
 
     readonly property bool _valueNeeded: formKind === "runner" || formKind === "tag"
 
+    readonly property int _kindIndex: {
+        for (let i = 0; i < kindOptions.length; i++)
+            if (kindOptions[i].value === formKind) return i
+        return 0
+    }
+    readonly property int _runnerIndex: {
+        for (let i = 0; i < runnerOptions.length; i++)
+            if (runnerOptions[i].value === formValue) return i
+        return 0
+    }
+
     maxWidth: 480
+    escEnabled: !iconPicker.visible
 
     function showAdd() {
         _editingIndex = -1
@@ -40,8 +52,6 @@ DialogCard {
         formIcon = "star"
         formKind = "tag"
         formValue = ""
-        _syncKindIndex()
-        _syncRunnerIndex()
         open()
     }
 
@@ -51,36 +61,14 @@ DialogCard {
         formIcon = entry.icon || "star"
         formKind = entry.kind || "tag"
         formValue = entry.value || ""
-        _syncKindIndex()
-        _syncRunnerIndex()
         open()
     }
 
     function hide() { root.closed(); close() }
 
-    function _syncKindIndex() {
-        for (let i = 0; i < kindOptions.length; i++) {
-            if (kindOptions[i].value === formKind) {
-                kindDropdown.currentIndex = i
-                return
-            }
-        }
-        kindDropdown.currentIndex = 0
-    }
-
-    function _syncRunnerIndex() {
-        for (let i = 0; i < runnerOptions.length; i++) {
-            if (runnerOptions[i].value === formValue) {
-                runnerDropdown.currentIndex = i
-                return
-            }
-        }
-        runnerDropdown.currentIndex = 0
-    }
-
     function _buildEntry() {
         let v = ""
-        if (formKind === "runner") v = runnerOptions[runnerDropdown.currentIndex].value
+        if (formKind === "runner") v = runnerOptions[root._runnerIndex].value
         else if (formKind === "tag") v = formValue.trim()
         return {
             enabled: true,
@@ -158,6 +146,7 @@ DialogCard {
             Layout.fillWidth: true
             label: "Kind"
             options: root.kindOptions
+            currentIndex: root._kindIndex
             onSelected: (value) => root.formKind = value
         }
 
@@ -177,6 +166,8 @@ DialogCard {
             visible: root.formKind === "runner"
             label: "Runner"
             options: root.runnerOptions
+            currentIndex: root._runnerIndex
+            onSelected: (value) => root.formValue = value
         }
     }
 

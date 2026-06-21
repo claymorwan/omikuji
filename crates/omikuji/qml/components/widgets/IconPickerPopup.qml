@@ -23,6 +23,8 @@ Item {
     }
     function hide() { popup.visible = false }
 
+    Keys.onEscapePressed: (event) => { popup.hide(); event.accepted = true }
+
     Rectangle {
         anchors.fill: parent
         color: Qt.rgba(0, 0, 0, 0.55)

@@ -24,12 +24,14 @@ Item {
 
     signal closeRequested()
 
+    property bool escEnabled: true
+
     function open() { shown = true }
     function close() { shown = false }
 
     Shortcut {
         sequence: "Escape"
-        enabled: root.shown
+        enabled: root.shown && root.escEnabled
         onActivated: root.closeRequested()
     }
 
