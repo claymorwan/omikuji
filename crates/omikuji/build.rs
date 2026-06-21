@@ -108,10 +108,26 @@ fn write_icon_names(names: &[String]) {
     fs::write(&out_path, content).expect("write icon_names.rs");
 }
 
+fn qt_version() -> String {
+    for tool in ["qmake6", "qmake"] {
+        if let Ok(out) = Command::new(tool).arg("-query").arg("QT_VERSION").output()
+            && out.status.success()
+        {
+            let v = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !v.is_empty() {
+                return v;
+            }
+        }
+    }
+    "unknown".to_string()
+}
+
 fn main() {
     let (icon_paths, icon_names) = collect_icons();
     write_icon_names(&icon_names);
     println!("cargo:rerun-if-changed=qml/icons");
+
+    println!("cargo:rustc-env=OMIKUJI_QT_VERSION={}", qt_version());
 
     let shader_paths = compile_shaders();
     println!("cargo:rerun-if-changed=qml/components/consolemode/shaders");

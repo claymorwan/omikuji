@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 
 import "."
@@ -7,12 +8,19 @@ import "../widgets"
 Item {
     id: root
 
-    // hand-maintained, bind from a build-info bridge invokable if a release pipeline ever lands (TODO: do ts)
-    readonly property string appVersion: "0.3.0"
+    property var gameModel: null
+
+    readonly property string appVersion: gameModel ? gameModel.app_version() : ""
     readonly property string repoUrl: "https://github.com/reakjra/omikuji"
     readonly property string assetsRepoUrl: "https://github.com/reakjra/omikuji-assets"
 
     implicitHeight: content.height
+
+    function _loadSystemInfo() {
+        if (gameModel) sysText.text = gameModel.system_info()
+    }
+    onGameModelChanged: _loadSystemInfo()
+    Component.onCompleted: _loadSystemInfo()
 
     Column {
         id: content
@@ -104,6 +112,49 @@ Item {
                         onLinkActivated: (link) => Qt.openUrlExternally(link)
                         anchors.verticalCenter: parent.verticalCenter
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    }
+                }
+            }
+        }
+
+        SettingsSection {
+            label: "System"
+            width: parent.width
+
+            Column {
+                width: parent.width
+                spacing: 10
+
+                TextArea {
+                    id: sysText
+                    width: parent.width
+                    readOnly: true
+                    wrapMode: TextArea.Wrap
+                    selectByMouse: true
+                    color: theme.text
+                    font.family: "monospace"
+                    font.pixelSize: 13
+                    leftPadding: 12
+                    rightPadding: 12
+                    topPadding: 10
+                    bottomPadding: 10
+                    text: ""
+
+                    background: Rectangle {
+                        radius: theme.radius.sm
+                        color: theme.bgAlt
+                        border.width: 1
+                        border.color: theme.outline
+                    }
+                }
+
+                M3Button {
+                    text: "Copy"
+                    variant: "tonal"
+                    onClicked: {
+                        sysText.selectAll()
+                        sysText.copy()
+                        sysText.deselect()
                     }
                 }
             }

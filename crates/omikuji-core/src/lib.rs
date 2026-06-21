@@ -25,6 +25,7 @@ pub mod process;
 pub mod runners;
 pub mod settings;
 pub mod steam;
+pub mod system_info;
 pub mod ui_settings;
 pub mod wine_tools;
 

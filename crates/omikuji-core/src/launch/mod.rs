@@ -159,6 +159,12 @@ fn apply_wrapping(
         env.insert("MANGOHUD_DLSYM".to_string(), "1".to_string());
     }
 
+    if wrap_mangohud {
+        for (k, v) in crate::system_info::gpu_launch_env(&game.graphics.gpu) {
+            env.insert(k, v);
+        }
+    }
+
     if !game.launch.command_prefix.is_empty() {
         for (i, part) in game.launch.command_prefix.split_whitespace().enumerate() {
             command.insert(i, part.to_string());
@@ -244,6 +250,9 @@ fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfi
     }
     if game.system.pulse_latency {
         command.push("--env=PULSE_LATENCY_MSEC=60".to_string());
+    }
+    for (k, v) in crate::system_info::gpu_launch_env(&game.graphics.gpu) {
+        command.push(format!("--env={}={}", k, v));
     }
 
     command.push(appid);

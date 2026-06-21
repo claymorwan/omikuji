@@ -105,6 +105,7 @@ Item {
             active: root.currentKind === "about"
             visible: active
             source: "../settings/TabGlobalAbout.qml"
+            onLoaded: item.gameModel = root.gameModel
         }
     }
 }

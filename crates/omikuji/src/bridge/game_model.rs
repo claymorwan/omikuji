@@ -201,6 +201,12 @@ pub mod qobject {
         fn list_gpus(self: &GameModel) -> QString;
 
         #[qinvokable]
+        fn system_info(self: &GameModel) -> QString;
+
+        #[qinvokable]
+        fn app_version(self: &GameModel) -> QString;
+
+        #[qinvokable]
         #[cxx_name = "cpuCoreCount"]
         fn cpu_core_count(self: &GameModel) -> i32;
 
@@ -1246,6 +1252,15 @@ impl qobject::GameModel {
             Ok(json) => QString::from(&json),
             Err(_) => QString::from("[[\"Default\",\"\"]]"),
         }
+    }
+
+    fn system_info(&self) -> QString {
+        let qt = option_env!("OMIKUJI_QT_VERSION").unwrap_or("unknown");
+        QString::from(&omikuji_core::system_info::report(env!("CARGO_PKG_VERSION"), qt))
+    }
+
+    fn app_version(&self) -> QString {
+        QString::from(env!("CARGO_PKG_VERSION"))
     }
 
     fn cpu_core_count(&self) -> i32 {
