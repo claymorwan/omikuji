@@ -7,6 +7,8 @@ Item {
     id: root
 
     property string currentTabLabel: ""
+    property bool showTitle: false
+    property real leftInset: 0
     property bool showAddButton: true
     property bool showSearch: true
     property bool showDisplayOptions: false
@@ -42,11 +44,13 @@ Item {
         font.pixelSize: 20
         font.weight: Font.DemiBold
         elide: Text.ElideRight
+        visible: root.showTitle
     }
 
     FieldSurface {
         id: searchBar
-        anchors.centerIn: parent
+        anchors.verticalCenter: parent.verticalCenter
+        x: (root.width - root.leftInset) / 2 - width / 2
         width: Math.min(360, parent.width * 0.4)
         height: 34
         radius: 17
@@ -117,15 +121,28 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             visible: root.showDisplayOptions
             onClicked: displayPopup.visible ? displayPopup.close() : displayPopup.open()
+
+            Tooltip {
+                text: "Quick Settings"
+                tipVisible: displayBtn.hovered && !displayPopup.visible
+                y: parent.height + 8
+            }
         }
 
         IconButton {
+            id: addBtn
             icon: "add"
             size: 32
             rounded: true
             anchors.verticalCenter: parent.verticalCenter
             visible: root.showAddButton
             onClicked: root.addClicked()
+
+            Tooltip {
+                text: "Add Game"
+                tipVisible: addBtn.hovered
+                y: parent.height + 8
+            }
         }
     }
 

@@ -13,6 +13,7 @@ Item {
     property int currentIndex: 0
     property string currentStore: ""
     property string currentBottom: ""
+    property string headerLabel: ""
 
     property int downloadCount: 0
 
@@ -64,11 +65,13 @@ Item {
         anchors.topMargin: 20
         anchors.left: parent.left
         anchors.leftMargin: 20
-        text: "omikuji"
-        color: theme.textMuted
-        font.pixelSize: 18
-        font.weight: Font.Bold
-        font.letterSpacing: 0.5
+        anchors.right: parent.right
+        anchors.rightMargin: 20
+        text: root.headerLabel
+        color: theme.text
+        font.pixelSize: 20
+        font.weight: Font.DemiBold
+        elide: Text.ElideRight
     }
 
     Rectangle {

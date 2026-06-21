@@ -326,6 +326,13 @@ ApplicationWindow {
     property string currentView: "library"
     property string activeModal: ""
 
+    readonly property string currentViewLabel: currentView === "steam" ? "Steam"
+        : currentView === "epic" ? "Epic Games"
+        : currentView === "gog" ? "GOG"
+        : currentView === "hoyo" ? "Gachas"
+        : currentView === "downloads" ? "Downloads"
+        : navTabs.tabs[navTabs.currentIndex]?.label || ""
+
     // clear search on view switch, but not on library filter tab flips (those dont change currentView, i think)
     onCurrentViewChanged: {
         topBar.searchText = ""
@@ -508,6 +515,7 @@ property real cardZoom: uiSettings.cardZoom
         }
 
         downloadCount: downloadModel.activeCount
+        headerLabel: root.currentViewLabel
 
         uiSettings: uiSettings
 
@@ -599,17 +607,9 @@ property real cardZoom: uiSettings.cardZoom
         anchors.right: parent.right
         z: 100
 
-        currentTabLabel: root.currentView === "steam"
-            ? "Steam"
-            : root.currentView === "epic"
-                ? "Epic Games"
-                : root.currentView === "gog"
-                    ? "GOG"
-                    : root.currentView === "hoyo"
-                        ? "Gachas"
-                        : root.currentView === "downloads"
-                            ? "Downloads"
-                            : navTabs.tabs[navTabs.currentIndex]?.label || ""
+        currentTabLabel: root.currentViewLabel
+        showTitle: uiSettings.navCollapsed
+        leftInset: navTabs.width
 
         showAddButton: root.currentView === "library"
         showSearch: root.currentView === "library"
