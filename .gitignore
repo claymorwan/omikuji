@@ -4,6 +4,8 @@
 **/*.rs.bk
 **/*.qsb
 
+/packaging/io.github.reakjra.omikuji.png
+
 /build/
 /build-*/
 CMakeCache.txt

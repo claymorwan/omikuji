@@ -37,6 +37,7 @@ fn find_qsb() -> PathBuf {
     }
     for candidate in [
         "/usr/lib/qt6/bin/qsb",
+        "/usr/lib64/qt6/bin/qsb",
         "/usr/lib/x86_64-linux-gnu/qt6/bin/qsb",
         "/usr/libexec/qt6/qsb",
     ] {
