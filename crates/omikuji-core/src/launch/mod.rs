@@ -441,7 +441,7 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
     }
 
     if game.wine.vkd3d {
-        append_dll_override(&mut env, "d3d12=n,b");
+        append_dll_override(&mut env, "d3d12,d3d12core=n,b");
     }
 
     if game.wine.dxvk_nvapi {
