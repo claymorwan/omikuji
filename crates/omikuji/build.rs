@@ -212,6 +212,7 @@ fn main() {
                 "qml/components/store/GogController.qml",
                 "qml/components/store/StorePanel.qml",
                 "qml/components/store/SteamLibrary.qml",
+                "qml/components/store/StoreLoginOverlay.qml",
                 // widgets
                 "qml/components/widgets/BaseCard.qml",
                 "qml/components/widgets/CardGrid.qml",
