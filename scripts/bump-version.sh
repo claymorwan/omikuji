@@ -55,7 +55,7 @@ rm -f "$block"
 
 log=$(mktemp)
 {
-    printf '* %s %s - %s-1\n' "$(date -d "$DATE" '+%a %b %d %Y')" "$MAINTAINER" "$VER"
+    printf '* %s %s - %s-1\n' "$(LC_ALL=C date -d "$DATE" '+%a %b %d %Y')" "$MAINTAINER" "$VER"
     for b in "${BULLETS[@]}"; do printf '%s\n' "- $b"; done
     printf '\n'
 } > "$log"
