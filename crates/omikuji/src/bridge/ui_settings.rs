@@ -317,6 +317,26 @@ impl UiSettingsRust {
     }
 }
 
+macro_rules! kv_json_accessor {
+    ($get:ident, $set:ident, $field:ident, $ty:ty, $changed:ident, $label:literal) => {
+        fn $get(&self) -> cxx_qt_lib::QString {
+            let json = serde_json::to_string(&self.$field).unwrap_or_else(|_| "[]".to_string());
+            cxx_qt_lib::QString::from(&json)
+        }
+
+        fn $set(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
+            match serde_json::from_str::<$ty>(&json.to_string()) {
+                Ok(entries) => {
+                    self.as_mut().rust_mut().get_mut().$field = entries;
+                    self.as_mut().persist();
+                    self.as_mut().$changed();
+                }
+                Err(e) => tracing::error!("bad {} json: {}", $label, e),
+            }
+        }
+    };
+}
+
 impl qobject::UiSettingsBridge {
     fn snapshot(&self) -> UiSettings {
         UiSettings {
@@ -533,56 +553,9 @@ impl qobject::UiSettingsBridge {
         self.as_mut().theme_changed();
     }
 
-    fn categories_json(&self) -> cxx_qt_lib::QString {
-        let json = serde_json::to_string(&self.categories).unwrap_or_else(|_| "[]".to_string());
-        cxx_qt_lib::QString::from(&json)
-    }
-
-    fn apply_categories_json(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
-        let s = json.to_string();
-        match serde_json::from_str::<Vec<CategoryEntry>>(&s) {
-            Ok(entries) => {
-                self.as_mut().rust_mut().get_mut().categories = entries;
-                self.as_mut().persist();
-                self.as_mut().categories_changed();
-            }
-            Err(e) => tracing::error!("bad categories json: {e}"),
-        }
-    }
-
-    fn env_sets_json(&self) -> cxx_qt_lib::QString {
-        let json = serde_json::to_string(&self.env_sets).unwrap_or_else(|_| "[]".to_string());
-        cxx_qt_lib::QString::from(&json)
-    }
-
-    fn apply_env_sets_json(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
-        let s = json.to_string();
-        match serde_json::from_str::<Vec<KvSet>>(&s) {
-            Ok(entries) => {
-                self.as_mut().rust_mut().get_mut().env_sets = entries;
-                self.as_mut().persist();
-                self.as_mut().env_sets_changed();
-            }
-            Err(e) => tracing::error!("bad env sets json: {e}"),
-        }
-    }
-
-    fn dll_sets_json(&self) -> cxx_qt_lib::QString {
-        let json = serde_json::to_string(&self.dll_sets).unwrap_or_else(|_| "[]".to_string());
-        cxx_qt_lib::QString::from(&json)
-    }
-
-    fn apply_dll_sets_json(mut self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
-        let s = json.to_string();
-        match serde_json::from_str::<Vec<KvSet>>(&s) {
-            Ok(entries) => {
-                self.as_mut().rust_mut().get_mut().dll_sets = entries;
-                self.as_mut().persist();
-                self.as_mut().dll_sets_changed();
-            }
-            Err(e) => tracing::error!("bad dll sets json: {e}"),
-        }
-    }
+    kv_json_accessor!(categories_json, apply_categories_json, categories, Vec<CategoryEntry>, categories_changed, "categories");
+    kv_json_accessor!(env_sets_json, apply_env_sets_json, env_sets, Vec<KvSet>, env_sets_changed, "env sets");
+    kv_json_accessor!(dll_sets_json, apply_dll_sets_json, dll_sets, Vec<KvSet>, dll_sets_changed, "dll sets");
 
     fn available_icons_json(&self) -> cxx_qt_lib::QString {
         let json = serde_json::to_string(ICON_NAMES).unwrap_or_else(|_| "[]".to_string());

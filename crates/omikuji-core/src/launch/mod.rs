@@ -387,6 +387,17 @@ pub fn spawn(config: &LaunchConfig) -> Result<std::process::Child> {
     Ok(child)
 }
 
+fn apply_kv_sets(sets: &[crate::ui_settings::KvSet], ids: &[String], mut apply: impl FnMut(&str, &str)) {
+    for id in ids {
+        let Some(set) = sets.iter().find(|s| &s.id == id) else { continue };
+        for pair in &set.vars {
+            if !pair.key.trim().is_empty() {
+                apply(&pair.key, &pair.value);
+            }
+        }
+    }
+}
+
 fn append_dll_override(env: &mut HashMap<String, String>, entry: &str) {
     let existing = env.get("WINEDLLOVERRIDES").map(|s| s.as_str()).unwrap_or("");
     let new_value = if existing.is_empty() {
@@ -482,16 +493,13 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
         }
     }
 
-    if !game.wine.dll_override_sets.is_empty() {
-        let ui = crate::ui_settings::UiSettings::load();
-        for set_id in &game.wine.dll_override_sets {
-            let Some(set) = ui.dll_sets.iter().find(|s| &s.id == set_id) else { continue };
-            for pair in &set.vars {
-                if !pair.key.trim().is_empty() {
-                    append_dll_override(&mut env, &format!("{}={}", pair.key, pair.value));
-                }
-            }
-        }
+    let set_ui = (!game.wine.dll_override_sets.is_empty() || !game.launch.env_sets.is_empty())
+        .then(crate::ui_settings::UiSettings::load);
+
+    if let Some(ui) = &set_ui {
+        apply_kv_sets(&ui.dll_sets, &game.wine.dll_override_sets, |key, value| {
+            append_dll_override(&mut env, &format!("{key}={value}"));
+        });
     }
 
     if game.system.pulse_latency {
@@ -506,16 +514,10 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
         env.insert(k.clone(), v.clone());
     }
 
-    if !game.launch.env_sets.is_empty() {
-        let ui = crate::ui_settings::UiSettings::load();
-        for set_id in &game.launch.env_sets {
-            let Some(set) = ui.env_sets.iter().find(|s| &s.id == set_id) else { continue };
-            for var in &set.vars {
-                if !var.key.trim().is_empty() {
-                    env.insert(var.key.clone(), var.value.clone());
-                }
-            }
-        }
+    if let Some(ui) = &set_ui {
+        apply_kv_sets(&ui.env_sets, &game.launch.env_sets, |key, value| {
+            env.insert(key.to_string(), value.to_string());
+        });
     }
 
     env
