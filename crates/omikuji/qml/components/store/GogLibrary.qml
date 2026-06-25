@@ -22,7 +22,9 @@ Item {
     signal importRequested(int index)
 
     function _maybeRefresh() {
-        if (gogModel && gogModel.isLoggedIn) {
+        if (!gogModel) return
+        gogModel.refresh_tools()
+        if (gogModel.isLoggedIn) {
             gogModel.refresh()
         }
     }
@@ -191,6 +193,10 @@ Item {
         title: "Login to GOG"
         description: "To sync your GOG library, sign in on gog.com and paste the authorization code from the redirect URL."
         loginUrl: gogModel ? gogModel.get_login_url() : ""
+        toolName: "gogdl"
+        toolReady: gogModel && gogModel.toolReady
+        toolInstalling: gogModel && gogModel.toolInstalling
         onLoginRequested: (code) => gogModel.login(code)
+        onInstallToolRequested: gogModel.install_tools()
     }
 }

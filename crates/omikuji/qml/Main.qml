@@ -192,7 +192,7 @@ ApplicationWindow {
     Timer {
         interval: 500
         repeat: true
-        running: componentsBridge.pendingCount > 0 || componentsBridge.inProgress
+        running: true
         onTriggered: componentsBridge.drainEvents()
     }
 
@@ -216,7 +216,7 @@ ApplicationWindow {
                     "Setting up omikuji",
                     "Fetching runtime components — see Downloads for progress."
                 )
-                componentsBridge.installAll()
+                componentsBridge.installEager()
             }
         }
     }

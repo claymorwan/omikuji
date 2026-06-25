@@ -22,7 +22,9 @@ Item {
     signal importRequested(int index)
 
     function _maybeRefresh() {
-        if (epicModel && epicModel.isLoggedIn) {
+        if (!epicModel) return
+        epicModel.refresh_tools()
+        if (epicModel.isLoggedIn) {
             epicModel.refresh()
         }
     }
@@ -190,6 +192,10 @@ Item {
         title: "Login to Epic Games"
         description: "To sync your Epic library, you need to provide an authorization code from Epic's website."
         loginUrl: "https://legendary.gl/epiclogin"
+        toolName: "Legendary"
+        toolReady: epicModel && epicModel.toolReady
+        toolInstalling: epicModel && epicModel.toolInstalling
         onLoginRequested: (code) => epicModel.login(code)
+        onInstallToolRequested: epicModel.install_tools()
     }
 }

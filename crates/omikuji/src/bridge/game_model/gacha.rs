@@ -286,6 +286,13 @@ impl super::qobject::GameModel {
             return QString::default();
         }
 
+        let tools = omikuji_core::components::gacha_tools(&manifest.publisher_slug, &manifest.launch_patch);
+        if !tools.is_empty() {
+            tokio::spawn(async move {
+                let _ = omikuji_core::components::ensure(&tools).await;
+            });
+        }
+
         let install_path_buf = std::path::PathBuf::from(&install_s);
         if let Some(version) = omikuji_core::gachas::strategies::read_install_version(
             &manifest,

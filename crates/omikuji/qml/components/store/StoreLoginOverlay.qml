@@ -9,8 +9,12 @@ Item {
     property string title: ""
     property string description: ""
     property string loginUrl: ""
+    property string toolName: ""
+    property bool toolReady: true
+    property bool toolInstalling: false
 
     signal loginRequested(string code)
+    signal installToolRequested()
 
     anchors.fill: parent
     z: 100
@@ -74,10 +78,37 @@ Item {
             width: 160
             height: 44
             text: "Login"
-            enabled: loginCodeField.text.length > 0
+            enabled: root.toolReady && loginCodeField.text.length > 0
             onClicked: {
                 root.loginRequested(loginCodeField.text)
                 loginCodeField.text = ""
+            }
+        }
+
+        Column {
+            visible: !root.toolReady
+            width: parent.width
+            spacing: theme.space.sm
+
+            Text {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: parent.width
+                text: root.toolInstalling
+                    ? "Installing " + root.toolName + "..."
+                    : "No " + root.toolName + " found. Install it to log in."
+                color: theme.textMuted
+                font.pixelSize: 13
+                horizontalAlignment: Text.AlignHCenter
+                wrapMode: Text.Wrap
+            }
+
+            M3Button {
+                anchors.horizontalCenter: parent.horizontalCenter
+                width: 200
+                text: "Install " + root.toolName
+                variant: "tonal"
+                enabled: !root.toolInstalling
+                onClicked: root.installToolRequested()
             }
         }
     }
