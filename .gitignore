@@ -57,3 +57,5 @@ omikuji-appdir
 AppDir/
 linuxdeploy*
 *.AppImage
+
+docs/site/book

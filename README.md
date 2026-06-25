@@ -197,7 +197,7 @@ Not implemented/WIP/Planning to add:
 - more CLI commands which i cant be bothered with yet
 
 ## Documentation
-- [Configuration](docs/configuration.md): `settings.toml`, custom runners, DLL packs
+- [Configuration](docs/site/src/user/configuration.md): `settings.toml`, custom runners, DLL packs
 - [Nix Home Manager options](docs/hm-module.md): Every options available in the Home Manager module
 
 ## Contributing
