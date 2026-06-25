@@ -22,6 +22,15 @@
     </p>
   </description>
   <releases>
+    <release version="0.4.4" date="2026-06-25">
+      <description>
+        <ul>
+          <li>Lazy runtime tools fetch (Only umu will be fetched on boot)</li>
+          <li>Added env/dll sets.</li>
+          <li>VKD3D toggle now overrides d3d12core too.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.4.3" date="2026-06-25">
       <description>
         <ul>
