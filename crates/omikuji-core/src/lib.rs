@@ -21,6 +21,7 @@ pub mod launch;
 pub mod library;
 pub mod media;
 pub mod notifications;
+pub mod prefixes;
 pub mod process;
 pub mod runners;
 pub mod settings;

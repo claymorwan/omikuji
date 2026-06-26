@@ -482,6 +482,11 @@ impl Game {
         self.source.kind == "epic"
     }
 
+    // steam/flatpak/native launch outside wine, so they don't use an omikuji-managed prefix, damn gaijin...
+    pub fn uses_wine_prefix(&self) -> bool {
+        !matches!(self.runner.runner_type.as_str(), "steam" | "flatpak" | "native")
+    }
+
     // skips fields the caller already set so per-source picks (steam:appid etc) survive
     pub fn seed_from_defaults(&mut self, d: &crate::defaults::Defaults) {
         let w = WineConfig::default();

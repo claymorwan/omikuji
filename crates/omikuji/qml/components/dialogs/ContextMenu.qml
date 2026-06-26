@@ -22,17 +22,23 @@ Popup {
     property var _submenu: null
     property bool _subCloseExpected: false
 
+    // tracks shift for items that declare a shiftText/shiftAction variant
+    property bool _shiftDown: false
+
     signal itemClicked(string action)
 
     padding: 8
     margins: 0
     width: itemWidth + padding * 2
+    focus: true
 
     onClosed: {
         lastClosedAt = Date.now()
         closePolicy = _defaultClosePolicy
         _closeSubmenu()
     }
+
+    onOpened: _shiftDown = false
 
     Component.onDestruction: {
         if (_submenu) _submenu.destroy()
@@ -244,6 +250,10 @@ Popup {
         id: menuColumn
         spacing: 0
         width: root.itemWidth
+        focus: true
+
+        Keys.onPressed: (event) => { if (event.key === Qt.Key_Shift) root._shiftDown = true }
+        Keys.onReleased: (event) => { if (event.key === Qt.Key_Shift) root._shiftDown = false }
 
         Repeater {
             id: itemRepeater
@@ -279,7 +289,9 @@ Popup {
                             anchors.left: parent.left
                             anchors.leftMargin: 12
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.text
+                            text: (modelData.shiftText && root._shiftDown && hoverArea.containsMouse)
+                                ? modelData.shiftText
+                                : modelData.text
                             color: modelData.danger
                                 ? theme.error
                                 : modelData.accent
@@ -312,11 +324,15 @@ Popup {
                                 if (modelData.submenu) root._scheduleSubmenu(index, parent)
                                 else root._closeSubmenu()
                             }
-                            onClicked: {
+                            onPositionChanged: (mouse) => root._shiftDown = (mouse.modifiers & Qt.ShiftModifier) !== 0
+                            onClicked: (mouse) => {
                                 if (modelData.submenu) {
                                     root._openSubmenuNow(index, parent)
                                 } else {
-                                    root.itemClicked(modelData.action || modelData.text.toLowerCase().replace(/ /g, "_"))
+                                    let useShift = modelData.shiftAction && (mouse.modifiers & Qt.ShiftModifier)
+                                    root.itemClicked(useShift
+                                        ? modelData.shiftAction
+                                        : (modelData.action || modelData.text.toLowerCase().replace(/ /g, "_")))
                                     root.close()
                                 }
                             }

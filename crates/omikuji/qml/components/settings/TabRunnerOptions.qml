@@ -104,7 +104,7 @@ Item {
 
                 M3FileField {
                     label: "Prefix"
-                    placeholder: "empty = auto-create per game"
+                    placeholder: config["wine.prefix.resolved"] || "empty = auto-create per game"
                     text: config["wine.prefix"] || ""
                     selectFolder: true
                     width: parent.width

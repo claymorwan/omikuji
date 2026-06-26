@@ -37,6 +37,7 @@ pub mod qobject {
         #[qml_element]
         #[base = QAbstractListModel]
         #[qproperty(i32, count)]
+        #[qproperty(bool, preparing)]
         type GameModel = super::GameModelRust;
     }
 
@@ -96,6 +97,14 @@ pub mod qobject {
         fn game_log_appended(self: Pin<&mut GameModel>, game_id: &QString);
 
         #[qsignal]
+        #[cxx_name = "prepareOutput"]
+        fn prepare_output(self: Pin<&mut GameModel>, line: &QString);
+
+        #[qsignal]
+        #[cxx_name = "prepareFinished"]
+        fn prepare_finished(self: Pin<&mut GameModel>, ok: bool, error: &QString);
+
+        #[qsignal]
         fn error_required(
             self: Pin<&mut GameModel>,
             game_id: &QString,
@@ -141,6 +150,12 @@ pub mod qobject {
         fn remove_game(self: Pin<&mut GameModel>, index: i32);
 
         #[qinvokable]
+        fn remove_game_with_prefix(self: Pin<&mut GameModel>, index: i32);
+
+        #[qinvokable]
+        fn game_prefix_info(self: &GameModel, index: i32) -> QString;
+
+        #[qinvokable]
         fn refresh(self: Pin<&mut GameModel>, selected_index: i32) -> QString;
 
         #[qinvokable]
@@ -157,6 +172,12 @@ pub mod qobject {
 
         #[qinvokable]
         fn launch_game_force(self: &GameModel, index: i32) -> bool;
+
+        #[qinvokable]
+        fn needs_prefix_prep(self: &GameModel, index: i32) -> bool;
+
+        #[qinvokable]
+        fn prepare_prefix(self: Pin<&mut GameModel>, index: i32);
 
         #[qinvokable]
         fn launch_exe(self: &GameModel, exe: &QString, runner: &QString, prefix: &QString) -> bool;
@@ -553,13 +574,14 @@ pub struct GameModelRust {
     count: i32,
     // in-memory staging slot for the add-game page. cleared on commit/discard.
     draft: Option<Game>,
+    preparing: bool,
 }
 
 impl Default for GameModelRust {
     fn default() -> Self {
         let library = Library::load().unwrap_or_default();
         let count = library.game.len() as i32;
-        Self { library, count, draft: None }
+        Self { library, count, draft: None, preparing: false }
     }
 }
 
@@ -788,6 +810,19 @@ game_fields! {
     "system.cpu_limit" => int, system.cpu_limit,
 }
 
+fn config_map(game: &Game) -> QMap<QMapPair_QString_QVariant> {
+    let mut m = QMap::<QMapPair_QString_QVariant>::default();
+    populate_config_map(game, &mut m);
+    if !game.metadata.id.is_empty() {
+        let resolved = omikuji_core::launch::prefix_path_for(game);
+        m.insert(
+            QString::from("wine.prefix.resolved"),
+            QVariant::from(&QString::from(&*resolved.to_string_lossy())),
+        );
+    }
+    m
+}
+
 impl qobject::GameModel {
     fn row_count(&self, _parent: &QModelIndex) -> i32 {
         self.library.game.len() as i32
@@ -861,18 +896,16 @@ impl qobject::GameModel {
     fn begin_new_game(mut self: Pin<&mut Self>) -> QMap<QMapPair_QString_QVariant> {
         let mut game = Game::new(String::new(), PathBuf::new());
         game.seed_from_defaults(&omikuji_core::defaults::Defaults::load());
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
-        populate_config_map(&game, &mut m);
+        let m = config_map(&game);
         self.as_mut().rust_mut().get_mut().draft = Some(game);
         m
     }
 
     fn get_draft_config(&self) -> QMap<QMapPair_QString_QVariant> {
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
-        if let Some(game) = &self.rust().draft {
-            populate_config_map(game, &mut m);
+        match &self.rust().draft {
+            Some(game) => config_map(game),
+            None => QMap::<QMapPair_QString_QVariant>::default(),
         }
-        m
     }
 
     fn update_draft_field(mut self: Pin<&mut Self>, key: &QString, value: &QString) -> bool {
@@ -954,11 +987,11 @@ impl qobject::GameModel {
 
     fn begin_edit_game(mut self: Pin<&mut Self>, index: i32) -> QMap<QMapPair_QString_QVariant> {
         let idx = index as usize;
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
         let cloned = self.library.game.get(idx).cloned();
-        if let Some(ref game) = cloned {
-            populate_config_map(game, &mut m);
-        }
+        let m = match &cloned {
+            Some(game) => config_map(game),
+            None => QMap::<QMapPair_QString_QVariant>::default(),
+        };
         self.as_mut().rust_mut().get_mut().draft = cloned;
         m
     }
@@ -1009,6 +1042,82 @@ impl qobject::GameModel {
         let count = self.library.game.len() as i32;
         self.as_mut().set_count(count);
         self.end_remove_rows();
+    }
+
+    fn remove_game_with_prefix(mut self: Pin<&mut Self>, index: i32) {
+        let idx = index as usize;
+        let prefix = match self.library.game.get(idx) {
+            Some(game) if game.uses_wine_prefix() => {
+                Some(omikuji_core::launch::prefix_path_for(game))
+            }
+            _ => None,
+        };
+        if let Some(p) = prefix {
+            omikuji_core::prefixes::delete_prefix(&p);
+        }
+        self.as_mut().remove_game(index);
+    }
+
+    fn game_prefix_info(&self, index: i32) -> QString {
+        let idx = index as usize;
+        let Some(game) = self.library.game.get(idx) else {
+            return QString::default();
+        };
+        let path = omikuji_core::launch::prefix_path_for(game);
+        let has_prefix = game.uses_wine_prefix() && path.is_dir();
+        let games: Vec<String> = if has_prefix {
+            self.library
+                .game
+                .iter()
+                .filter(|g| g.uses_wine_prefix() && omikuji_core::launch::prefix_path_for(g) == path)
+                .map(|g| g.metadata.name.clone())
+                .collect()
+        } else {
+            Vec::new()
+        };
+        let v = serde_json::json!({
+            "hasPrefix": has_prefix,
+            "path": path.to_string_lossy(),
+            "gameCount": games.len(),
+            "games": games,
+        });
+        QString::from(&v.to_string())
+    }
+
+    fn needs_prefix_prep(&self, index: i32) -> bool {
+        self.library
+            .game
+            .get(index as usize)
+            .map(omikuji_core::prefixes::prefix_needs_bootstrap)
+            .unwrap_or(false)
+    }
+
+    fn prepare_prefix(mut self: Pin<&mut Self>, index: i32) {
+        if self.preparing {
+            return;
+        }
+        let Some(game) = self.library.game.get(index as usize).cloned() else {
+            return;
+        };
+        self.as_mut().set_preparing(true);
+        let qt = self.as_mut().qt_thread();
+        std::thread::spawn(move || {
+            let line_qt = qt.clone();
+            let res = omikuji_core::prefixes::bootstrap_prefix(&game, |line| {
+                let l = line.to_string();
+                let _ = line_qt.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
+                    obj.as_mut().prepare_output(&QString::from(&l));
+                });
+            });
+            let (ok, err) = match res {
+                Ok(_) => (true, String::new()),
+                Err(e) => (false, e.to_string()),
+            };
+            let _ = qt.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
+                obj.as_mut().set_preparing(false);
+                obj.as_mut().prepare_finished(ok, &QString::from(&err));
+            });
+        });
     }
 
     fn refresh(mut self: Pin<&mut Self>, selected_index: i32) -> QString {
@@ -1145,9 +1254,7 @@ impl qobject::GameModel {
         let Some(game) = self.library.game.get(idx) else {
             return QMap::<QMapPair_QString_QVariant>::default();
         };
-        let mut m = QMap::<QMapPair_QString_QVariant>::default();
-        populate_config_map(game, &mut m);
-        m
+        config_map(game)
     }
 
     fn update_game_field(mut self: Pin<&mut Self>, index: i32, key: &QString, value: &QString) -> bool {

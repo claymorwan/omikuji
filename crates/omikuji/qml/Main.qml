@@ -139,6 +139,8 @@ ApplicationWindow {
 
     ArchiveManagerBridge { id: archiveManager }
 
+    OfudaBridge { id: ofudaBridge }
+
     property var archiveActiveInstalls: ({})
 
     // bumped on runner changes so consumers re-query witout restart
@@ -243,6 +245,7 @@ ApplicationWindow {
     readonly property var dllSetsDialogRef: dllSetsDialog
     readonly property var componentsBridgeRef: componentsBridge
     readonly property var archiveManagerRef: archiveManager
+    readonly property var ofudaBridgeRef: ofudaBridge
 
     GameModel {
         id: gameModel
@@ -403,6 +406,14 @@ ApplicationWindow {
                 return false
             }
         }
+        if (gameModel.needs_prefix_prep(idx)) {
+            prefixPrepDialog.start(idx, forceSkipUpdateCheck)
+            return true
+        }
+        return doLaunch(idx, forceSkipUpdateCheck)
+    }
+
+    function doLaunch(idx, forceSkipUpdateCheck) {
         let launched = forceSkipUpdateCheck
             ? gameModel.launch_game_force(idx)
             : gameModel.launch_game(idx)
@@ -1027,6 +1038,49 @@ property real cardZoom: uiSettings.cardZoom
         }
     }
 
+    PrefixCreateDialog {
+        id: prefixCreateDialog
+        anchors.fill: parent
+        gameModel: root.gameModelRef
+        ofudaBridge: root.ofudaBridgeRef
+    }
+
+    PrefixPrepDialog {
+        id: prefixPrepDialog
+        anchors.fill: parent
+        gameModel: root.gameModelRef
+        onLaunchReady: (idx, skip) => root.doLaunch(idx, skip)
+    }
+
+    PrefixDetailDialog {
+        id: prefixDetailDialog
+        anchors.fill: parent
+        ofudaBridge: root.ofudaBridgeRef
+        onDeleteRequested: (p) => {
+            const n = (p.games || []).length
+            deletePrefixConfirm.message = n > 0
+                ? "This deletes the prefix and everything in it. " + n + (n === 1 ? " game uses" : " games use") + " it, and it won't be recoverable."
+                : "This deletes the prefix and everything in it. It won't be recoverable."
+            prefixDetailDialog.escEnabled = false
+            deletePrefixConfirm.show(p)
+        }
+    }
+
+    ConfirmDialog {
+        id: deletePrefixConfirm
+        anchors.fill: parent
+        title: "Delete prefix?"
+        confirmText: "Delete"
+        cancelText: "Cancel"
+        destructive: true
+        onConfirmed: (p) => {
+            if (ofudaBridge && p) ofudaBridge.deletePrefix(p.path)
+            prefixDetailDialog.escEnabled = true
+            prefixDetailDialog.close()
+        }
+        onCancelled: prefixDetailDialog.escEnabled = true
+    }
+
     ContextMenu {
         id: wineToolsMenu
         property string pendingRunExeRequestId: ""
@@ -1131,6 +1185,7 @@ property real cardZoom: uiSettings.cardZoom
                 uiSettings: root.uiSettingsRef
                 componentsBridge: root.componentsBridgeRef
                 archiveManager: root.archiveManagerRef
+                ofudaBridge: root.ofudaBridgeRef
                 defaults: defaultsBridge
                 gameModel: root.gameModelRef
                 activeInstalls: root.archiveActiveInstalls
@@ -1142,6 +1197,8 @@ property real cardZoom: uiSettings.cardZoom
                 onCategoryEditRequested: (idx, entry) => categoriesController.showEdit(idx, entry)
                 onCategoryDeleteRequested: (idx, entry) => categoriesController.showDelete(idx, entry)
                 onDefaultsApplyToExistingRequested: defaultsApplyDialog.show()
+                onPrefixOpenRequested: (p) => prefixDetailDialog.show(p)
+                onPrefixCreateRequested: prefixCreateDialog.show()
             }
         }
     }

@@ -7,6 +7,7 @@ Item {
     property var uiSettings: null
     property var componentsBridge: null
     property var archiveManager: null
+    property var ofudaBridge: null
     property var defaults: null
     property var gameModel: null
     property var activeInstalls: ({})
@@ -21,6 +22,9 @@ Item {
     signal defaultsApplyToExistingRequested()
     signal manageSetsRequested(string kind)
 
+    signal prefixOpenRequested(var prefix)
+    signal prefixCreateRequested()
+
     readonly property string modalTitle: "Settings"
     readonly property string modalSubtitle: ""
     readonly property string primaryLabel: ""
@@ -34,6 +38,7 @@ Item {
 
     property var tabs: [
         { label: "Components", kind: "components", icon: "layers" },
+        { label: "Ofuda",      kind: "ofuda",      icon: "ofuda" },
         { label: "Defaults",   kind: "defaults",   icon: "settings" },
         { label: "Interface",  kind: "ui",         icon: "tune" },
         { label: "Theme",      kind: "theme",      icon: "imagesmode" },
@@ -63,6 +68,18 @@ Item {
                 item.manageRequested.connect((cat, name, kind) => {
                     root.manageRequested(cat, name, kind)
                 })
+            }
+        }
+
+        Loader {
+            width: parent.width
+            active: root.currentKind === "ofuda"
+            visible: active
+            source: "../settings/TabGlobalOfuda.qml"
+            onLoaded: {
+                item.ofudaBridge = root.ofudaBridge
+                item.openRequested.connect((p) => root.prefixOpenRequested(p))
+                item.createRequested.connect(() => root.prefixCreateRequested())
             }
         }
 

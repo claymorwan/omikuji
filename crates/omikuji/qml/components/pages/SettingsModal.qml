@@ -161,7 +161,10 @@ Item {
             width: 184
             items: root.pageItem ? root.pageItem.tabs : []
             currentIndex: root.pageItem ? root.pageItem.currentTabIndex : 0
-            onItemClicked: (i) => { if (root.pageItem) root.pageItem.currentTabIndex = i }
+            onItemClicked: (i) => {
+                if (root.pageItem) root.pageItem.currentTabIndex = i
+                contentFlick.contentY = 0
+            }
         }
 
         Item {

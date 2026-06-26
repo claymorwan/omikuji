@@ -706,7 +706,7 @@ fn is_executable(_path: &Path) -> bool {
     true
 }
 
-pub fn resolve_prefix(game: &Game) -> PathBuf {
+pub fn prefix_path_for(game: &Game) -> PathBuf {
     if !game.wine.prefix.is_empty() {
         return PathBuf::from(&game.wine.prefix);
     }
@@ -724,8 +724,13 @@ pub fn resolve_prefix(game: &Game) -> PathBuf {
     } else {
         format!("{}-{}", slug, game.metadata.id)
     };
-    let prefix = dir.join(folder);
-    if !prefix.exists()
+    dir.join(folder)
+}
+
+pub fn resolve_prefix(game: &Game) -> PathBuf {
+    let prefix = prefix_path_for(game);
+    if game.wine.prefix.is_empty()
+        && !prefix.exists()
         && let Err(e) = std::fs::create_dir_all(&prefix) {
             tracing::error!("failed to create prefix dir: {}", e);
         }

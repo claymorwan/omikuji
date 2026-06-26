@@ -36,11 +36,16 @@ Item {
     ContextMenu {
         id: menu
         property int currentGameIndex: -1
+        property var currentPrefixInfo: ({})
 
         function setPosition(index, mouseX, mouseY) {
             if (!ctrl.gameModel) return
             let game = ctrl.gameModel.get_game(index)
             if (!game) return
+
+            let pinfo = {}
+            try { pinfo = JSON.parse(ctrl.gameModel.game_prefix_info(index) || "{}") } catch (e) { pinfo = {} }
+            currentPrefixInfo = pinfo
 
             let isFav = game.favourite || false
             let isEpic = game.sourceKind === "epic" && game.sourceAppId && game.sourceAppId.length > 0
@@ -76,7 +81,12 @@ Item {
             if (isEpic) {
                 built.push({ text: "Uninstall (Epic Games)", action: "uninstall_epic", danger: true })
             }
-            built.push({ text: "Remove", action: "remove", danger: true })
+            let removeItem = { text: "Remove", action: "remove", danger: true }
+            if (pinfo.hasPrefix) {
+                removeItem.shiftText = "Remove + prefix"
+                removeItem.shiftAction = "remove_prefix"
+            }
+            built.push(removeItem)
             items = built
 
             currentGameIndex = index
@@ -131,6 +141,18 @@ Item {
                     ctrl.gameModel.remove_game(idx)
                     ctrl.removeRequested(idx)
                     break
+                case "remove_prefix": {
+                    let g = ctrl.gameModel.get_game(idx)
+                    let info = menu.currentPrefixInfo || {}
+                    let nm = (g && g.name) ? g.name : "this game"
+                    let others = (info.gameCount || 1) - 1
+                    removeWithPrefixConfirm.title = "Remove " + nm + " + prefix?"
+                    removeWithPrefixConfirm.message = others > 0
+                        ? "This removes " + nm + " and deletes its prefix. " + others + (others === 1 ? " other game uses" : " other games use") + " this prefix and will lose it too. It won't be recoverable."
+                        : "This removes " + nm + " and deletes its prefix. It won't be recoverable."
+                    removeWithPrefixConfirm.show({ idx: idx })
+                    break
+                }
                 case "uninstall_epic": {
                     let g = ctrl.gameModel.get_game(idx)
                     if (g && g.gameId) {
@@ -165,6 +187,20 @@ Item {
         destructive: true
         onConfirmed: (payload) => {
             if (payload && payload.id && ctrl.gameModel) ctrl.gameModel.epic_uninstall(payload.id)
+        }
+    }
+
+    ConfirmDialog {
+        id: removeWithPrefixConfirm
+        anchors.fill: parent
+        confirmText: "Remove + delete"
+        cancelText: "Cancel"
+        destructive: true
+        onConfirmed: (payload) => {
+            if (payload && ctrl.gameModel) {
+                ctrl.gameModel.remove_game_with_prefix(payload.idx)
+                ctrl.removeRequested(payload.idx)
+            }
         }
     }
 }
