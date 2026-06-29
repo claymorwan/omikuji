@@ -44,7 +44,16 @@ async fn main() {
         return;
     }
 
-    unsafe { omikuji_app_init(); }
+    let had_style_override = std::env::var_os("QT_STYLE_OVERRIDE").is_some();
+    unsafe {
+        if !had_style_override {
+            std::env::set_var("QT_STYLE_OVERRIDE", "Fusion");
+        }
+        omikuji_app_init();
+        if !had_style_override {
+            std::env::remove_var("QT_STYLE_OVERRIDE");
+        }
+    }
 
     let ui = omikuji_core::ui_settings::UiSettings::load();
 
