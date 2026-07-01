@@ -217,12 +217,7 @@ fn build_steam_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfig>
     let mut command = build_steam_command(&appid, &game.launch.args);
 
     let mut env: HashMap<String, String> = std::env::vars().collect();
-    for (k, v) in &game.launch.env {
-        env.insert(k.clone(), v.clone());
-    }
-    if game.system.pulse_latency {
-        env.insert("PULSE_LATENCY_MSEC".to_string(), "60".to_string());
-    }
+    env.extend(game_env_pairs(game));
 
     apply_wrapping(&mut command, &mut env, game, true);
 
@@ -240,16 +235,13 @@ fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfi
 
     let mut command = vec!["flatpak".to_string(), "run".to_string()];
 
-    // env table + mangohud + pulse_latency get translated to --env= flags so they reach inside the sandbox
-    for (k, v) in &game.launch.env {
+    // game env + mangohud get translated to --env= flags so they reach inside the sandbox
+    for (k, v) in game_env_pairs(game) {
         command.push(format!("--env={}={}", k, v));
     }
     if game.graphics.mangohud && !game.graphics.gamescope.enabled {
         command.push("--env=MANGOHUD=1".to_string());
         command.push("--env=MANGOHUD_DLSYM=1".to_string());
-    }
-    if game.system.pulse_latency {
-        command.push("--env=PULSE_LATENCY_MSEC=60".to_string());
     }
     for (k, v) in crate::system_info::gpu_launch_env(&game.graphics.gpu) {
         command.push(format!("--env={}={}", k, v));
@@ -286,12 +278,7 @@ fn build_native_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfig
     }
 
     let mut env: HashMap<String, String> = std::env::vars().collect();
-    for (k, v) in &game.launch.env {
-        env.insert(k.clone(), v.clone());
-    }
-    if game.system.pulse_latency {
-        env.insert("PULSE_LATENCY_MSEC".to_string(), "60".to_string());
-    }
+    env.extend(game_env_pairs(game));
 
     apply_wrapping(&mut command, &mut env, game, true);
 
@@ -398,6 +385,23 @@ fn apply_kv_sets(sets: &[crate::ui_settings::KvSet], ids: &[String], mut apply: 
     }
 }
 
+fn game_env_pairs(game: &Game) -> Vec<(String, String)> {
+    let mut pairs = Vec::new();
+    if game.system.pulse_latency {
+        pairs.push(("PULSE_LATENCY_MSEC".to_string(), "60".to_string()));
+    }
+    for (k, v) in &game.launch.env {
+        pairs.push((k.clone(), v.clone()));
+    }
+    if !game.launch.env_sets.is_empty() {
+        let ui = crate::ui_settings::UiSettings::load();
+        apply_kv_sets(&ui.env_sets, &game.launch.env_sets, |key, value| {
+            pairs.push((key.to_string(), value.to_string()));
+        });
+    }
+    pairs
+}
+
 fn append_dll_override(env: &mut HashMap<String, String>, entry: &str) {
     let existing = env.get("WINEDLLOVERRIDES").map(|s| s.as_str()).unwrap_or("");
     let new_value = if existing.is_empty() {
@@ -493,32 +497,18 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
         }
     }
 
-    let set_ui = (!game.wine.dll_override_sets.is_empty() || !game.launch.env_sets.is_empty())
-        .then(crate::ui_settings::UiSettings::load);
-
-    if let Some(ui) = &set_ui {
+    if !game.wine.dll_override_sets.is_empty() {
+        let ui = crate::ui_settings::UiSettings::load();
         apply_kv_sets(&ui.dll_sets, &game.wine.dll_override_sets, |key, value| {
             append_dll_override(&mut env, &format!("{key}={value}"));
         });
-    }
-
-    if game.system.pulse_latency {
-        env.insert("PULSE_LATENCY_MSEC".to_string(), "60".to_string());
     }
 
     if game.is_epic() {
         env.insert("LEGENDARY_WRAPPER_EXE".to_string(), "C:\\windows\\command\\EpicGamesLauncher.exe".to_string());
     }
 
-    for (k, v) in &game.launch.env {
-        env.insert(k.clone(), v.clone());
-    }
-
-    if let Some(ui) = &set_ui {
-        apply_kv_sets(&ui.env_sets, &game.launch.env_sets, |key, value| {
-            env.insert(key.to_string(), value.to_string());
-        });
-    }
+    env.extend(game_env_pairs(game));
 
     env
 }
