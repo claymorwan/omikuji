@@ -566,6 +566,8 @@ impl Game {
             && let Some(v) = dgs.game_height { gs.game_height = v; }
         if gs.fps == gs_def.fps
             && let Some(v) = dgs.fps { gs.fps = v; }
+        if gs.refresh_rate == gs_def.refresh_rate
+            && let Some(v) = dgs.refresh_rate { gs.refresh_rate = v; }
         if gs.fullscreen == gs_def.fullscreen
             && let Some(v) = dgs.fullscreen { gs.fullscreen = v; }
         if gs.borderless == gs_def.borderless

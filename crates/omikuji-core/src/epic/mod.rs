@@ -338,8 +338,15 @@ pub fn find_installed_info(app_name: &str) -> Option<InstalledInfo> {
     let v: serde_json::Value = serde_json::from_str(&content).ok()?;
     let entry = v.get(app_name)?;
     let install_path = PathBuf::from(entry.get("install_path")?.as_str()?);
-    let exe_rel = entry.get("executable")?.as_str()?;
-    let executable = install_path.join(exe_rel);
+    let exe_rel = entry
+        .get("executable")
+        .and_then(|e| e.as_str())
+        .unwrap_or("");
+    let executable = if exe_rel.is_empty() {
+        PathBuf::new()
+    } else {
+        install_path.join(exe_rel)
+    };
     let title = entry.get("title").and_then(|t| t.as_str()).map(String::from);
     Some(InstalledInfo {
         install_path,

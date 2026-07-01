@@ -26,6 +26,18 @@ pub enum DownloadStatus {
 }
 
 impl DownloadStatus {
+    pub fn is_active(&self) -> bool {
+        matches!(
+            self,
+            Self::Queued
+                | Self::Starting
+                | Self::Downloading
+                | Self::Extracting
+                | Self::Patching
+                | Self::Paused
+        )
+    }
+
     // failure detail is dropped here on purpose; callers that need it read
     // the full status variant
     pub fn short(&self) -> &'static str {
@@ -439,17 +451,7 @@ impl DownloadManager {
             .unwrap()
             .entries
             .iter()
-            .filter(|e| {
-                matches!(
-                    e.status,
-                    DownloadStatus::Queued
-                        | DownloadStatus::Starting
-                        | DownloadStatus::Downloading
-                        | DownloadStatus::Extracting
-                        | DownloadStatus::Patching
-                        | DownloadStatus::Paused
-                )
-            })
+            .filter(|e| e.status.is_active())
             .count()
     }
 
@@ -804,17 +806,7 @@ fn queue_path() -> PathBuf {
 fn save_queue(entries: &[DownloadEntry]) {
     let active: Vec<&DownloadEntry> = entries
         .iter()
-        .filter(|e| {
-            matches!(
-                e.status,
-                DownloadStatus::Queued
-                    | DownloadStatus::Starting
-                    | DownloadStatus::Downloading
-                    | DownloadStatus::Extracting
-                    | DownloadStatus::Patching
-                    | DownloadStatus::Paused
-            )
-        })
+        .filter(|e| e.status.is_active())
         .collect();
 
     let path = queue_path();
