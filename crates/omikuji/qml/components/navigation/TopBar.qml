@@ -14,11 +14,14 @@ Item {
     property bool showDisplayOptions: false
     property real zoomValue: 1.0
     property int spacingValue: 16
+    property string sortValue: "default"
+    property bool showSort: false
     property alias searchText: searchInput.text
 
     signal addClicked()
     signal zoomMoved(real value)
     signal spacingMoved(int value)
+    signal sortSelected(string value)
     signal consoleModeClicked()
 
     height: 54
@@ -154,7 +157,10 @@ Item {
 
         zoomValue: root.zoomValue
         spacingValue: root.spacingValue
+        sortValue: root.sortValue
+        showSort: root.showSort
         onZoomMoved: (v) => root.zoomMoved(v)
         onSpacingMoved: (v) => root.spacingMoved(v)
+        onSortSelected: (v) => root.sortSelected(v)
     }
 }

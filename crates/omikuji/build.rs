@@ -209,7 +209,6 @@ fn main() {
                 "qml/components/navigation/Sidebar.qml",
                 "qml/components/navigation/SubNavRail.qml",
                 "qml/components/navigation/TopBar.qml",
-                "qml/components/navigation/WindowControls.qml",
                 // pages
                 "qml/components/pages/AddGamePage.qml",
                 "qml/components/pages/GameSettingsPage.qml",
@@ -257,6 +256,7 @@ fn main() {
                 "qml/components/widgets/M3Switch.qml",
                 "qml/components/widgets/M3TextField.qml",
                 "qml/components/widgets/PlayButton.qml",
+                "qml/components/widgets/PopupSurface.qml",
                 "qml/components/widgets/StatusBadge.qml",
                 "qml/components/widgets/StoreCardAction.qml",
                 "qml/components/widgets/Squircle.qml",

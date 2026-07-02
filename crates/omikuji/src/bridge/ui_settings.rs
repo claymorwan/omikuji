@@ -47,6 +47,7 @@ pub mod qobject {
         #[qproperty(f64, ui_scale, cxx_name = "uiScale")]
         #[qproperty(bool, muted_icons, cxx_name = "mutedIcons")]
         #[qproperty(QString, card_flow, cxx_name = "cardFlow")]
+        #[qproperty(QString, card_sort, cxx_name = "cardSort")]
         #[qproperty(QString, console_background, cxx_name = "consoleBackground")]
         #[qproperty(bool, follow_system_colors, cxx_name = "followSystemColors")]
         #[qproperty(bool, follow_system_font, cxx_name = "followSystemFont")]
@@ -164,6 +165,10 @@ pub mod qobject {
         fn apply_card_flow(self: Pin<&mut UiSettingsBridge>, value: &QString);
 
         #[qinvokable]
+        #[cxx_name = "applyCardSort"]
+        fn apply_card_sort(self: Pin<&mut UiSettingsBridge>, value: &QString);
+
+        #[qinvokable]
         #[cxx_name = "applyConsoleBackground"]
         fn apply_console_background(self: Pin<&mut UiSettingsBridge>, value: &QString);
 
@@ -265,6 +270,7 @@ pub struct UiSettingsRust {
     pub ui_scale: f64,
     pub muted_icons: bool,
     pub card_flow: cxx_qt_lib::QString,
+    pub card_sort: cxx_qt_lib::QString,
     pub console_background: cxx_qt_lib::QString,
     pub follow_system_colors: bool,
     pub follow_system_font: bool,
@@ -312,6 +318,7 @@ impl UiSettingsRust {
             ui_scale: s.display.scale,
             muted_icons: s.display.muted_icons,
             card_flow: cxx_qt_lib::QString::from(&s.display.card_flow),
+            card_sort: cxx_qt_lib::QString::from(&s.display.card_sort),
             console_background: cxx_qt_lib::QString::from(&s.console_mode.background),
             follow_system_colors: s.theme.follow_system_colors,
             follow_system_font: s.theme.follow_system_font,
@@ -398,6 +405,7 @@ impl qobject::UiSettingsBridge {
                 scale: self.ui_scale,
                 muted_icons: self.muted_icons,
                 card_flow: self.card_flow.to_string(),
+                card_sort: self.card_sort.to_string(),
             },
             theme: ThemeSettings {
                 follow_system_colors: self.follow_system_colors,
@@ -466,6 +474,14 @@ impl qobject::UiSettingsBridge {
         self.persist();
     }
 
+    fn apply_card_sort(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
+        let v = value.to_string();
+        let allowed = matches!(v.as_str(), "default" | "a-z" | "z-a");
+        let final_v = if allowed { value.clone() } else { cxx_qt_lib::QString::from("default") };
+        self.as_mut().set_card_sort(final_v);
+        self.persist();
+    }
+
     apply_setting!(qstr apply_console_background, set_console_background);
     apply_setting!(qstr apply_language, set_language);
 
@@ -493,6 +509,7 @@ impl qobject::UiSettingsBridge {
         self.as_mut().set_ui_scale(s.display.scale);
         self.as_mut().set_muted_icons(s.display.muted_icons);
         self.as_mut().set_card_flow(cxx_qt_lib::QString::from(&s.display.card_flow));
+        self.as_mut().set_card_sort(cxx_qt_lib::QString::from(&s.display.card_sort));
         self.as_mut().set_console_background(cxx_qt_lib::QString::from(&s.console_mode.background));
         self.as_mut().set_follow_system_colors(s.theme.follow_system_colors);
         self.as_mut().set_follow_system_font(s.theme.follow_system_font);

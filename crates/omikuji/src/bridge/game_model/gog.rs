@@ -1,7 +1,7 @@
 use std::pin::Pin;
 
-use cxx_qt::{CxxQtType, Threading};
-use cxx_qt_lib::{QModelIndex, QString};
+use cxx_qt::Threading;
+use cxx_qt_lib::QString;
 
 use omikuji_core::library::{Game, Library};
 use omikuji_core::media;
@@ -49,7 +49,7 @@ impl super::qobject::GameModel {
         runner_version: &QString,
     ) -> QString {
         use omikuji_core::library::{
-            default_color, GraphicsConfig, LaunchConfig, Metadata, RunnerConfig, SourceConfig, SystemConfig, WineConfig,
+            GraphicsConfig, LaunchConfig, Metadata, RunnerConfig, SourceConfig, SystemConfig, WineConfig,
         };
 
         let app_name_s = app_name.to_string();
@@ -74,19 +74,8 @@ impl super::qobject::GameModel {
 
         let mut game = Game {
             metadata: Metadata {
-                id: app_name_s.clone(),
-                name: title.clone(),
-                sort_name: String::new(),
-                slug: String::new(),
-                exe: info.executable.clone(),
-                color: default_color(),
-                playtime: 0.0,
-                last_played: String::new(),
-                banner: String::new(),
-                coverart: String::new(),
-                icon: String::new(),
-                favourite: false,
                 categories: vec!["GOG".to_string()],
+                ..Metadata::new(app_name_s.clone(), title.clone(), info.executable.clone())
             },
             source: SourceConfig {
                 kind: "gog".to_string(),
@@ -107,8 +96,6 @@ impl super::qobject::GameModel {
         };
         game.seed_from_defaults(&omikuji_core::defaults::Defaults::load());
 
-        let row = self.library.game.len() as i32;
-
         if let Err(e) = Library::save_game_static(&game) {
             tracing::error!("failed to save: {}", e);
             return QString::default();
@@ -122,11 +109,7 @@ impl super::qobject::GameModel {
             media::fetch_media_blocking_with(&id_for_media, &name_for_media, on_asset);
         });
 
-        self.as_mut().begin_insert_rows(&QModelIndex::default(), row, row);
-        self.as_mut().rust_mut().get_mut().library.game.push(game);
-        let count = self.library.game.len() as i32;
-        self.as_mut().set_count(count);
-        self.as_mut().end_insert_rows();
+        self.as_mut().insert_game_sorted(game);
 
         tracing::info!("imported '{}' as id '{}'", title, app_name_s);
         QString::from(&app_name_s)

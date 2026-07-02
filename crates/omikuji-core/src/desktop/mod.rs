@@ -305,6 +305,7 @@ pub fn duplicate_game(game: &Game) -> Result<Game> {
     new_game.metadata.name = format!("{} (Copy)", game.metadata.name);
     new_game.metadata.playtime = 0.0;
     new_game.metadata.last_played = String::new();
+    new_game.metadata.added = crate::library::rfc3339_now();
 
     Library::save_game_static(&new_game)?;
 

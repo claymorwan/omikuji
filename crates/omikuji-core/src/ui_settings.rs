@@ -160,11 +160,12 @@ pub struct DisplaySettings {
     pub scale: f64,
     pub muted_icons: bool,
     pub card_flow: String,
+    pub card_sort: String,
 }
 
 impl Default for DisplaySettings {
     fn default() -> Self {
-        Self { scale: 1.0, muted_icons: false, card_flow: "center".into() }
+        Self { scale: 1.0, muted_icons: false, card_flow: "center".into(), card_sort: "default".into() }
     }
 }
 

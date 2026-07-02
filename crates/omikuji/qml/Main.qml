@@ -46,6 +46,9 @@ ApplicationWindow {
         function onThemeChanged() {
             theme.overrides = JSON.parse(uiSettings.overridesJson())
         }
+        function onCardSortChanged() {
+            gameModel.applySortMode(uiSettings.cardSort)
+        }
     }
 
     UiSettingsBridge {
@@ -637,11 +640,14 @@ property real cardZoom: uiSettings.cardZoom
             || root.currentView === "hoyo"
         zoomValue: uiSettings.cardZoom
         spacingValue: uiSettings.cardSpacing
+        sortValue: uiSettings.cardSort
+        showSort: root.currentView === "library"
 
         onAddClicked: root.activeModal = "addGame"
         onConsoleModeClicked: gameModel.launch_console_mode()
         onZoomMoved: (v) => uiSettings.applyCardZoom(v)
         onSpacingMoved: (v) => uiSettings.applyCardSpacing(v)
+        onSortSelected: (v) => uiSettings.applyCardSort(v)
     }
 
     Item {

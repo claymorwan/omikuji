@@ -239,6 +239,28 @@ Item {
             }
 
             SettingsRow {
+                label: qsTr("Library sort")
+                labelWidth: root.rowLabelWidth
+                width: parent.width
+
+                M3Dropdown {
+                    width: 200
+                    options: [
+                        { label: qsTr("Date added"), value: "default" },
+                        { label: qsTr("Name A-Z"),   value: "a-z" },
+                        { label: qsTr("Name Z-A"),   value: "z-a" }
+                    ]
+                    currentIndex: {
+                        let v = uiSettings ? uiSettings.cardSort : "default"
+                        if (v === "a-z") return 1
+                        if (v === "z-a") return 2
+                        return 0
+                    }
+                    onSelected: (value) => uiSettings.applyCardSort(value)
+                }
+            }
+
+            SettingsRow {
                 label: qsTr("Muted icons")
                 description: qsTr("Dim icons to ~55% instead of full contrast")
                 labelWidth: root.rowLabelWidth

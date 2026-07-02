@@ -141,6 +141,10 @@ pub mod qobject {
         fn discard_draft(self: Pin<&mut GameModel>);
 
         #[qinvokable]
+        #[cxx_name = "applySortMode"]
+        fn apply_sort_mode(self: Pin<&mut GameModel>, value: &QString);
+
+        #[qinvokable]
         fn begin_edit_game(self: Pin<&mut GameModel>, index: i32) -> QMap_QString_QVariant;
 
         #[qinvokable]
@@ -540,14 +544,16 @@ pub mod qobject {
     impl cxx_qt::Threading for GameModel {}
 }
 
+use std::cmp::Ordering;
 use std::path::PathBuf;
 use std::pin::Pin;
 
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QByteArray, QHash, QHashPair_i32_QByteArray, QModelIndex, QMap, QMapPair_QString_QVariant, QString, QVariant};
 
-use omikuji_core::library::{Game, Library};
+use omikuji_core::library::{rfc3339_now, Game, Library};
 use omikuji_core::media::{self, MediaType};
+use omikuji_core::ui_settings::UiSettings;
 
 const ROLE_ID: i32 = 0x0100;
 const ROLE_NAME: i32 = 0x0101;
@@ -563,19 +569,49 @@ const ROLE_FAVOURITE: i32 = 0x010A;
 const ROLE_CATEGORIES: i32 = 0x010B;
 const ROLE_RUNNER_TYPE: i32 = 0x010C;
 
+#[derive(Clone, Copy, PartialEq, Default)]
+enum SortMode {
+    #[default]
+    Added,
+    NameAsc,
+    NameDesc,
+}
+
+impl SortMode {
+    fn parse(v: &str) -> Self {
+        match v {
+            "a-z" => Self::NameAsc,
+            "z-a" => Self::NameDesc,
+            _ => Self::Added,
+        }
+    }
+
+    fn cmp(self, a: &Game, b: &Game) -> Ordering {
+        let added = a.added_key().cmp(&b.added_key());
+        match self {
+            Self::Added => added,
+            Self::NameAsc => a.display_sort_key().cmp(&b.display_sort_key()).then(added),
+            Self::NameDesc => b.display_sort_key().cmp(&a.display_sort_key()).then(added),
+        }
+    }
+}
+
 pub struct GameModelRust {
     library: Library,
     count: i32,
     // in-memory staging slot for the add-game page. cleared on commit/discard.
     draft: Option<Game>,
     preparing: bool,
+    sort_mode: SortMode,
 }
 
 impl Default for GameModelRust {
     fn default() -> Self {
-        let library = Library::load().unwrap_or_default();
+        let mut library = Library::load().unwrap_or_default();
+        let sort_mode = SortMode::parse(&UiSettings::load().display.card_sort);
+        library.game.sort_by(|a, b| sort_mode.cmp(a, b));
         let count = library.game.len() as i32;
-        Self { library, count, draft: None, preparing: false }
+        Self { library, count, draft: None, preparing: false, sort_mode }
     }
 }
 
@@ -928,6 +964,43 @@ impl qobject::GameModel {
         apply_field_to_game(game, &k, &v)
     }
 
+    pub(crate) fn insert_game_sorted(mut self: Pin<&mut Self>, game: Game) -> i32 {
+        let mode = self.sort_mode;
+        let row = self
+            .library
+            .game
+            .partition_point(|g| mode.cmp(g, &game) != Ordering::Greater) as i32;
+        self.as_mut().begin_insert_rows(&QModelIndex::default(), row, row);
+        self.as_mut().rust_mut().get_mut().library.game.insert(row as usize, game);
+        let count = self.library.game.len() as i32;
+        self.as_mut().set_count(count);
+        self.as_mut().end_insert_rows();
+        row
+    }
+
+    fn resort_reset(mut self: Pin<&mut Self>) {
+        let mode = self.sort_mode;
+        if self
+            .library
+            .game
+            .is_sorted_by(|a, b| mode.cmp(a, b) != Ordering::Greater)
+        {
+            return;
+        }
+        self.as_mut().begin_reset_model();
+        self.as_mut().rust_mut().get_mut().library.game.sort_by(|a, b| mode.cmp(a, b));
+        self.as_mut().end_reset_model();
+    }
+
+    fn apply_sort_mode(mut self: Pin<&mut Self>, value: &QString) {
+        let mode = SortMode::parse(&value.to_string());
+        if mode == self.sort_mode {
+            return;
+        }
+        self.as_mut().rust_mut().get_mut().sort_mode = mode;
+        self.resort_reset();
+    }
+
     // on failure, draft is preserved so the user can fix fields and retry (a bit useless most of the times but may it be a connection error)
     fn commit_new_game(mut self: Pin<&mut Self>) -> QString {
         let Some(mut game) = self.as_mut().rust_mut().get_mut().draft.take() else {
@@ -943,10 +1016,10 @@ impl qobject::GameModel {
         }
 
         game.metadata.name = game.metadata.name.trim().to_string();
+        game.metadata.added = rfc3339_now();
 
         let game_id = game.metadata.id.clone();
         let game_name = game.metadata.name.clone();
-        let row = self.library.game.len() as i32;
 
         if let Err(e) = Library::save_game_static(&game) {
             tracing::error!("commit_new_game: failed to save: {}", e);
@@ -954,12 +1027,9 @@ impl qobject::GameModel {
             return QString::default();
         }
 
-        self.as_mut().begin_insert_rows(&QModelIndex::default(), row, row);
-        self.as_mut().rust_mut().get_mut().library.game.push(game);
-        let count = self.library.game.len() as i32;
-        self.as_mut().set_count(count);
-        self.as_mut().end_insert_rows();
+        self.as_mut().insert_game_sorted(game);
 
+        let new_id = QString::from(&*game_id);
         let qt_thread = self.as_mut().qt_thread();
         let on_asset = media_changed_notifier(qt_thread, game_id.clone());
         std::thread::spawn(move || {
@@ -979,7 +1049,7 @@ impl qobject::GameModel {
             }
         });
 
-        QString::from(&*self.library.game.last().unwrap().metadata.id)
+        new_id
     }
 
     fn discard_draft(mut self: Pin<&mut Self>) {
@@ -1017,6 +1087,7 @@ impl qobject::GameModel {
         let model_idx = self.as_ref().model_index(idx as i32, 0, &QModelIndex::default());
         let roles = cxx_qt_lib::QList::<i32>::default();
         self.as_mut().data_changed(&model_idx, &model_idx, &roles);
+        self.as_mut().resort_reset();
         true
     }
 
@@ -1131,7 +1202,9 @@ impl qobject::GameModel {
         };
 
         match Library::load() {
-            Ok(new_lib) => {
+            Ok(mut new_lib) => {
+                let mode = self.sort_mode;
+                new_lib.game.sort_by(|a, b| mode.cmp(a, b));
                 let new_count = new_lib.game.len() as i32;
                 self.as_mut().begin_reset_model();
                 self.as_mut().rust_mut().get_mut().library = new_lib;
@@ -1402,21 +1475,7 @@ impl qobject::GameModel {
             Ok(new_game) => {
                 let new_name = new_game.metadata.name.clone();
                 let new_id = new_game.metadata.id.clone();
-                let row = self.library.game.len() as i32;
-
-                self.as_mut()
-                    .begin_insert_rows(&QModelIndex::default(), row, row);
-
-                self.as_mut()
-                    .rust_mut()
-                    .get_mut()
-                    .library
-                    .game
-                    .push(new_game);
-
-                let count = self.library.game.len() as i32;
-                self.as_mut().set_count(count);
-                self.as_mut().end_insert_rows();
+                self.as_mut().insert_game_sorted(new_game);
 
                 tracing::info!("duplicated game '{}' -> '{}' (id: {})",
                     game.metadata.name, new_name, new_id);

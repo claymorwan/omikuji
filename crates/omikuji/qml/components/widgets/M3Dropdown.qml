@@ -133,7 +133,7 @@ Item {
         onPressed: popup.close()
     }
 
-    Rectangle {
+    PopupSurface {
         id: popup
         parent: root.popupHost
         visible: false
@@ -152,9 +152,6 @@ Item {
         }
         z: 50
         radius: theme.radius.sm
-        color: theme.bg
-        border.width: 1
-        border.color: theme.surfaceBorder
 
         function open() {
             if (!popup.parent) return
@@ -222,7 +219,11 @@ Item {
                         width: col.width
                         height: isHeader ? (index === 0 ? 22 : 28) : 40
                         radius: theme.radius.xs
-                        color: !isHeader && optionMouse.containsMouse ? theme.surfaceHover : "transparent"
+                        color: !isHeader && optionMouse.containsMouse ? theme.alpha(theme.text, 0.14) : "transparent"
+
+                        Behavior on color {
+                            ColorAnimation { duration: 80 }
+                        }
 
                         // group caption, non-interactive
                         Text {

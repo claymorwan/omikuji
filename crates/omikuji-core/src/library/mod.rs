@@ -42,6 +42,8 @@ pub struct Metadata {
     #[serde(default)]
     pub last_played: String,
     #[serde(default)]
+    pub added: String,
+    #[serde(default)]
     pub banner: String,
     #[serde(default)]
     pub coverart: String,
@@ -246,6 +248,35 @@ pub fn default_color() -> String {
     "#1a1a2e".to_string()
 }
 
+fn rfc3339_of(t: std::time::SystemTime) -> String {
+    chrono::DateTime::<chrono::Utc>::from(t).to_rfc3339_opts(chrono::SecondsFormat::Millis, true)
+}
+
+pub fn rfc3339_now() -> String {
+    rfc3339_of(std::time::SystemTime::now())
+}
+
+impl Metadata {
+    pub fn new(id: String, name: String, exe: PathBuf) -> Self {
+        Self {
+            id,
+            name,
+            sort_name: String::new(),
+            slug: String::new(),
+            exe,
+            color: default_color(),
+            playtime: 0.0,
+            last_played: String::new(),
+            added: rfc3339_now(),
+            banner: String::new(),
+            coverart: String::new(),
+            icon: String::new(),
+            favourite: false,
+            categories: Vec::new(),
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct Library {
     pub game: Vec<Game>,
@@ -298,10 +329,24 @@ impl Library {
             }
 
             match Self::load_game(&path) {
-                Ok(game) => games.push(game),
+                Ok(mut game) => {
+                    if game.metadata.added.is_empty() {
+                        let t = fs::metadata(&path)
+                            .ok()
+                            .and_then(|m| m.created().or_else(|_| m.modified()).ok())
+                            .unwrap_or(std::time::UNIX_EPOCH);
+                        game.metadata.added = rfc3339_of(t);
+                        if let Ok(contents) = toml::to_string_pretty(&game) {
+                            let _ = fs::write(&path, contents);
+                        }
+                    }
+                    games.push(game)
+                }
                 Err(e) => tracing::warn!("failed to load game {}: {}", path.display(), e),
             }
         }
+
+        games.sort_by(|a, b| a.added_key().cmp(&b.added_key()));
 
         Ok(Self { game: games })
     }
@@ -443,21 +488,7 @@ impl Game {
         runner_version: Option<String>,
     ) -> Self {
         Self {
-            metadata: Metadata {
-                id: generate_id(),
-                name,
-                sort_name: String::new(),
-                slug: String::new(),
-                exe,
-                color: default_color(),
-                playtime: 0.0,
-                last_played: String::new(),
-                banner: String::new(),
-                coverart: String::new(),
-                icon: String::new(),
-                favourite: false,
-                categories: Vec::new(),
-            },
+            metadata: Metadata::new(generate_id(), name, exe),
             source: SourceConfig::default(),
             runner: RunnerConfig {
                 runner_type: runner_type.unwrap_or_default(),
@@ -476,6 +507,16 @@ impl Game {
     pub fn id(&self) -> &str { &self.metadata.id }
     pub fn name(&self) -> &str { &self.metadata.name }
     pub fn exe(&self) -> &PathBuf { &self.metadata.exe }
+
+    pub fn added_key(&self) -> (&str, &str) {
+        (&self.metadata.added, &self.metadata.id)
+    }
+
+    pub fn display_sort_key(&self) -> String {
+        let m = &self.metadata;
+        let s = if m.sort_name.trim().is_empty() { &m.name } else { &m.sort_name };
+        s.trim().to_lowercase()
+    }
 
     // epic games are launched via legendary, not wine directly, i mean still wine but through legendary
     pub fn is_epic(&self) -> bool {
