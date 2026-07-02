@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 
 import "."
-import "../widgets"
+import "../controls"
 
 // these toggles have side-effects beyond toml writes, so refreshConfig instead of updateField
 Item {

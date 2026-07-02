@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import ".."
-import "../widgets/RunnerGrouping.js" as RG
+import "../lib/RunnerGrouping.js" as RG
 
 Item {
     id: row

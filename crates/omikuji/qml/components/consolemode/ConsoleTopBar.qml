@@ -1,7 +1,7 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
 import ".."
-import "../widgets"
+import "../primitives"
 
 Row {
     id: bar

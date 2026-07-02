@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
-import "."
+import "../primitives"
 
 
 // built on ListView so add/remove gives smooth stack shifts, not instant pops

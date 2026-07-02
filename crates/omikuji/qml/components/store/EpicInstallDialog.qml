@@ -1,8 +1,10 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import "../widgets"
-import "../widgets/RunnerGrouping.js" as RG
+import "../lib/RunnerGrouping.js" as RG
+import "../controls"
+import "../dialogs"
+import "../primitives"
 
 DialogCard {
     id: root

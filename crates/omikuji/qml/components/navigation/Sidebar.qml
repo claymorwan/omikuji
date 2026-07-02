@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Effects
-import "../widgets"
 import "../library"
 
 

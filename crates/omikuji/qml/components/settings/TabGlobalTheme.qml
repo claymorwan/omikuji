@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Dialogs
 
 import "."
-import "../widgets"
+import "../controls"
 
 Item {
     id: root

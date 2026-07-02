@@ -2,8 +2,9 @@ import QtQuick
 import QtQuick.Layouts
 
 import "."
-import "../widgets"
-import "../widgets/RunnerGrouping.js" as RG
+import "../lib/RunnerGrouping.js" as RG
+import "../controls"
+import "../primitives"
 
 Item {
     id: root

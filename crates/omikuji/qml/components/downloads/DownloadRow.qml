@@ -1,8 +1,10 @@
 import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
+import "../controls"
+import "../popups"
+import "../primitives"
 
-import "../widgets"
 
 Item {
     id: row

@@ -1,8 +1,8 @@
 import QtQuick
 import QtQuick.Controls
 
-import "../widgets"
-import "../widgets/RunnerGrouping.js" as RG
+import "../lib/RunnerGrouping.js" as RG
+import "../controls"
 
 DialogCard {
     id: root

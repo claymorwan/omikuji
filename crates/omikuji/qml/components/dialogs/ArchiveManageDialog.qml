@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Controls
+import "../controls"
+import "../primitives"
 
-import "../widgets"
 
 DialogCard {
     id: root

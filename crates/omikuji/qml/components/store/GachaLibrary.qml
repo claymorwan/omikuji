@@ -1,8 +1,9 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
+import "../cards"
+import "../primitives"
 
-import "../widgets"
 
 Item {
     id: root

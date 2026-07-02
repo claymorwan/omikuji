@@ -3,7 +3,8 @@ import QtQuick.Controls
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import ".."
-import "../widgets"
+import "../controls"
+import "../primitives"
 
 Item {
     id: root

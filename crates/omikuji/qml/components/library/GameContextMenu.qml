@@ -1,5 +1,6 @@
 import QtQuick
 import "../dialogs"
+import "../popups"
 
 Item {
     id: ctrl

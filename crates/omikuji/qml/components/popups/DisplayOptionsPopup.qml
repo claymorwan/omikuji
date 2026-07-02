@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
+import "../controls"
 
-import "."
 
 Popup {
     id: root

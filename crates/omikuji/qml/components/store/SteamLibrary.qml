@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls
+import "../cards"
 
-import "../widgets"
 
 Item {
     id: root

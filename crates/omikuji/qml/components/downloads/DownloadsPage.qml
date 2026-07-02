@@ -4,7 +4,7 @@ import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 
 import "."
-import "../widgets"
+import "../primitives"
 
 Item {
     id: root

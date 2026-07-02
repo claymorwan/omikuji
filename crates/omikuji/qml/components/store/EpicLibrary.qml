@@ -3,7 +3,9 @@ import QtQuick.Controls
 import QtQuick.Layouts
 
 import omikuji 1.0
-import "../widgets"
+import "../cards"
+import "../controls"
+import "../primitives"
 
 Item {
     id: root

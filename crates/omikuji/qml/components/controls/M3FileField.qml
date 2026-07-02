@@ -1,6 +1,6 @@
 import QtQuick
 import QtCore
-import "."
+import "../primitives"
 
 Item {
     id: root

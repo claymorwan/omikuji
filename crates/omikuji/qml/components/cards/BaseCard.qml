@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
-import "."
+import "../popups"
+import "../primitives"
 
 Item {
     id: root

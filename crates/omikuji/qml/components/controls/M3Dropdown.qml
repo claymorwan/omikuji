@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
-import "."
+import "../popups"
+import "../primitives"
 
 Item {
     id: root
@@ -143,7 +144,7 @@ Item {
         // clamp against the window not the popup parent, so a small dialog card doestn shrink the dropdown to nothing
         height: {
             if (!visible) return 0
-            var wanted = col.height + 8
+            var wanted = col.height + 16
             var win = root.Window
             if (!win || !parent) return wanted
             var topInWin = parent.mapToItem(win.contentItem, x, y).y
@@ -197,7 +198,7 @@ Item {
         Flickable {
             id: popupFlick
             anchors.fill: parent
-            anchors.margins: 4
+            anchors.margins: 8
             contentWidth: width
             contentHeight: col.height
             clip: true
@@ -219,11 +220,11 @@ Item {
                         width: col.width
                         height: isHeader ? (index === 0 ? 22 : 28) : 40
                         radius: theme.radius.xs
-                        color: !isHeader && optionMouse.containsMouse ? theme.alpha(theme.text, 0.14) : "transparent"
-
-                        Behavior on color {
-                            ColorAnimation { duration: 80 }
-                        }
+                        color: !isHeader && optionMouse.containsMouse
+                            ? (index === root.currentIndex
+                                ? theme.alpha(theme.accent, 0.18)
+                                : theme.alpha(theme.text, 0.14))
+                            : "transparent"
 
                         // group caption, non-interactive
                         Text {

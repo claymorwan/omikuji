@@ -1,5 +1,5 @@
 import QtQuick
-import "../widgets"
+import "../cards"
 
 // dont re-declare required props here, QML rejects the redeclaration and model roles never reach the card
 BaseCard {

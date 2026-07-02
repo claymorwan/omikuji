@@ -1,7 +1,9 @@
 import QtQuick
 import QtQuick.Controls
+import "../controls"
+import "../popups"
+import "../primitives"
 
-import "../widgets"
 
 Item {
     id: root

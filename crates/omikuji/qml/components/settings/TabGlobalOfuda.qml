@@ -1,7 +1,8 @@
 import QtQuick
 
 import "."
-import "../widgets"
+import "../controls"
+import "../primitives"
 
 Item {
     id: root

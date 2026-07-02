@@ -1,5 +1,5 @@
 import QtQuick
-import "../widgets"
+import "../primitives"
 
 
 Item {

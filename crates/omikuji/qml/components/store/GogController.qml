@@ -1,5 +1,4 @@
 import QtQuick
-import "../dialogs"
 
 Item {
     id: ctrl

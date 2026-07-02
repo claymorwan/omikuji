@@ -1,7 +1,7 @@
 import QtQuick
-import "../widgets"
-import "../widgets/RunnerGrouping.js" as RG
+import "../lib/RunnerGrouping.js" as RG
 import "."
+import "../cards"
 
 Item {
     id: root

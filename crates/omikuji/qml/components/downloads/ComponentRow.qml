@@ -1,7 +1,8 @@
 import QtQuick
 import QtQuick.Layouts
+import "../controls"
+import "../primitives"
 
-import "../widgets"
 
 Rectangle {
     id: row

@@ -10,9 +10,9 @@ import "components/dialogs"
 import "components/downloads"
 import "components/library"
 import "components/navigation"
-import "components/pages"
 import "components/store"
-import "components/widgets"
+import "components/modals"
+import "components/popups"
 
 /*
 yes this is cursed. yes it works. we ballin

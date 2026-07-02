@@ -1,8 +1,9 @@
 import QtQuick
 import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
-import "../widgets"
 import "../navigation"
+import "../controls"
+import "../primitives"
 
 Item {
     id: root
