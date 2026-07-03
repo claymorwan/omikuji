@@ -22,6 +22,14 @@
     </p>
   </description>
   <releases>
+    <release version="0.5.2" date="2026-07-03">
+      <description>
+        <ul>
+          <li>Main library cards A-Z/Z-A sorting</li>
+          <li>M3Dropdown widget polish</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.1" date="2026-07-02">
       <description>
         <ul>
