@@ -1302,6 +1302,9 @@ impl qobject::GameModel {
             Ok(mut new_lib) => {
                 let mode = self.sort_mode;
                 new_lib.game.sort_by(|a, b| mode.cmp(a, b));
+                if new_lib.game == self.library.game {
+                    return QString::from(&*selected_id);
+                }
                 let new_count = new_lib.game.len() as i32;
                 self.as_mut().begin_reset_model();
                 self.as_mut().rust_mut().get_mut().library = new_lib;

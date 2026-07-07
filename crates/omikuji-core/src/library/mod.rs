@@ -6,7 +6,7 @@ use std::path::PathBuf;
 
 
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Game {
     #[serde(flatten)]
     pub metadata: Metadata,
@@ -26,7 +26,7 @@ pub struct Game {
     pub source: SourceConfig,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Metadata {
     pub id: String,
     pub name: String,
@@ -62,7 +62,7 @@ pub struct Metadata {
 // kind values: "" (manual), "epic", "steam", "gog", "gacha"...
 // honestly idk if i should use the relative epic/gog/gacha badges in the library for these games. cause for steam *steam* launches them, while installing these three latter stores you're still launching
 // them on local with your own custom wine stuff, so i wonder... i wonder i wonder i wonder
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct SourceConfig {
     #[serde(default)]
     pub kind: String,
@@ -82,7 +82,7 @@ pub struct SourceConfig {
     pub patch: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[derive(Default)]
 pub struct RunnerConfig {
     #[serde(alias = "runner_type", rename = "type", default)]
@@ -90,7 +90,7 @@ pub struct RunnerConfig {
 }
 
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WineConfig {
     #[serde(default)]
     pub version: String,
@@ -174,7 +174,7 @@ impl Default for WineConfig {
     }
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct LaunchConfig {
     #[serde(default)]
     pub args: Vec<String>,
@@ -192,7 +192,7 @@ pub struct LaunchConfig {
     pub env_sets: Vec<String>,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct GraphicsConfig {
     #[serde(default)]
     pub mangohud: bool,
@@ -202,7 +202,7 @@ pub struct GraphicsConfig {
     pub gamescope: GamescopeConfig,
 }
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct GamescopeConfig {
     #[serde(default)]
     pub enabled: bool,
@@ -233,7 +233,7 @@ pub struct GamescopeConfig {
 }
 
 
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct SystemConfig {
     #[serde(default)]
     pub gamemode: bool,
