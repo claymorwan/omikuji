@@ -22,6 +22,14 @@
     </p>
   </description>
   <releases>
+    <release version="0.5.3" date="2026-07-08">
+      <description>
+        <ul>
+          <li>Main library cards drag and drop with custom order.</li>
+          <li>Pre-launch scripts now executing before resolving the executable.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.5.2" date="2026-07-03">
       <description>
         <ul>
