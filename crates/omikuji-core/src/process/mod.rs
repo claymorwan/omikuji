@@ -75,21 +75,6 @@ impl ProcessManager {
                 tracing::warn!("cloud save download failed: {} (launching anyway)", e);
             }
 
-        if !config.pre_launch_script.is_empty() {
-            tracing::info!("running pre-launch script: {}", config.pre_launch_script);
-            let status = std::process::Command::new("sh")
-                .arg("-c")
-                .arg(&config.pre_launch_script)
-                .current_dir(&config.working_dir)
-                .envs(&config.env)
-                .status();
-            match status {
-                Ok(s) if !s.success() => tracing::warn!("pre-launch script exited with: {}", s),
-                Err(e) => tracing::error!("pre-launch script failed: {}", e),
-                _ => {}
-            }
-        }
-
         // drop stale in-memory log from the previous session before streaming new lines
         crate::game_logs::reset_log(&config.game_id);
 
@@ -320,7 +305,7 @@ lazy_static::lazy_static! {
     static ref EXITED_GAMES: Mutex<VecDeque<String>> = Mutex::new(VecDeque::new());
 }
 
-fn notify_game_exited(game_id: &str) {
+pub fn notify_game_exited(game_id: &str) {
     if let Ok(mut queue) = EXITED_GAMES.lock() {
         queue.push_back(game_id.to_string());
         while queue.len() > 10 {

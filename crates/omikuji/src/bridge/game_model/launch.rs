@@ -146,56 +146,30 @@ impl super::qobject::GameModel {
             );
         }
 
-        match omikuji_core::launch::build_launch(game) {
-            Ok(config) => {
-                tracing::info!("launching '{}': {:?}", game.metadata.name, config.command);
-
-                // spawn os thread + build fresh runtime: we're already inside the #[tokio::main] runtime, cant block_on from here directly
-                let game_name = game.metadata.name.clone();
-                let game_id = game.metadata.id.clone();
-                let logs_dir = omikuji_core::logs_dir();
-                std::thread::spawn(move || {
-                    let rt = tokio::runtime::Runtime::new().unwrap();
-                    rt.block_on(async {
-                        match omikuji_core::process::launch_game(&config).await {
-                            Ok(proc_id) => {
-                                tracing::info!("game '{}' launched, process id: {:?}", game_name, proc_id);
-                                tracing::debug!("logs: {}", logs_dir.display());
-                            }
-                            Err(e) => {
-                                tracing::error!("failed to launch '{}': {}", game_name, e);
-                                omikuji_core::process::notify_error(
-                                    omikuji_core::process::ErrorNotification {
-                                        game_id,
-                                        title: "Couldn't launch".to_string(),
-                                        message: e.to_string(),
-                                        action: omikuji_core::process::ErrorAction::OpenGameSettings,
-                                    },
-                                );
-                            }
-                        }
-                    });
-                });
-
-                true
+        if game.launch.pre_launch_script.is_empty() {
+            match omikuji_core::launch::build_launch(game) {
+                Ok(config) => {
+                    spawn_launch_thread(config);
+                    true
+                }
+                Err(e) => {
+                    tracing::error!("failed to build launch config: {}", e);
+                    notify_launch_failed(game.metadata.id.clone(), &e);
+                    false
+                }
             }
-            Err(e) => {
-                tracing::error!("failed to build launch config: {}", e);
-                let action = if e.downcast_ref::<omikuji_core::launch::ComponentMissing>().is_some() {
-                    omikuji_core::process::ErrorAction::OpenGlobalSettings
-                } else {
-                    omikuji_core::process::ErrorAction::OpenGameSettings
-                };
-                omikuji_core::process::notify_error(
-                    omikuji_core::process::ErrorNotification {
-                        game_id: game.metadata.id.clone(),
-                        title: "Couldn't launch".to_string(),
-                        message: e.to_string(),
-                        action,
-                    },
-                );
-                false
-            }
+        } else {
+            let game = game.clone();
+            std::thread::spawn(move || {
+                match omikuji_core::launch::prepare_launch(&game) {
+                    Ok(config) => spawn_launch_thread(config),
+                    Err(e) => {
+                        tracing::error!("failed to build launch config: {}", e);
+                        notify_launch_failed(game.metadata.id.clone(), &e);
+                    }
+                }
+            });
+            true
         }
     }
 
@@ -406,4 +380,47 @@ fn blocking_check_gacha_update(app_id: &str) -> Option<GachaUpdateInfo> {
     .join()
     .ok()
     .flatten()
+}
+
+fn spawn_launch_thread(config: omikuji_core::launch::LaunchConfig) {
+    tracing::info!("launching '{}': {:?}", config.game_name, config.command);
+    let logs_dir = omikuji_core::logs_dir();
+    std::thread::spawn(move || {
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            match omikuji_core::process::launch_game(&config).await {
+                Ok(proc_id) => {
+                    tracing::info!("game '{}' launched, process id: {:?}", config.game_name, proc_id);
+                    tracing::debug!("logs: {}", logs_dir.display());
+                }
+                Err(e) => {
+                    tracing::error!("failed to launch '{}': {}", config.game_name, e);
+                    omikuji_core::process::notify_game_exited(&config.game_id);
+                    omikuji_core::process::notify_error(
+                        omikuji_core::process::ErrorNotification {
+                            game_id: config.game_id.clone(),
+                            title: "Couldn't launch".to_string(),
+                            message: e.to_string(),
+                            action: omikuji_core::process::ErrorAction::OpenGameSettings,
+                        },
+                    );
+                }
+            }
+        });
+    });
+}
+
+fn notify_launch_failed(game_id: String, e: &omikuji_core::anyhow::Error) {
+    omikuji_core::process::notify_game_exited(&game_id);
+    let action = if e.downcast_ref::<omikuji_core::launch::ComponentMissing>().is_some() {
+        omikuji_core::process::ErrorAction::OpenGlobalSettings
+    } else {
+        omikuji_core::process::ErrorAction::OpenGameSettings
+    };
+    omikuji_core::process::notify_error(omikuji_core::process::ErrorNotification {
+        game_id,
+        title: "Couldn't launch".to_string(),
+        message: e.to_string(),
+        action,
+    });
 }

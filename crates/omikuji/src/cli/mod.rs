@@ -164,7 +164,7 @@ fn launch_and_wait(game: &Game) -> i32 {
         return 1;
     }
 
-    let config = match launch::build_launch(game) {
+    let config = match launch::prepare_launch(game) {
         Ok(c) => c,
         Err(e) => {
             tracing::error!("failed to build launch config: {}", e);

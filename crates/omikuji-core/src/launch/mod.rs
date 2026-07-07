@@ -24,7 +24,6 @@ pub struct LaunchConfig {
     pub working_dir: PathBuf,
     pub game_id: String,
     pub game_name: String,
-    pub pre_launch_script: String,
     pub post_exit_script: String,
 }
 
@@ -36,7 +35,6 @@ impl LaunchConfig {
             working_dir,
             game_id: game.metadata.id.clone(),
             game_name: game.metadata.name.clone(),
-            pre_launch_script: game.launch.pre_launch_script.clone(),
             post_exit_script: game.launch.post_exit_script.clone(),
         }
     }
@@ -72,7 +70,69 @@ impl WineVariant {
     }
 }
 
+pub fn prepare_launch(game: &Game) -> Result<LaunchConfig> {
+    let config = assemble_launch(game)?;
+    run_pre_launch_script(game, &config);
+    validate_exe(game)?;
+    Ok(config)
+}
+
 pub fn build_launch(game: &Game) -> Result<LaunchConfig> {
+    let config = assemble_launch(game)?;
+    validate_exe(game)?;
+    Ok(config)
+}
+
+fn run_pre_launch_script(game: &Game, config: &LaunchConfig) {
+    let script = &game.launch.pre_launch_script;
+    if script.is_empty() {
+        return;
+    }
+    tracing::info!("running pre-launch script: {}", script);
+    let cwd = if config.working_dir.exists() {
+        config.working_dir.clone()
+    } else {
+        dirs::home_dir().unwrap_or_else(|| PathBuf::from("/"))
+    };
+    let status = std::process::Command::new("sh")
+        .arg("-c")
+        .arg(script.as_str())
+        .current_dir(&cwd)
+        .envs(&config.env)
+        .status();
+    match status {
+        Ok(s) if !s.success() => tracing::warn!("pre-launch script exited with: {}", s),
+        Err(e) => tracing::error!("pre-launch script failed: {}", e),
+        _ => {}
+    }
+}
+
+fn validate_exe(game: &Game) -> Result<()> {
+    let exe = &game.metadata.exe;
+    match game.runner.runner_type.as_str() {
+        "steam" | "flatpak" => Ok(()),
+        "native" => {
+            if exe.as_os_str().is_empty() {
+                anyhow::bail!("Native runner requires an executable");
+            }
+            if !exe.exists() {
+                anyhow::bail!("Game executable not found at `{}`", exe.display());
+            }
+            if !is_executable(exe) {
+                anyhow::bail!("`{}` is not executable. Mark it executable (chmod +x) and try again.", exe.display());
+            }
+            Ok(())
+        }
+        _ => {
+            if !game.is_epic() && !exe.as_os_str().is_empty() && !exe.exists() {
+                anyhow::bail!("Game executable not found at `{}`", exe.display());
+            }
+            Ok(())
+        }
+    }
+}
+
+fn assemble_launch(game: &Game) -> Result<LaunchConfig> {
     let working_dir = resolve_working_dir(game);
 
     match game.runner.runner_type.as_str() {
@@ -119,9 +179,6 @@ pub fn build_launch(game: &Game) -> Result<LaunchConfig> {
         }
         cmd
     } else {
-        if !game.metadata.exe.as_os_str().is_empty() && !game.metadata.exe.exists() {
-            anyhow::bail!("Game executable not found at `{}`", game.metadata.exe.display());
-        }
         let mut cmd = vec![wine_exe.to_string_lossy().to_string()];
         if !game.metadata.exe.as_os_str().is_empty() {
             // jadeite spawns the game process itself, so extra args go after `--`
@@ -261,16 +318,6 @@ fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfi
 
 fn build_native_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfig> {
     let exe = &game.metadata.exe;
-    if exe.as_os_str().is_empty() {
-        anyhow::bail!("Native runner requires an executable");
-    }
-    if !exe.exists() {
-        anyhow::bail!("Game executable not found at `{}`", exe.display());
-    }
-    if !is_executable(exe) {
-        anyhow::bail!("`{}` is not executable. Mark it executable (chmod +x) and try again.", exe.display());
-    }
-
     let mut command = vec![relative_exe(exe, &working_dir)];
     for arg in &game.launch.args {
         command.push(arg.clone());
