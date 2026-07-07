@@ -99,7 +99,7 @@ Item {
             width: root.cardBaseWidth * root.cardZoom
             height: root.cardBaseHeight * root.cardZoom
 
-            elevation: root.cardElevation
+            elevation: root.cardElevation && dragProxy.dragCard !== cardDelegate
             selected: index === root.selectedIndex
             cardVisible: (root.searchText === "" ||
                          name.toLowerCase().includes(root.searchText.toLowerCase())) &&
