@@ -301,6 +301,10 @@ fn main() {
     let builder = builder.qt_module("Widgets");
     println!("cargo:rustc-link-lib=Qt6Widgets");
 
+    // QQuickTextDocument in log_highlighter needs Qt6Quick linked explicitly, ci shenanigans smh
+    let builder = builder.qt_module("Quick");
+    println!("cargo:rustc-link-lib=Qt6Quick");
+
     let builder = unsafe {
         builder.cc_builder(|cc| {
             cc.flag_if_supported("-Wno-sfinae-incomplete");
