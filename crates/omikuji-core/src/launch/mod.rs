@@ -72,6 +72,7 @@ impl WineVariant {
 
 pub fn prepare_launch(game: &Game) -> Result<LaunchConfig> {
     let config = assemble_launch(game)?;
+    reject_slop_env(&config)?;
     run_pre_launch_script(game, &config);
     validate_exe(game)?;
     Ok(config)
@@ -79,8 +80,18 @@ pub fn prepare_launch(game: &Game) -> Result<LaunchConfig> {
 
 pub fn build_launch(game: &Game) -> Result<LaunchConfig> {
     let config = assemble_launch(game)?;
+    reject_slop_env(&config)?;
     validate_exe(game)?;
     Ok(config)
+}
+
+fn reject_slop_env(config: &LaunchConfig) -> Result<()> {
+    if config.env.contains_key("WINE_CANONICAL_HOLE") {
+        anyhow::bail!(
+            "WINE_CANONICAL_HOLE detected in the launch environment. bro remove this shit pls. this variable is not real, wine has no canonical hole, and whatever slop config it came from probably broke other things too :xdd:"
+        );
+    }
+    Ok(())
 }
 
 fn run_pre_launch_script(game: &Game, config: &LaunchConfig) {
