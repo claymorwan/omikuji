@@ -22,21 +22,17 @@ pub async fn check_for_update(manifest: &GachaManifest, edition_id: &str) -> Res
     if info.version == from_version || info.version.is_empty() {
         return Ok(None);
     }
-    let target = crate::gachas::strategies::normalize_version(&from_version);
-    let download_size = info
-        .patch_configs
-        .iter()
-        .find(|p| crate::gachas::strategies::normalize_version(&p.version) == target)
-        .map(|p| p.download_size)
-        .unwrap_or(0);
+    let matched = info.matching_patch(&from_version);
+    let download_size = matched.map(|p| p.download_size).unwrap_or(0);
+    let has_delta = matched.is_some();
     Ok(Some(UpdateInfo {
         game_slug: manifest.game_slug.clone(),
         edition: edition_id.to_string(),
         from_version,
         to_version: info.version,
         download_size,
-        can_diff: true,
-        delta_supported: true,
+        can_diff: has_delta,
+        delta_supported: has_delta,
     }))
 }
 

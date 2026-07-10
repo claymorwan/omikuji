@@ -31,6 +31,15 @@ pub struct PatchConfig {
     pub un_compress_size: u64,
 }
 
+impl ResourceInfo {
+    pub fn matching_patch(&self, from_version: &str) -> Option<&PatchConfig> {
+        let target = crate::gachas::strategies::normalize_version(from_version);
+        self.patch_configs
+            .iter()
+            .find(|p| crate::gachas::strategies::normalize_version(&p.version) == target)
+    }
+}
+
 pub async fn fetch_resource_info(manifest: &GachaManifest, edition_id: &str) -> Result<ResourceInfo> {
     let url = super::index_url_from_manifest(manifest, edition_id)?;
 
@@ -190,6 +199,26 @@ pub struct ResourceFile {
     pub size: u64,
     #[serde(default)]
     pub md5: String,
+    #[serde(default, rename = "fromFolder")]
+    pub from_folder: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PatchIndexFile {
+    pub resource: Vec<ResourceFile>,
+    #[serde(default, rename = "deleteFiles")]
+    pub delete_files: Vec<String>,
+    #[serde(default, rename = "groupInfos")]
+    pub group_infos: Vec<PatchGroup>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct PatchGroup {
+    pub dest: String,
+    #[serde(default, rename = "srcFiles")]
+    pub src_files: Vec<ResourceFile>,
+    #[serde(default, rename = "dstFiles")]
+    pub dst_files: Vec<ResourceFile>,
 }
 
 // server returns size as either a number or a stringified number depending on the endpoint
@@ -209,7 +238,15 @@ where
 }
 
 pub async fn fetch_index_file(index_file_url: &str) -> Result<IndexFile> {
-    let resp = reqwest::get(index_file_url)
+    fetch_json(index_file_url).await
+}
+
+pub async fn fetch_patch_index(index_file_url: &str) -> Result<PatchIndexFile> {
+    fetch_json(index_file_url).await
+}
+
+async fn fetch_json<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
+    let resp = reqwest::get(url)
         .await
         .map_err(|e| anyhow!("fetch indexFile: {}", e))?;
     if !resp.status().is_success() {

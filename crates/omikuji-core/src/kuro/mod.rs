@@ -1,8 +1,6 @@
-// kuro cdn: fetch index.json per game+edition, get a per-file resource list,
-// download directly with no archive phase. krdiff patches not wired yet
-// per-game/edition index_url moved into manifest.editions[].strategy_config (asset repo) on 2026-04-26.
-
 pub mod api;
+pub mod krpdiff;
+mod patcher;
 pub mod source;
 pub mod update;
 

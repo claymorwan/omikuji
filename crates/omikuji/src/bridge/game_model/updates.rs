@@ -304,11 +304,12 @@ fn build_download_request(
     kind: omikuji_core::downloads::DownloadKind,
     label: &str,
 ) -> omikuji_core::downloads::DownloadRequest {
-    // exe's parent dir is the game-data root; sophon patcher and resource probes need that, not th exe itself
-    let install_path = std::path::PathBuf::from(&game.metadata.exe)
-        .parent()
-        .map(|p| p.to_path_buf())
-        .unwrap_or_else(|| std::path::PathBuf::from(&game.metadata.exe));
+    let exe = &game.metadata.exe;
+    let install_path = (game.source.kind == "gacha")
+        .then(|| omikuji_core::gachas::strategies::install_root_for(&game.source.app_id, exe))
+        .flatten()
+        .or_else(|| exe.parent().map(|p| p.to_path_buf()))
+        .unwrap_or_else(|| exe.clone());
 
     let prefix = if game.wine.prefix.is_empty() {
         None

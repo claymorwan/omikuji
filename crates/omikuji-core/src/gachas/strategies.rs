@@ -89,6 +89,24 @@ pub fn find_for_app_id(app_id: &str) -> Option<(GachaManifest, String, Vec<Strin
     Some((manifest, edition_id, voices))
 }
 
+pub fn edition_exe_name<'a>(manifest: &'a GachaManifest, edition_id: &str) -> Option<&'a str> {
+    manifest
+        .editions
+        .iter()
+        .find(|e| e.id == edition_id)
+        .map(|e| e.exe_name.as_str())
+        .filter(|s| !s.is_empty())
+}
+
+pub fn install_root_for(app_id: &str, exe: &Path) -> Option<PathBuf> {
+    let (manifest, edition_id, _) = find_for_app_id(app_id)?;
+    let rel = Path::new(edition_exe_name(&manifest, &edition_id)?);
+    if !exe.ends_with(rel) {
+        return None;
+    }
+    exe.ancestors().nth(rel.components().count()).map(Path::to_path_buf)
+}
+
 #[allow(clippy::too_many_arguments)]
 pub fn build_install_request(
     manifest: &GachaManifest,
@@ -287,13 +305,8 @@ pub fn inspect_existing(
                 crate::hoyo::source::inspect_hoyo_temp(&app_id, install_path, temp_dir);
             // hoyo has no cheap "is installed" signal without touching the game's own manifest,
             // so fall back to checking whether the edition's exe exists
-            let edition_exe = manifest
-                .editions
-                .iter()
-                .find(|e| e.id == edition_id)
-                .map(|e| e.exe_name.as_str())
-                .unwrap_or("");
-            let has_install = !edition_exe.is_empty() && install_path.join(edition_exe).exists();
+            let has_install = edition_exe_name(manifest, edition_id)
+                .is_some_and(|exe| install_path.join(exe).exists());
             ExistingInstallInfo {
                 scratch_bytes: bytes,
                 segments,
@@ -304,13 +317,9 @@ pub fn inspect_existing(
         GRYPHLINE_RESOURCE_PATCH => {
             let (bytes, segments) =
                 crate::endfield::source::inspect_endfield_temp(&app_id, install_path, temp_dir);
-            let edition_exe = manifest
-                .editions
-                .iter()
-                .find(|e| e.id == edition_id)
-                .map(|e| e.exe_name.as_str())
-                .unwrap_or("Endfield.exe");
-            let has_install = install_path.join(edition_exe).exists();
+            let has_install = install_path
+                .join(edition_exe_name(manifest, edition_id).unwrap_or("Endfield.exe"))
+                .exists();
             ExistingInstallInfo {
                 scratch_bytes: bytes,
                 segments,
@@ -322,13 +331,8 @@ pub fn inspect_existing(
             // kuro writes files straight into install_path with no scratch dir.
             // partial downloads are invisible here; the resume hint wont light up
             // until source.install() runs and size-matches per-file.
-            let edition_exe = manifest
-                .editions
-                .iter()
-                .find(|e| e.id == edition_id)
-                .map(|e| e.exe_name.as_str())
-                .unwrap_or("");
-            let has_install = !edition_exe.is_empty() && install_path.join(edition_exe).exists();
+            let has_install = edition_exe_name(manifest, edition_id)
+                .is_some_and(|exe| install_path.join(exe).exists());
             ExistingInstallInfo {
                 scratch_bytes: 0,
                 segments: 0,

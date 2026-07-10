@@ -12,7 +12,7 @@ use crate::downloads::{
     check_control, report_progress, ControlSignal, DownloadEntry, DownloadKind, DownloadSource,
 };
 
-const PARALLEL_FILES: usize = 8;
+pub(super) const PARALLEL_FILES: usize = 8;
 
 pub struct KuroSource;
 
@@ -37,6 +37,20 @@ async fn run_install_or_update(entry: &DownloadEntry) -> Result<()> {
     let game_slug = manifest.game_slug.clone();
 
     let info = api::fetch_resource_info(&manifest, &edition_id).await?;
+
+    if let DownloadKind::Update { from_version } = &entry.kind
+        && let Some(pc) = info.matching_patch(from_version)
+    {
+        match super::patcher::run_patch_update(entry, &info, pc).await {
+            Ok(true) => {
+                super::set_installed_version(&game_slug, &edition_id, &info.version);
+                return Ok(());
+            }
+            Ok(false) => return Ok(()),
+            Err(e) => tracing::warn!("kuro delta update failed, falling back to full sync: {}", e),
+        }
+    }
+
     let index = api::fetch_index_file(&info.index_file_url).await?;
     if index.resource.is_empty() {
         return Err(anyhow!("indexFile returned zero resources"));
@@ -91,7 +105,7 @@ async fn run_install_or_update(entry: &DownloadEntry) -> Result<()> {
     Ok(())
 }
 
-async fn download_one(
+pub(super) async fn download_one(
     id: &str,
     file: &api::ResourceFile,
     base_url: &str,
@@ -180,7 +194,7 @@ fn tick_progress(id: &str, downloaded: &AtomicU64, total: u64, start: Instant) {
 }
 
 // drop leading slashes and .. to prevent path traversal outside install_root
-fn sanitize_rel(dest: &str) -> PathBuf {
+pub(super) fn sanitize_rel(dest: &str) -> PathBuf {
     let cleaned: Vec<&str> = dest
         .split(['/', '\\'])
         .filter(|p| !p.is_empty() && *p != "." && *p != "..")
