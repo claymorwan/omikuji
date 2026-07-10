@@ -155,7 +155,7 @@ fn assemble_launch(game: &Game) -> Result<LaunchConfig> {
 
     let variant = WineVariant::from_version(&game.wine.version);
     let wine_exe = resolve_wine_exe(variant, &game.wine.version)?;
-    let mut env = build_env(game, variant, &wine_exe);
+    let mut env = build_env(game, variant, &wine_exe, EnvPurpose::Session);
 
     if variant == WineVariant::Proton
         && let Err(e) = crate::desktop::ensure_steam_icon(game) {
@@ -469,7 +469,13 @@ fn append_dll_override(env: &mut HashMap<String, String>, entry: &str) {
     env.insert("WINEDLLOVERRIDES".to_string(), new_value);
 }
 
-pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<String, String> {
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EnvPurpose {
+    Session,
+    Tool,
+}
+
+pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path, purpose: EnvPurpose) -> HashMap<String, String> {
     let mut env = HashMap::new();
 
     for (k, v) in std::env::vars() {
@@ -538,7 +544,7 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path) -> HashMap<
         append_dll_override(&mut env, "winepulse.drv=d");
     }
 
-    if game.wine.graphics_driver == "wayland" {
+    if purpose == EnvPurpose::Session && game.wine.graphics_driver == "wayland" {
         if variant == WineVariant::Proton {
             env.insert("PROTON_ENABLE_WAYLAND".to_string(), "1".to_string());
         } else {
@@ -823,11 +829,11 @@ mod tests {
 
     #[test]
     fn test_ntsync_env_for_proton() {
-        let enabled = build_env(&game("Proton-9-0-4", true), WineVariant::Proton, Path::new("wine"));
+        let enabled = build_env(&game("Proton-9-0-4", true), WineVariant::Proton, Path::new("wine"), EnvPurpose::Session);
         assert_eq!(enabled.get("PROTON_USE_NTSYNC").map(String::as_str), Some("1"));
         assert_eq!(enabled.get("PROTON_NO_NTSYNC").map(String::as_str), Some("0"));
 
-        let disabled = build_env(&game("Proton-9-0-4", false), WineVariant::Proton, Path::new("wine"));
+        let disabled = build_env(&game("Proton-9-0-4", false), WineVariant::Proton, Path::new("wine"), EnvPurpose::Session);
         assert_eq!(disabled.get("PROTON_USE_NTSYNC").map(String::as_str), Some("0"));
         assert_eq!(disabled.get("PROTON_NO_NTSYNC").map(String::as_str), Some("1"));
     }
@@ -836,7 +842,7 @@ mod tests {
     fn test_ntsync_env_not_added_for_non_proton() {
         let inherited_use = std::env::var_os("PROTON_USE_NTSYNC").is_some();
         let inherited_no = std::env::var_os("PROTON_NO_NTSYNC").is_some();
-        let env = build_env(&game("wine-ge-9-5", true), WineVariant::WineGE, Path::new("wine"));
+        let env = build_env(&game("wine-ge-9-5", true), WineVariant::WineGE, Path::new("wine"), EnvPurpose::Session);
 
         if !inherited_use {
             assert!(!env.contains_key("PROTON_USE_NTSYNC"));

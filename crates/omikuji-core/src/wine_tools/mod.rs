@@ -1,4 +1,4 @@
-use crate::launch::{build_env, resolve_wine_exe, WineVariant};
+use crate::launch::{build_env, resolve_wine_exe, EnvPurpose, WineVariant};
 use crate::library::Game;
 use anyhow::{anyhow, Result};
 use std::path::{Path, PathBuf};
@@ -75,7 +75,7 @@ fn build_wine_command(game: &Game, tool: &WineTool) -> Result<Command> {
 
     let variant = WineVariant::from_version(&g.wine.version);
     let wine_exe = resolve_wine_exe(variant, &g.wine.version)?;
-    let mut env = build_env(g, variant, &wine_exe);
+    let mut env = build_env(g, variant, &wine_exe, EnvPurpose::Tool);
 
     // fuck this shit lmao
     if matches!(tool, WineTool::Winetricks | WineTool::WinetricksVerbs(_))

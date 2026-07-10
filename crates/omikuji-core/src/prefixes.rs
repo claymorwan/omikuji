@@ -131,7 +131,7 @@ pub fn bootstrap_prefix<F: FnMut(&str)>(
 ) -> anyhow::Result<()> {
     let variant = crate::launch::WineVariant::from_version(&game.wine.version);
     let wine_exe = crate::launch::resolve_wine_exe(variant, &game.wine.version)?;
-    let env = crate::launch::build_env(game, variant, &wine_exe);
+    let env = crate::launch::build_env(game, variant, &wine_exe, crate::launch::EnvPurpose::Tool);
     let prefix = crate::launch::resolve_prefix(game);
 
     if prefix.join("drive_c").join("windows").join("system32").is_dir() {
