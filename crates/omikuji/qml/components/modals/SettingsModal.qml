@@ -44,9 +44,10 @@ Item {
     Item {
         id: cardWrap
         property bool isDropdownHost: true
-        anchors.centerIn: parent
-        width: parent.width * 0.95
-        height: parent.height * 0.95
+        x: Math.round((parent.width - width) / 2)
+        y: Math.round((parent.height - height) / 2)
+        width: Math.round(parent.width * 0.95)
+        height: Math.round(parent.height * 0.95)
         opacity: root.shown ? 1 : 0
         scale: root.shown ? 1 : 0.97
         visible: opacity > 0.01

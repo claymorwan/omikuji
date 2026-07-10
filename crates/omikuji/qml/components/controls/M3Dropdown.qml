@@ -132,6 +132,10 @@ Item {
         z: popup.z - 1
         acceptedButtons: Qt.LeftButton | Qt.RightButton
         onPressed: popup.close()
+        onWheel: (wheel) => {
+            popup.close()
+            wheel.accepted = false
+        }
     }
 
     PopupSurface {
@@ -146,10 +150,10 @@ Item {
             if (!visible) return 0
             var wanted = col.height + 16
             var win = root.Window
-            if (!win || !parent) return wanted
+            if (!win || !parent) return Math.round(wanted)
             var topInWin = parent.mapToItem(win.contentItem, x, y).y
             var maxAvail = win.height - topInWin - 12
-            return Math.min(wanted, Math.max(80, maxAvail))
+            return Math.round(Math.min(wanted, Math.max(80, maxAvail)))
         }
         z: 50
         radius: theme.radius.sm
@@ -157,16 +161,15 @@ Item {
         function open() {
             if (!popup.parent) return
             syncPosition()
-            popup.width = button.width
             visible = true
         }
         function close() { visible = false }
         function syncPosition() {
             if (!popup.parent) return
             var pos = button.mapToItem(popup.parent, 0, button.height + 4)
-            popup.x = pos.x
-            popup.y = pos.y
-            popup.width = button.width
+            popup.x = Math.round(pos.x)
+            popup.y = Math.round(pos.y)
+            popup.width = Math.round(button.width)
         }
 
         // flickable scroll is a visual transform with no property-change signal, so a cheap poll keeps the popup glued. i suppose. Lets hope! 
@@ -175,6 +178,12 @@ Item {
             interval: 16
             repeat: true
             onTriggered: popup.syncPosition()
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            acceptedButtons: Qt.NoButton
+            onWheel: (wheel) => wheel.accepted = true
         }
 
         SvgIcon {
