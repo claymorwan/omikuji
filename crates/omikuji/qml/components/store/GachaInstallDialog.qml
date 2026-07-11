@@ -4,6 +4,7 @@ import "../lib/RunnerGrouping.js" as RG
 import "../controls"
 import "../dialogs"
 import "../primitives"
+import "../lib/Format.js" as Format
 
 DialogCard {
     id: root
@@ -101,14 +102,6 @@ DialogCard {
         let resuming = existingTempSegments > 0 || existingInstall
         if (!resuming && installFreeBytes < installBytes) return false
         return true
-    }
-
-    function formatBytes(bytes) {
-        if (bytes <= 0) return ""
-        let gb = bytes / (1024 * 1024 * 1024)
-        if (gb >= 1) return gb.toFixed(1) + " GB"
-        let mb = bytes / (1024 * 1024)
-        return mb.toFixed(0) + " MB"
     }
 
     onInstallPathChanged: { refreshFreeSpace(); refreshExisting() }
@@ -428,10 +421,10 @@ DialogCard {
                     } else if (root.sizeError !== "") {
                         parts.push(qsTr("Size unavailable"))
                     } else if (root.installBytes >= 0) {
-                        parts.push(qsTr("%1 install").arg(root.formatBytes(root.installBytes)))
+                        parts.push(qsTr("%1 install").arg(Format.formatBytesShort(root.installBytes)))
                     }
                     if (root.installFreeBytes >= 0) {
-                        parts.push(qsTr("%1 free").arg(root.formatBytes(root.installFreeBytes)))
+                        parts.push(qsTr("%1 free").arg(Format.formatBytesShort(root.installFreeBytes)))
                     }
                     if (root.existingInstall) {
                         if (root.existingVersion !== "") {
@@ -476,13 +469,13 @@ DialogCard {
                 text: {
                     let parts = []
                     if (root.existingTempSegments > 0) {
-                        parts.push(qsTr("Found existing files · %1").arg(root.formatBytes(root.existingTempBytes)))
+                        parts.push(qsTr("Found existing files · %1").arg(Format.formatBytesShort(root.existingTempBytes)))
                     }
                     if (root.downloadBytes >= 0) {
-                        parts.push(qsTr("%1 download").arg(root.formatBytes(root.downloadBytes)))
+                        parts.push(qsTr("%1 download").arg(Format.formatBytesShort(root.downloadBytes)))
                     }
                     if (root.tempFreeBytes >= 0) {
-                        parts.push(qsTr("%1 free").arg(root.formatBytes(root.tempFreeBytes)))
+                        parts.push(qsTr("%1 free").arg(Format.formatBytesShort(root.tempFreeBytes)))
                     }
                     return parts.join(" · ")
                 }

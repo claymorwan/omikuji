@@ -1,5 +1,7 @@
 pub mod gogdl;
+pub mod io_stats;
 pub mod legendary;
+mod proc_tree;
 pub mod source;
 
 use indicatif::{MultiProgress, ProgressBar, ProgressStyle};
@@ -26,6 +28,13 @@ pub enum DownloadStatus {
 }
 
 impl DownloadStatus {
+    pub fn is_running(&self) -> bool {
+        matches!(
+            self,
+            Self::Starting | Self::Downloading | Self::Extracting | Self::Patching
+        )
+    }
+
     pub fn is_active(&self) -> bool {
         matches!(
             self,
@@ -145,6 +154,15 @@ struct Inner {
     control: HashMap<String, ControlSignal>,
     sources: HashMap<String, Arc<dyn DownloadSource>>,
     worker_started: bool,
+    sampler_running: bool,
+}
+
+fn arm_threads(inner: &mut Inner) -> (bool, bool) {
+    let worker = !inner.worker_started;
+    inner.worker_started = true;
+    let sampler = !inner.sampler_running;
+    inner.sampler_running = true;
+    (worker, sampler)
 }
 
 pub struct DownloadManager {
@@ -173,6 +191,7 @@ lazy_static! {
                 control: HashMap::new(),
                 sources,
                 worker_started: false,
+                sampler_running: false,
             }),
             notify: Notify::new(),
         })
@@ -274,25 +293,19 @@ impl DownloadManager {
             speed_bps: 0,
         };
 
-        let need_worker = {
+        let need = {
             let mut inner = self.inner.lock().unwrap();
             inner.entries.push(entry);
             inner.events.push_back(DownloadEvent::Added(id.clone()));
             save_queue(&inner.entries);
             if start_paused {
-                false
+                (false, false)
             } else {
-                let start = !inner.worker_started;
-                if start {
-                    inner.worker_started = true;
-                }
-                start
+                arm_threads(&mut inner)
             }
         };
 
-        if need_worker {
-            Self::spawn_worker();
-        }
+        Self::spawn_threads(need);
         if !start_paused {
             self.notify.notify_one();
         }
@@ -318,7 +331,7 @@ impl DownloadManager {
     }
 
     pub fn resume(&self, id: &str) {
-        let (should_notify, need_worker) = {
+        let (should_notify, need) = {
             let mut inner = self.inner.lock().unwrap();
             let Some(e) = inner.entries.iter_mut().find(|e| e.id == id) else { return };
             if e.status == DownloadStatus::Paused {
@@ -327,18 +340,12 @@ impl DownloadManager {
                     .events
                     .push_back(DownloadEvent::StatusChanged(id.to_string(), DownloadStatus::Queued));
                 save_queue(&inner.entries);
-                let start = !inner.worker_started;
-                if start {
-                    inner.worker_started = true;
-                }
-                (true, start)
+                (true, arm_threads(&mut inner))
             } else {
-                (false, false)
+                (false, (false, false))
             }
         };
-        if need_worker {
-            Self::spawn_worker();
-        }
+        Self::spawn_threads(need);
         if should_notify {
             self.notify.notify_one();
         }
@@ -399,7 +406,7 @@ impl DownloadManager {
             );
         }
 
-        let need_worker = {
+        let need = {
             let mut inner = self.inner.lock().unwrap();
             if let Some(e) = inner.entries.iter_mut().find(|e| e.id == id) {
                 e.status = DownloadStatus::Queued;
@@ -412,16 +419,10 @@ impl DownloadManager {
                 ));
                 save_queue(&inner.entries);
             }
-            let start = !inner.worker_started;
-            if start {
-                inner.worker_started = true;
-            }
-            start
+            arm_threads(&mut inner)
         };
 
-        if need_worker {
-            Self::spawn_worker();
-        }
+        Self::spawn_threads(need);
         self.notify.notify_one();
     }
 
@@ -448,6 +449,15 @@ impl DownloadManager {
     pub fn take_events(&self) -> Vec<DownloadEvent> {
         let mut inner = self.inner.lock().unwrap();
         inner.events.drain(..).collect()
+    }
+
+    fn spawn_threads((worker, sampler): (bool, bool)) {
+        if worker {
+            Self::spawn_worker();
+        }
+        if sampler {
+            std::thread::spawn(sampler_loop);
+        }
     }
 
     fn spawn_worker() {
@@ -520,6 +530,42 @@ impl DownloadManager {
                 (Err(e), ControlSignal::None) => set_failed(&entry.id, e.to_string()),
             }
         }
+    }
+}
+
+fn sampler_loop() {
+    let mut last_id: Option<String> = None;
+    loop {
+        std::thread::sleep(std::time::Duration::from_secs(1));
+        let running = {
+            let mut inner = MANAGER.inner.lock().unwrap();
+            let has_work = inner
+                .entries
+                .iter()
+                .any(|e| e.status.is_running() || e.status == DownloadStatus::Queued);
+            if !has_work {
+                inner.sampler_running = false;
+                return;
+            }
+            inner
+                .entries
+                .iter()
+                .find(|e| e.status.is_running())
+                .map(|e| (e.id.clone(), e.status.clone(), e.speed_bps))
+        };
+        let Some((id, status, speed)) = running else {
+            last_id = None;
+            continue;
+        };
+        if last_id.as_deref() != Some(&id) {
+            io_stats::reset_history();
+            last_id = Some(id);
+        }
+        let net = match status {
+            DownloadStatus::Extracting | DownloadStatus::Patching => 0,
+            _ => speed,
+        };
+        io_stats::tick(net);
     }
 }
 

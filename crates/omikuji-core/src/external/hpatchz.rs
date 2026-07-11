@@ -1,7 +1,7 @@
 use std::io::{Error, ErrorKind, Result};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 pub fn binary_path() -> Result<PathBuf> {
     let p = crate::runtime_dir().join("hpatchz");
@@ -30,12 +30,16 @@ pub fn patch(file: &Path, patch: &Path, output: &Path) -> Result<()> {
         }
     }
 
-    let out = Command::new(&bin)
+    let child = Command::new(&bin)
         .arg("-f")
         .arg(file)
         .arg(patch)
         .arg(output)
-        .output()?;
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()?;
+    crate::downloads::io_stats::track_child(child.id());
+    let out = child.wait_with_output()?;
 
     if String::from_utf8_lossy(&out.stdout).contains("patch ok!") {
         Ok(())

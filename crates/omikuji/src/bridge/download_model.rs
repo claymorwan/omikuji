@@ -8,7 +8,7 @@ use cxx_qt::CxxQtType;
 use cxx_qt_lib::{QByteArray, QHash, QHashPair_i32_QByteArray, QModelIndex, QString, QVariant};
 
 use omikuji_core::downloads::{
-    self, DownloadEntry, DownloadEvent, DownloadRequest, DownloadStatus,
+    self, DownloadEntry, DownloadEvent, DownloadKind, DownloadRequest, DownloadStatus,
 };
 
 #[cxx_qt::bridge]
@@ -37,6 +37,10 @@ pub mod qobject {
         #[qproperty(i32, count)]
         #[qproperty(i32, active_count, cxx_name = "activeCount")]
         #[qproperty(i32, completed_count, cxx_name = "completedCount")]
+        #[qproperty(i32, running_count, cxx_name = "runningCount")]
+        #[qproperty(i32, queued_count, cxx_name = "queuedCount")]
+        #[qproperty(i32, failed_count, cxx_name = "failedCount")]
+        #[qproperty(QString, hero_id, cxx_name = "heroId")]
         type DownloadModel = super::DownloadModelRust;
     }
 
@@ -118,6 +122,10 @@ pub mod qobject {
         #[qinvokable]
         fn active_for_app_id(self: &DownloadModel, app_id: &QString) -> QString;
 
+        #[qinvokable]
+        #[cxx_name = "speedHistoryJson"]
+        fn speed_history_json(self: &DownloadModel) -> QString;
+
         #[qsignal]
         fn state_changed(self: Pin<&mut DownloadModel>);
     }
@@ -164,31 +172,32 @@ const ROLE_SPEED: i32 = 0x0207;
 const ROLE_BYTES_DL: i32 = 0x0208;
 const ROLE_BYTES_TOTAL: i32 = 0x0209;
 const ROLE_ERROR: i32 = 0x020A;
+const ROLE_KIND: i32 = 0x020B;
 
 pub struct DownloadModelRust {
     entries: Vec<DownloadEntry>,
     count: i32,
     active_count: i32,
     completed_count: i32,
+    running_count: i32,
+    queued_count: i32,
+    failed_count: i32,
+    hero_id: QString,
 }
 
 impl Default for DownloadModelRust {
     fn default() -> Self {
         let entries = downloads::manager().list();
-        let count = entries.len() as i32;
-        let active_count = entries
-            .iter()
-            .filter(|e| e.status.is_active())
-            .count() as i32;
-        let completed_count = entries
-            .iter()
-            .filter(|e| matches!(e.status, DownloadStatus::Completed))
-            .count() as i32;
+        let c = recompute(&entries, "");
         Self {
+            count: entries.len() as i32,
+            active_count: c.active,
+            completed_count: c.completed,
+            running_count: c.running,
+            queued_count: c.queued,
+            failed_count: c.failed,
+            hero_id: QString::from(&c.hero_id),
             entries,
-            count,
-            active_count,
-            completed_count,
         }
     }
 }
@@ -205,18 +214,54 @@ fn error_text(s: &DownloadStatus) -> String {
     }
 }
 
-fn recompute_active(entries: &[DownloadEntry]) -> i32 {
-    entries
-        .iter()
-        .filter(|e| e.status.is_active())
-        .count() as i32
+#[derive(Default)]
+struct Counts {
+    active: i32,
+    completed: i32,
+    running: i32,
+    queued: i32,
+    failed: i32,
+    hero_id: String,
 }
 
-fn recompute_completed(entries: &[DownloadEntry]) -> i32 {
-    entries
-        .iter()
-        .filter(|e| matches!(e.status, DownloadStatus::Completed))
-        .count() as i32
+fn recompute(entries: &[DownloadEntry], prev_hero: &str) -> Counts {
+    let mut c = Counts {
+        hero_id: entries
+            .iter()
+            .find(|e| e.status.is_running())
+            .or_else(|| {
+                entries
+                    .iter()
+                    .find(|e| e.id == prev_hero && e.status == DownloadStatus::Paused)
+            })
+            .or_else(|| entries.iter().find(|e| e.status == DownloadStatus::Paused))
+            .map(|e| e.id.clone())
+            .unwrap_or_default(),
+        ..Counts::default()
+    };
+    for e in entries {
+        if e.status.is_active() {
+            c.active += 1;
+        }
+        if e.status.is_running() {
+            c.running += 1;
+        }
+        match &e.status {
+            DownloadStatus::Completed => c.completed += 1,
+            DownloadStatus::Failed(_) => c.failed += 1,
+            DownloadStatus::Queued | DownloadStatus::Paused if e.id != c.hero_id => c.queued += 1,
+            _ => {}
+        }
+    }
+    c
+}
+
+fn kind_label(k: &DownloadKind) -> &'static str {
+    match k {
+        DownloadKind::Install => "install",
+        DownloadKind::Update { .. } => "update",
+        DownloadKind::Repair => "repair",
+    }
 }
 
 impl qobject::DownloadModel {
@@ -237,6 +282,7 @@ impl qobject::DownloadModel {
         h.insert_clone(&ROLE_BYTES_DL, &QByteArray::from("bytesDownloaded"));
         h.insert_clone(&ROLE_BYTES_TOTAL, &QByteArray::from("bytesTotal"));
         h.insert_clone(&ROLE_ERROR, &QByteArray::from("error"));
+        h.insert_clone(&ROLE_KIND, &QByteArray::from("kind"));
         h
     }
 
@@ -257,6 +303,7 @@ impl qobject::DownloadModel {
             ROLE_BYTES_DL => QVariant::from(&(e.bytes_downloaded as f64)),
             ROLE_BYTES_TOTAL => QVariant::from(&(e.bytes_total as f64)),
             ROLE_ERROR => QVariant::from(&QString::from(&error_text(&e.status))),
+            ROLE_KIND => QVariant::from(&QString::from(kind_label(&e.kind))),
             _ => QVariant::default(),
         }
     }
@@ -460,10 +507,14 @@ impl qobject::DownloadModel {
             }
         }
 
-        let new_active = recompute_active(&self.entries);
-        let new_completed = recompute_completed(&self.entries);
-        self.as_mut().set_active_count(new_active);
-        self.as_mut().set_completed_count(new_completed);
+        let prev_hero = self.hero_id.to_string();
+        let c = recompute(&self.entries, &prev_hero);
+        self.as_mut().set_active_count(c.active);
+        self.as_mut().set_completed_count(c.completed);
+        self.as_mut().set_running_count(c.running);
+        self.as_mut().set_queued_count(c.queued);
+        self.as_mut().set_failed_count(c.failed);
+        self.as_mut().set_hero_id(QString::from(&c.hero_id));
         self.as_mut().state_changed();
     }
 
@@ -510,18 +561,16 @@ impl qobject::DownloadModel {
             return QString::from("");
         };
 
-        let kind = match &e.kind {
-            omikuji_core::downloads::DownloadKind::Install => "install",
-            omikuji_core::downloads::DownloadKind::Update { .. } => "update",
-            omikuji_core::downloads::DownloadKind::Repair => "repair",
-        };
-
         let payload = serde_json::json!({
             "id": e.id,
             "status": status_label(&e.status),
             "progress": e.progress,
-            "kind": kind,
+            "kind": kind_label(&e.kind),
         });
         QString::from(&payload.to_string())
+    }
+
+    fn speed_history_json(&self) -> QString {
+        QString::from(&downloads::io_stats::history_json())
     }
 }

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import "../controls"
+import "../lib/Format.js" as Format
 
 DialogCard {
     id: root
@@ -34,13 +35,6 @@ DialogCard {
         open()
     }
     function hide() { close() }
-
-    function formatBytes(b) {
-        if (b >= 1024 * 1024 * 1024) return (b / (1024 * 1024 * 1024)).toFixed(2) + " GB"
-        if (b >= 1024 * 1024) return (b / (1024 * 1024)).toFixed(1) + " MB"
-        if (b >= 1024) return (b / 1024).toFixed(1) + " KB"
-        return b + " B"
-    }
 
     onCloseRequested: { root.dismissed(root.gameId); root.close() }
 
@@ -114,7 +108,7 @@ DialogCard {
                     text: {
                         if (root.canDiff) {
                             return root.downloadBytes > 0
-                                ? qsTr("Delta update · %1").arg(root.formatBytes(root.downloadBytes))
+                                ? qsTr("Delta update · %1").arg(Format.formatBytes(root.downloadBytes))
                                 : qsTr("Delta update")
                         }
                         let name = root.displayName || qsTr("the game")

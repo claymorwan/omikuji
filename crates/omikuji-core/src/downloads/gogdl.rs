@@ -5,25 +5,8 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 
+use super::proc_tree::shutdown;
 use super::{check_control, report_progress, ControlSignal, DownloadEntry, DownloadSource};
-
-async fn shutdown(child: &mut Child) {
-    use nix::sys::signal::{kill, killpg, Signal};
-    use nix::unistd::Pid;
-
-    let pid = child.id();
-    if let Some(pid) = pid {
-        let _ = kill(Pid::from_raw(pid as i32), Signal::SIGTERM);
-    }
-    let _ = tokio::time::timeout(std::time::Duration::from_secs(8), child.wait()).await;
-    if let Some(pid) = pid {
-        let pgid = Pid::from_raw(pid as i32);
-        let _ = killpg(pgid, Signal::SIGKILL);
-    }
-    if matches!(child.try_wait(), Ok(None)) {
-        let _ = child.wait().await;
-    }
-}
 
 pub struct GogdlSource;
 
@@ -147,6 +130,9 @@ fn spawn_download(gogdl: &std::path::Path, entry: &DownloadEntry) -> Result<Chil
 }
 
 async fn run_with_progress(mut child: Child, entry: &DownloadEntry) -> Result<()> {
+    if let Some(pid) = child.id() {
+        super::io_stats::track_child(pid);
+    }
     let stdout = child.stdout.take().expect("stdout piped");
     let stderr = child.stderr.take().expect("stderr piped");
     let mut out_lines = BufReader::new(stdout).lines();

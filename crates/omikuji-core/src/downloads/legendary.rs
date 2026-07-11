@@ -8,36 +8,8 @@ use std::process::Stdio;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 
+use super::proc_tree::shutdown;
 use super::{check_control, report_progress, ControlSignal, DownloadEntry, DownloadSource};
-
-// two-phase shutdown for legendary downloads.
-// phase 1: SIGTERM the parent only. legendary catches it, flushes the .resume
-// manifest in ~/.config/legendary/tmp/, then coordinates worker shutdown (8s)
-// phase 2: SIGKILL the entire process group. legendary uses python ultiprocessing and workers inherit the lock fd via fcntl.flock().
-// any worker surviving phase 1 holds the lock, causing "Failed to acquire installed data lock" on the next install. killpg ensures the kernel releases it.
-
-async fn shutdown(child: &mut Child) {
-    use nix::sys::signal::{kill, killpg, Signal};
-    use nix::unistd::Pid;
-
-    // grab pid before wait() reaps the child and clears it
-    let pid = child.id();
-
-    if let Some(pid) = pid {
-        let _ = kill(Pid::from_raw(pid as i32), Signal::SIGTERM);
-    }
-    let _ = tokio::time::timeout(std::time::Duration::from_secs(8), child.wait()).await;
-
-    // kill the group even if parent exited cleanly; orphaned workers may still hold the lock
-    if let Some(pid) = pid {
-        let pgid = Pid::from_raw(pid as i32);
-        let _ = killpg(pgid, Signal::SIGKILL);
-    }
-
-    if matches!(child.try_wait(), Ok(None)) {
-        let _ = child.wait().await;
-    }
-}
 
 pub struct LegendarySource;
 
@@ -163,6 +135,9 @@ impl DownloadSource for LegendarySource {
 }
 
 async fn run_with_progress(mut child: Child, entry: &DownloadEntry) -> Result<()> {
+    if let Some(pid) = child.id() {
+        super::io_stats::track_child(pid);
+    }
     let stdout = child.stdout.take().expect("stdout piped");
     let stderr = child.stderr.take().expect("stderr piped");
     let mut out_lines = BufReader::new(stdout).lines();

@@ -5,6 +5,7 @@ import "../lib/RunnerGrouping.js" as RG
 import "../controls"
 import "../dialogs"
 import "../primitives"
+import "../lib/Format.js" as Format
 
 DialogCard {
     id: root
@@ -104,14 +105,6 @@ DialogCard {
                 root.installBytes = parseInt(p.install) || 0
             }
         }
-    }
-
-    function formatBytes(bytes) {
-        if (bytes <= 0) return ""
-        let gb = bytes / (1024 * 1024 * 1024)
-        if (gb >= 1) return gb.toFixed(1) + " GB"
-        let mb = bytes / (1024 * 1024)
-        return mb.toFixed(0) + " MB"
     }
 
     onInstallPathChanged: refreshFreeSpace()
@@ -254,7 +247,7 @@ DialogCard {
                     let parts = []
                     if (root.existingInstallBytes > 0 || root.hasResumeState) {
                         let label = qsTr("Found existing files")
-                        if (root.existingInstallBytes > 0) label += " · " + root.formatBytes(root.existingInstallBytes)
+                        if (root.existingInstallBytes > 0) label += " · " + Format.formatBytesShort(root.existingInstallBytes)
                         if (root.hasResumeState) label += " · " + qsTr("resume state")
                         parts.push(label)
                     }
@@ -265,13 +258,13 @@ DialogCard {
                     } else if (root.installBytes === 0 && root.downloadBytes === 0) {
                         parts.push(qsTr("Size unknown"))
                     } else if (root.installBytes >= 0) {
-                        parts.push(qsTr("%1 install").arg(root.formatBytes(root.installBytes)))
+                        parts.push(qsTr("%1 install").arg(Format.formatBytesShort(root.installBytes)))
                         if (root.downloadBytes > 0) {
-                            parts.push(qsTr("%1 download").arg(root.formatBytes(root.downloadBytes)))
+                            parts.push(qsTr("%1 download").arg(Format.formatBytesShort(root.downloadBytes)))
                         }
                     }
                     if (root.freeSpaceBytes >= 0) {
-                        parts.push(qsTr("%1 free").arg(root.formatBytes(root.freeSpaceBytes)))
+                        parts.push(qsTr("%1 free").arg(Format.formatBytesShort(root.freeSpaceBytes)))
                     }
                     return parts.join(" · ")
                 }

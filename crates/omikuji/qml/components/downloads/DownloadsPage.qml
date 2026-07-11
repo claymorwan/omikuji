@@ -1,7 +1,6 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Layouts
-import Qt5Compat.GraphicalEffects
 
 import "."
 import "../primitives"
@@ -20,7 +19,7 @@ Item {
 
     // patched row-by-row so we dont reparse the full json on every progress tick
     property var componentStatuses: ({})
-    readonly property var componentOrder: ["umu-run", "hpatchz", "legendary", "jadeite", "egl-dummy"]
+    readonly property var componentOrder: ["umu-run", "hpatchz", "legendary", "gogdl", "jadeite", "egl-dummy"]
     readonly property bool componentsVisible: {
         if (!componentsBridge) return false
         if (componentsBridge.inProgress) return true
@@ -55,6 +54,11 @@ Item {
         }
         function onComponentCompleted(name, version) { root.syncComponentStatuses() }
         function onComponentFailed(name, error) { root.syncComponentStatuses() }
+    }
+
+    component SectionHeader: CapsLabel {
+        color: theme.textMuted
+        size: 11
     }
 
     Item {
@@ -101,20 +105,14 @@ Item {
         ColumnLayout {
             id: listCol
             width: parent.width
-            spacing: 14
+            spacing: 10
 
             ColumnLayout {
                 Layout.fillWidth: true
                 spacing: 8
                 visible: root.componentsVisible
 
-                Text {
-                    text: qsTr("Runtime components")
-                    color: theme.textMuted
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    textFormat: Text.PlainText
-                }
+                SectionHeader { text: qsTr("Runtime components") }
 
                 Repeater {
                     model: root.componentOrder
@@ -130,65 +128,72 @@ Item {
                 }
             }
 
-            // active downloads only, completed rows split into their own section so the in-progress list stays readable
-            ColumnLayout {
-                id: activeBox
-                Layout.fillWidth: true
-                spacing: 10
-                visible: downloadModel && (downloadModel.count - downloadModel.completedCount) > 0
+            SectionHeader {
+                text: downloadModel && downloadModel.runningCount > 0 ? qsTr("Now downloading") : qsTr("Paused")
+                visible: downloadModel && downloadModel.heroId !== ""
+                Layout.topMargin: root.componentsVisible ? theme.space.md : 0
+            }
 
-                Text {
-                    text: qsTr("Downloads")
-                    color: theme.textMuted
-                    font.pixelSize: 11
-                    font.weight: Font.DemiBold
-                    visible: root.componentsVisible
-                }
-
-                Repeater {
-                    model: root.downloadModel
-                    delegate: DownloadRow {
-                        Layout.fillWidth: true
-                        downloadModel: root.downloadModel
-                        pageVisible: root.pageVisible
-                        visible: status !== "Completed"
-                        onCancelRequested: (id, displayName) => root.cancelRequested(id, displayName)
-                    }
+            Repeater {
+                model: root.downloadModel
+                delegate: HeroCard {
+                    id: heroItem
+                    Layout.fillWidth: true
+                    downloadModel: root.downloadModel
+                    pageVisible: root.pageVisible
+                    visible: root.downloadModel && heroItem.id === root.downloadModel.heroId
+                    onCancelRequested: (id, displayName) => root.cancelRequested(id, displayName)
                 }
             }
 
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 12
-                visible: downloadModel && downloadModel.completedCount > 0
-                Layout.topMargin: {
-                    let viewport = listFlick.height
-                    let above = activeBox.visible ? activeBox.implicitHeight + listCol.spacing : 0
-                    return Math.max(20, viewport * 0.4 - above)
-                }
+            SectionHeader {
+                text: qsTr("Up next") + "  ·  " + (downloadModel ? downloadModel.queuedCount : 0)
+                visible: downloadModel && downloadModel.queuedCount > 0
+                Layout.topMargin: theme.space.md
+            }
 
-                Rectangle {
+            Repeater {
+                model: root.downloadModel
+                delegate: MiniRow {
+                    id: upNextItem
                     Layout.fillWidth: true
-                    Layout.preferredHeight: 1
-                    color: theme.alpha(theme.text, 0.08)
+                    downloadModel: root.downloadModel
+                    visible: (status === "Queued" || status === "Paused")
+                        && root.downloadModel && upNextItem.id !== root.downloadModel.heroId
+                    onCancelRequested: (id, displayName) => root.cancelRequested(id, displayName)
                 }
+            }
 
-                Text {
-                    text: qsTr("Completed")
-                    color: theme.text
-                    font.pixelSize: 18
-                    font.weight: Font.DemiBold
+            SectionHeader {
+                text: qsTr("Failed") + "  ·  " + (downloadModel ? downloadModel.failedCount : 0)
+                color: theme.error
+                visible: downloadModel && downloadModel.failedCount > 0
+                Layout.topMargin: theme.space.md
+            }
+
+            Repeater {
+                model: root.downloadModel
+                delegate: MiniRow {
+                    Layout.fillWidth: true
+                    downloadModel: root.downloadModel
+                    visible: status === "Failed"
+                    onCancelRequested: (id, displayName) => root.cancelRequested(id, displayName)
                 }
+            }
 
-                Repeater {
-                    model: root.downloadModel
-                    delegate: DownloadRow {
-                        Layout.fillWidth: true
-                        downloadModel: root.downloadModel
-                        pageVisible: root.pageVisible
-                        visible: status === "Completed"
-                        onCancelRequested: (id, displayName) => root.cancelRequested(id, displayName)
-                    }
+            SectionHeader {
+                text: qsTr("Completed") + "  ·  " + (downloadModel ? downloadModel.completedCount : 0)
+                visible: downloadModel && downloadModel.completedCount > 0
+                Layout.topMargin: theme.space.md
+            }
+
+            Repeater {
+                model: root.downloadModel
+                delegate: MiniRow {
+                    Layout.fillWidth: true
+                    downloadModel: root.downloadModel
+                    visible: status === "Completed" || status === "Cancelled"
+                    onCancelRequested: (id, displayName) => root.cancelRequested(id, displayName)
                 }
             }
         }

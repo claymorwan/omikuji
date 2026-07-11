@@ -157,6 +157,7 @@ fn main() {
     qrc_paths.extend(shader_paths);
     qrc_paths.extend(translation_paths);
     qrc_paths.push("qml/components/lib/RunnerGrouping.js".to_string());
+    qrc_paths.push("qml/components/lib/Format.js".to_string());
 
     let builder = CxxQtBuilder::new_qml_module(
         QmlModule::new("omikuji")
@@ -198,9 +199,13 @@ fn main() {
                 "qml/components/dialogs/SetsDialog.qml",
                 "qml/components/dialogs/UpdateAvailableDialog.qml",
                 // downloads
+                "qml/components/downloads/BannerThumb.qml",
+                "qml/components/downloads/CapsLabel.qml",
                 "qml/components/downloads/ComponentRow.qml",
-                "qml/components/downloads/DownloadRow.qml",
                 "qml/components/downloads/DownloadsPage.qml",
+                "qml/components/downloads/HeroCard.qml",
+                "qml/components/downloads/KindChip.qml",
+                "qml/components/downloads/MiniRow.qml",
                 // library
                 "qml/components/library/FloatingBar.qml",
                 "qml/components/library/GameCard.qml",
@@ -264,6 +269,7 @@ fn main() {
                 "qml/components/popups/PopupSurface.qml",
                 "qml/components/cards/StatusBadge.qml",
                 "qml/components/cards/StoreCardAction.qml",
+                "qml/components/primitives/Sparkline.qml",
                 "qml/components/primitives/Squircle.qml",
                 "qml/components/primitives/SvgIcon.qml",
                 "qml/components/primitives/ThinScrollBar.qml",

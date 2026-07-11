@@ -610,6 +610,7 @@ pub fn extract_archive(archive_path: &Path, dest: &Path, entry_id: Option<&str>)
         .stderr(std::process::Stdio::piped())
         .spawn()
         .map_err(|e| anyhow!("failed to run 7z: {}", e))?;
+    crate::downloads::io_stats::track_child(child.id());
 
     if let Some(stdout) = child.stdout.take() {
         use std::io::Read;
