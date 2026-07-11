@@ -28,6 +28,7 @@ fn collect_icons() -> (Vec<String>, Vec<String>) {
 
 fn collect_translations() -> Vec<String> {
     let dir = Path::new("i18n");
+    let _ = fs::create_dir_all(dir);
     let Ok(entries) = fs::read_dir(dir) else {
         return vec![];
     };
