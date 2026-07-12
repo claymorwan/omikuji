@@ -72,7 +72,7 @@ Item {
         }
 
         IconButton {
-            icon: "play"
+            icon: "play_arrow"
             size: 32
             visible: row.isPaused
             onClicked: if (row.downloadModel) row.downloadModel.resume(row.id)

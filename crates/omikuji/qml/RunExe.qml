@@ -39,6 +39,7 @@ ApplicationWindow {
     Theme {
         id: theme
         mutedIcons: uiSettings.mutedIcons
+        filledIcons: uiSettings.filledIcons
         followSystemColors: uiSettings.followSystemColors
         followSystemFont: uiSettings.followSystemFont
         fontFamily: uiSettings.fontFamily

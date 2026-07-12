@@ -46,6 +46,7 @@ pub mod qobject {
         #[qproperty(bool, discord_rpc, cxx_name = "discordRpc")]
         #[qproperty(f64, ui_scale, cxx_name = "uiScale")]
         #[qproperty(bool, muted_icons, cxx_name = "mutedIcons")]
+        #[qproperty(bool, filled_icons, cxx_name = "filledIcons")]
         #[qproperty(bool, highlight_logs, cxx_name = "highlightLogs")]
         #[qproperty(QString, card_flow, cxx_name = "cardFlow")]
         #[qproperty(QString, card_sort, cxx_name = "cardSort")]
@@ -164,6 +165,10 @@ pub mod qobject {
         #[qinvokable]
         #[cxx_name = "applyMutedIcons"]
         fn apply_muted_icons(self: Pin<&mut UiSettingsBridge>, value: bool);
+
+        #[qinvokable]
+        #[cxx_name = "applyFilledIcons"]
+        fn apply_filled_icons(self: Pin<&mut UiSettingsBridge>, value: bool);
 
         #[qinvokable]
         #[cxx_name = "applyHighlightLogs"]
@@ -286,6 +291,7 @@ pub struct UiSettingsRust {
     pub double_click_launches: bool,
     pub ui_scale: f64,
     pub muted_icons: bool,
+    pub filled_icons: bool,
     pub highlight_logs: bool,
     pub card_flow: cxx_qt_lib::QString,
     pub card_sort: cxx_qt_lib::QString,
@@ -336,6 +342,7 @@ impl UiSettingsRust {
             double_click_launches: s.behavior.double_click_launches,
             ui_scale: s.display.scale,
             muted_icons: s.display.muted_icons,
+            filled_icons: s.display.filled_icons,
             highlight_logs: s.display.highlight_logs,
             card_flow: cxx_qt_lib::QString::from(&s.display.card_flow),
             card_sort: cxx_qt_lib::QString::from(&s.display.card_sort),
@@ -425,6 +432,7 @@ impl qobject::UiSettingsBridge {
             display: DisplaySettings {
                 scale: self.ui_scale,
                 muted_icons: self.muted_icons,
+                filled_icons: self.filled_icons,
                 card_flow: self.card_flow.to_string(),
                 card_sort: self.card_sort.to_string(),
                 highlight_logs: self.highlight_logs,
@@ -488,6 +496,7 @@ impl qobject::UiSettingsBridge {
     }
 
     apply_setting!(apply_muted_icons, set_muted_icons, bool);
+    apply_setting!(apply_filled_icons, set_filled_icons, bool);
     apply_setting!(apply_highlight_logs, set_highlight_logs, bool);
 
     fn apply_card_flow(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
@@ -532,6 +541,7 @@ impl qobject::UiSettingsBridge {
         self.as_mut().set_double_click_launches(s.behavior.double_click_launches);
         self.as_mut().set_ui_scale(s.display.scale);
         self.as_mut().set_muted_icons(s.display.muted_icons);
+        self.as_mut().set_filled_icons(s.display.filled_icons);
         self.as_mut().set_highlight_logs(s.display.highlight_logs);
         self.as_mut().set_card_flow(cxx_qt_lib::QString::from(&s.display.card_flow));
         self.as_mut().set_card_sort(cxx_qt_lib::QString::from(&s.display.card_sort));

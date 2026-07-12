@@ -7,6 +7,9 @@ Item {
     property string name: ""
     property color color: "#ffffff"
     property int size: 20
+    property bool _fillMissing: false
+
+    onNameChanged: _fillMissing = false
 
     width: size
     height: size
@@ -19,9 +22,14 @@ Item {
     Image {
         id: img
         anchors.fill: parent
-        source: name ? "qrc:/qt/qml/omikuji/qml/icons/" + name + ".svg" : ""
+        source: {
+            if (!name) return ""
+            let fill = theme.filledIcons && !icon._fillMissing && !name.endsWith("_fill")
+            return "qrc:/qt/qml/omikuji/qml/icons/" + name + (fill ? "_fill" : "") + ".svg"
+        }
         sourceSize: Qt.size(icon.size * 2, icon.size * 2)
         visible: false
+        onStatusChanged: if (status === Image.Error && theme.filledIcons && !icon._fillMissing) Qt.callLater(function() { icon._fillMissing = true })
     }
 
     ColorOverlay {

@@ -120,7 +120,11 @@ Item {
                 anchors.centerIn: parent
                 name: "folder"
                 size: 20
-                color: theme.textMuted
+                color: folderMouse.containsMouse ? theme.iconHover : theme.icon
+
+                Behavior on color {
+                    ColorAnimation { duration: 100 }
+                }
             }
 
             MouseArea {

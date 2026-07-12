@@ -17,7 +17,7 @@ fn collect_icons() -> (Vec<String>, Vec<String>) {
         let filename = p.file_name().unwrap().to_string_lossy().into_owned();
         let stem = filename.strip_suffix(&format!(".{ext}")).unwrap().to_string();
         paths.push(format!("qml/icons/{filename}"));
-        if ext == "svg" && stem != "app" {
+        if ext == "svg" && stem != "app" && !stem.ends_with("_fill") {
             names.push(stem);
         }
     }

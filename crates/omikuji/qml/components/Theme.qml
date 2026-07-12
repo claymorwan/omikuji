@@ -44,6 +44,7 @@ QtObject {
     property color barBorder: Qt.rgba(text.r, text.g, text.b, 0.08)
 
     property bool mutedIcons: false
+    property bool filledIcons: false
     property color icon: Qt.rgba(text.r, text.g, text.b, mutedIcons ? 0.55 : 0.92)
     property color iconHover: Qt.rgba(text.r, text.g, text.b, mutedIcons ? 0.9 : 1.0)
 

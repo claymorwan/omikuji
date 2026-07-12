@@ -166,6 +166,7 @@ pub struct DisplaySettings {
     // this sucks not gonna lie the scaling is so ass it blurs everything
     pub scale: f64,
     pub muted_icons: bool,
+    pub filled_icons: bool,
     pub card_flow: String,
     pub card_sort: String,
     pub highlight_logs: bool,
@@ -174,7 +175,7 @@ pub struct DisplaySettings {
 
 impl Default for DisplaySettings {
     fn default() -> Self {
-        Self { scale: 1.0, muted_icons: false, card_flow: "center".into(), card_sort: "default".into(), highlight_logs: true, log_rules: Vec::new() }
+        Self { scale: 1.0, muted_icons: false, filled_icons: false, card_flow: "center".into(), card_sort: "default".into(), highlight_logs: true, log_rules: Vec::new() }
     }
 }
 

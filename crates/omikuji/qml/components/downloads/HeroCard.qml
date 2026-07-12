@@ -121,7 +121,7 @@ Item {
 
                         IconButton {
                             id: pauseBtn
-                            icon: hero.isPaused ? "play" : "pause"
+                            icon: hero.isPaused ? "play_arrow" : "pause"
                             size: 36
                             blocked: hero.isUninterruptible
                             onClicked: {

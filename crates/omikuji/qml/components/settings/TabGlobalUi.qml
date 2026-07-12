@@ -234,6 +234,17 @@ Item {
             }
 
             SettingsRow {
+                label: qsTr("Filled icons")
+                description: qsTr("Use the filled Material Symbols variants")
+                labelWidth: root.rowLabelWidth
+                width: parent.width
+                M3Switch {
+                    checked: uiSettings ? uiSettings.filledIcons : false
+                    onToggled: (val) => uiSettings.applyFilledIcons(val)
+                }
+            }
+
+            SettingsRow {
                 label: qsTr("Highlight logs")
                 description: qsTr("Color error, fixme and warning lines in log output")
                 labelWidth: root.rowLabelWidth
