@@ -167,6 +167,8 @@ pub struct DisplaySettings {
     pub scale: f64,
     pub muted_icons: bool,
     pub filled_icons: bool,
+    pub show_hidden: bool,
+    pub dim_hidden: bool,
     pub card_flow: String,
     pub card_sort: String,
     pub highlight_logs: bool,
@@ -175,7 +177,7 @@ pub struct DisplaySettings {
 
 impl Default for DisplaySettings {
     fn default() -> Self {
-        Self { scale: 1.0, muted_icons: false, filled_icons: false, card_flow: "center".into(), card_sort: "default".into(), highlight_logs: true, log_rules: Vec::new() }
+        Self { scale: 1.0, muted_icons: false, filled_icons: false, show_hidden: false, dim_hidden: false, card_flow: "center".into(), card_sort: "default".into(), highlight_logs: true, log_rules: Vec::new() }
     }
 }
 

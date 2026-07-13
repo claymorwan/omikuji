@@ -656,12 +656,15 @@ property real cardZoom: uiSettings.cardZoom
         spacingValue: uiSettings.cardSpacing
         sortValue: uiSettings.cardSort
         showSort: root.currentView === "library"
+        showHiddenValue: uiSettings.showHidden
+        showHiddenOption: root.currentView === "library"
 
         onAddClicked: root.activeModal = "addGame"
         onConsoleModeClicked: gameModel.launch_console_mode()
         onZoomMoved: (v) => uiSettings.applyCardZoom(v)
         onSpacingMoved: (v) => uiSettings.applyCardSpacing(v)
         onSortSelected: (v) => uiSettings.applyCardSort(v)
+        onShowHiddenToggled: (v) => uiSettings.applyShowHidden(v)
     }
 
     Item {
@@ -705,6 +708,8 @@ property real cardZoom: uiSettings.cardZoom
                 cardBaseHeight: root.cardBaseHeight
                 cardFlow: uiSettings.cardFlow
                 cardSort: uiSettings.cardSort
+                showHidden: uiSettings.showHidden
+                dimHidden: uiSettings.dimHidden
                 searchText: topBar.searchText
                 filterKind: navTabs.tabs[navTabs.currentIndex]?.kind || "all"
                 filterValue: navTabs.tabs[navTabs.currentIndex]?.value || ""

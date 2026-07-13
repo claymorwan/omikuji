@@ -592,6 +592,7 @@ const ROLE_ICON: i32 = 0x0109;
 const ROLE_FAVOURITE: i32 = 0x010A;
 const ROLE_CATEGORIES: i32 = 0x010B;
 const ROLE_RUNNER_TYPE: i32 = 0x010C;
+const ROLE_HIDDEN: i32 = 0x010D;
 
 #[derive(Clone, Copy, PartialEq, Default)]
 enum SortMode {
@@ -802,6 +803,7 @@ game_fields! {
     "meta.coverart" => str, metadata.coverart,
     "meta.icon" => str, metadata.icon,
     "meta.favourite" => bool, metadata.favourite,
+    "meta.hidden" => bool, metadata.hidden,
     "meta.categories" => json, metadata.categories,
 
     "source.kind" => str readonly, source.kind,
@@ -939,6 +941,7 @@ impl qobject::GameModel {
                 QVariant::from(&QString::from(&*path))
             }
             ROLE_FAVOURITE => QVariant::from(&game.metadata.favourite),
+            ROLE_HIDDEN => QVariant::from(&game.metadata.hidden),
             ROLE_RUNNER_TYPE => QVariant::from(&QString::from(&*game.runner.runner_type)),
             ROLE_CATEGORIES => {
                 match serde_json::to_string(&game.metadata.categories) {
@@ -963,6 +966,7 @@ impl qobject::GameModel {
         hash.insert_clone(&ROLE_COVERART, &QByteArray::from("coverart"));
         hash.insert_clone(&ROLE_ICON, &QByteArray::from("icon"));
         hash.insert_clone(&ROLE_FAVOURITE, &QByteArray::from("favourite"));
+        hash.insert_clone(&ROLE_HIDDEN, &QByteArray::from("hidden"));
         hash.insert_clone(&ROLE_CATEGORIES, &QByteArray::from("categories"));
         hash.insert_clone(&ROLE_RUNNER_TYPE, &QByteArray::from("runnerType"));
         hash
@@ -1362,6 +1366,10 @@ impl qobject::GameModel {
             QString::from("favourite"),
             QVariant::from(&game.metadata.favourite),
         );
+        map.insert(
+            QString::from("hidden"),
+            QVariant::from(&game.metadata.hidden),
+        );
         let cats_json = serde_json::to_string(&game.metadata.categories)
             .unwrap_or_else(|_| "[]".to_string());
         map.insert(
@@ -1438,7 +1446,13 @@ impl qobject::GameModel {
         let Some(game) = self.as_mut().rust_mut().get_mut().library.game.get_mut(idx) else {
             return false;
         };
-        apply_field_to_game(game, &k, &v)
+        if !apply_field_to_game(game, &k, &v) {
+            return false;
+        }
+        let model_idx = self.as_ref().model_index(index, 0, &QModelIndex::default());
+        let roles = cxx_qt_lib::QList::<i32>::default();
+        self.as_mut().data_changed(&model_idx, &model_idx, &roles);
+        true
     }
 
     fn save_game(self: Pin<&mut Self>, game_id: &QString) -> bool {

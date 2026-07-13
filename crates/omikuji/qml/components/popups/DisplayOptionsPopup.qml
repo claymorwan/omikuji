@@ -18,10 +18,13 @@ Popup {
 
     property string sortValue: "default"
     property bool showSort: false
+    property bool showHiddenValue: false
+    property bool showHiddenOption: false
 
     signal zoomMoved(real value)
     signal spacingMoved(int value)
     signal sortSelected(string value)
+    signal showHiddenToggled(bool value)
 
     padding: 16
     margins: 0
@@ -95,6 +98,14 @@ Popup {
                     currentIndex: Math.max(0, options.findIndex(o => o.value === root.sortValue))
                     onSelected: (value) => root.sortSelected(value)
                 }
+            }
+
+            LabeledSwitch {
+                width: parent.width
+                visible: root.showHiddenOption
+                label: qsTr("Show hidden games")
+                checked: root.showHiddenValue
+                onToggled: (val) => root.showHiddenToggled(val)
             }
         }
     }

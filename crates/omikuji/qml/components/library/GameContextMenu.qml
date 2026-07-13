@@ -49,6 +49,7 @@ Item {
             currentPrefixInfo = pinfo
 
             let isFav = game.favourite || false
+            let isHidden = game.hidden || false
             let isEpic = game.sourceKind === "epic" && game.sourceAppId && game.sourceAppId.length > 0
             let isGog = game.sourceKind === "gog" && game.sourceAppId && game.sourceAppId.length > 0
             let hasDesktopShortcut = ctrl.gameModel.has_desktop_shortcut(index)
@@ -70,6 +71,7 @@ Item {
                 { text: qsTr("Categories"), action: "categories" },
                 { text: qsTr("Browse files"), action: "browse" },
                 { text: isFav ? qsTr("Remove from favorites") : qsTr("Add to favorites"), action: "favorite" },
+                { text: isHidden ? qsTr("Unhide") : qsTr("Hide"), action: "hide" },
                 { text: qsTr("Shortcuts"), submenu: shortcuts },
                 { text: qsTr("Duplicate"), action: "duplicate" }
             ]
@@ -122,6 +124,13 @@ Item {
                     let game = ctrl.gameModel.get_game(idx)
                     let newFav = !(game.favourite || false)
                     ctrl.gameModel.update_game_field(idx, "meta.favourite", newFav ? "true" : "false")
+                    ctrl.gameModel.save_game(game.gameId)
+                    break
+                }
+                case "hide": {
+                    let game = ctrl.gameModel.get_game(idx)
+                    let newHidden = !(game.hidden || false)
+                    ctrl.gameModel.update_game_field(idx, "meta.hidden", newHidden ? "true" : "false")
                     ctrl.gameModel.save_game(game.gameId)
                     break
                 }

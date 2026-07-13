@@ -54,6 +54,8 @@ pub struct Metadata {
     #[serde(default)]
     pub favourite: bool,
     #[serde(default)]
+    pub hidden: bool,
+    #[serde(default)]
     pub categories: Vec<String>,
 }
 
@@ -275,6 +277,7 @@ impl Metadata {
             coverart: String::new(),
             icon: String::new(),
             favourite: false,
+            hidden: false,
             categories: Vec::new(),
         }
     }

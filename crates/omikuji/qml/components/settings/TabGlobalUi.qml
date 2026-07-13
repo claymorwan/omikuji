@@ -223,6 +223,28 @@ Item {
             }
 
             SettingsRow {
+                label: qsTr("Show hidden games")
+                description: qsTr("Keep games marked as hidden visible in the library")
+                labelWidth: root.rowLabelWidth
+                width: parent.width
+                M3Switch {
+                    checked: uiSettings ? uiSettings.showHidden : false
+                    onToggled: (val) => uiSettings.applyShowHidden(val)
+                }
+            }
+
+            SettingsRow {
+                label: qsTr("Dim hidden games")
+                description: qsTr("Fade hidden games so they stand out while shown")
+                labelWidth: root.rowLabelWidth
+                width: parent.width
+                M3Switch {
+                    checked: uiSettings ? uiSettings.dimHidden : false
+                    onToggled: (val) => uiSettings.applyDimHidden(val)
+                }
+            }
+
+            SettingsRow {
                 label: qsTr("Muted icons")
                 description: qsTr("Dim icons to ~55% instead of full contrast")
                 labelWidth: root.rowLabelWidth

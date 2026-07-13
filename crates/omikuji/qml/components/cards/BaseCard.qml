@@ -26,6 +26,7 @@ Item {
     property color selectedBgTint: "transparent"
 
     property bool cardVisible: true
+    property bool dimmed: false
 
     property bool elevation: false
 
@@ -54,7 +55,7 @@ Item {
     implicitWidth: 180
     implicitHeight: 240
 
-    opacity: cardVisible ? 1 : 0
+    opacity: !cardVisible ? 0 : dimmed ? 0.55 : 1
     visible: opacity > 0.01
     Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 

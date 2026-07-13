@@ -19,6 +19,8 @@ Item {
     property string filterKind: "all"
     property string filterValue: ""
     property string cardSort: "default"
+    property bool showHidden: false
+    property bool dimHidden: false
     property var gameModel: null
 
     readonly property bool reorderActive: cardSort === "custom" && searchText === "" && filterKind === "all"
@@ -95,14 +97,17 @@ Item {
             required property string color
             required property string runnerType
             required property string runner
+            required property bool hidden
 
             width: root.cardBaseWidth * root.cardZoom
             height: root.cardBaseHeight * root.cardZoom
 
             elevation: root.cardElevation && dragProxy.dragCard !== cardDelegate
             selected: index === root.selectedIndex
+            dimmed: root.dimHidden && hidden
             cardVisible: (root.searchText === "" ||
                          name.toLowerCase().includes(root.searchText.toLowerCase())) &&
+                         (root.showHidden || !hidden) &&
                          root.gamePassesFilter(index)
             reorderable: root.reorderActive
             onClicked: root.gameClicked(index)
