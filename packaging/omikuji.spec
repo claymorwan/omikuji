@@ -1,7 +1,7 @@
 %global debug_package %{nil}
 
 Name:           omikuji
-Version:        0.6.0
+Version:        0.7.0
 Release:        1%{?dist}
 Summary:        Qt/QML based wine apps launcher for Linux
 
@@ -53,6 +53,20 @@ install -Dm0644 packaging/io.github.reakjra.omikuji.metainfo.xml %{buildroot}%{_
 %{_datadir}/metainfo/io.github.reakjra.omikuji.metainfo.xml
 
 %changelog
+* Mon Jul 13 2026 reakjra <reakjra@proton.me> - 0.7.0-1
+- Kuro games now use krpdiff to update.
+- Fix winetricks not opening by not inheriting blank DISPLAY env (#51)
+- Fix modals blur on fractional coords + dropdown scroll wheel leakthrough
+- downloads page items overhaul + shm leak on cancel (GOGDL/Legendary)
+- Move value on top of the sliders
+- Move to the left the theme colors value
+- Refine spinboxes 
+- add filled svgs with filled toggle and rework ofudas, steam and gog svgs
+- Refine toasts
+- Add hide functionality for main library cards
+- Port settingd and downloads bridges onto kushi codegen
+- Add kushi crate dep
+
 * Thu Jul 09 2026 reakjra <reakjra@proton.me> - 0.6.0-1
 - Data structure migration + migration modal 
 - UI polish (smaller buttons, headers action buttons, log windows refinement, logs custom colors regex)

@@ -1679,6 +1679,19 @@
     {
         "type": "archive",
         "archive-type": "tar-gzip",
+        "url": "https://static.crates.io/crates/kushi/kushi-0.1.0.crate",
+        "sha256": "cdbaf7c71f004dfe3cad693fdccef40a53d3b837b59d7a682f5b133be9b9fa8f",
+        "dest": "cargo/vendor/kushi-0.1.0"
+    },
+    {
+        "type": "inline",
+        "contents": "{\"package\": \"cdbaf7c71f004dfe3cad693fdccef40a53d3b837b59d7a682f5b133be9b9fa8f\", \"files\": {}}",
+        "dest": "cargo/vendor/kushi-0.1.0",
+        "dest-filename": ".cargo-checksum.json"
+    },
+    {
+        "type": "archive",
+        "archive-type": "tar-gzip",
         "url": "https://static.crates.io/crates/lazy_static/lazy_static-1.5.0.crate",
         "sha256": "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe",
         "dest": "cargo/vendor/lazy_static-1.5.0"

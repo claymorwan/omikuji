@@ -22,6 +22,24 @@
     </p>
   </description>
   <releases>
+    <release version="0.7.0" date="2026-07-13">
+      <description>
+        <ul>
+          <li>Kuro games now use krpdiff to update.</li>
+          <li>Fix winetricks not opening by not inheriting blank DISPLAY env (#51)</li>
+          <li>Fix modals blur on fractional coords + dropdown scroll wheel leakthrough</li>
+          <li>downloads page items overhaul + shm leak on cancel (GOGDL/Legendary)</li>
+          <li>Move value on top of the sliders</li>
+          <li>Move to the left the theme colors value</li>
+          <li>Refine spinboxes </li>
+          <li>add filled svgs with filled toggle and rework ofudas, steam and gog svgs</li>
+          <li>Refine toasts</li>
+          <li>Add hide functionality for main library cards</li>
+          <li>Port settingd and downloads bridges onto kushi codegen</li>
+          <li>Add kushi crate dep</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.6.0" date="2026-07-09">
       <description>
         <ul>
