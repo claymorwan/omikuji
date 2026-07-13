@@ -1287,6 +1287,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "kushi"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cdbaf7c71f004dfe3cad693fdccef40a53d3b837b59d7a682f5b133be9b9fa8f"
+
+[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1565,6 +1571,7 @@ dependencies = [
  "cxx-qt-lib",
  "dirs",
  "gilrs",
+ "kushi",
  "lazy_static",
  "libc",
  "omikuji-core",

@@ -160,6 +160,122 @@ fn main() {
     qrc_paths.push("qml/components/lib/RunnerGrouping.js".to_string());
     qrc_paths.push("qml/components/lib/Format.js".to_string());
 
+    let out_dir = PathBuf::from(std::env::var("OUT_DIR").unwrap());
+    let ui_settings_bridge = kushi::ObjectBridge::new("UiSettingsBridge")
+        .external_data("UiSettings", "UiSettings::load()")
+        .threading()
+        .prop_at("card_zoom", kushi::Kind::F64, "library.card_zoom")
+        .prop_at("card_spacing", kushi::Kind::I32, "library.card_spacing")
+        .prop_at("card_elevation", kushi::Kind::Bool, "library.card_elevation")
+        .prop_at("unload_store_pages", kushi::Kind::Bool, "library.unload_store_pages")
+        .prop_at("show_gachas", kushi::Kind::Bool, "tabs.show_gachas")
+        .prop_at("show_epic", kushi::Kind::Bool, "tabs.show_epic")
+        .prop_at("show_gog", kushi::Kind::Bool, "tabs.show_gog")
+        .prop_at("show_steam", kushi::Kind::Bool, "tabs.show_steam")
+        .prop_at("nav_width", kushi::Kind::I32, "nav.width")
+        .prop_at("nav_collapsed", kushi::Kind::Bool, "nav.collapsed")
+        .prop_at("minimize_on_launch", kushi::Kind::Bool, "behavior.minimize_on_launch")
+        .prop_at("save_game_logs", kushi::Kind::Bool, "behavior.save_game_logs")
+        .prop_at("double_click_launches", kushi::Kind::Bool, "behavior.double_click_launches")
+        .prop_at("auto_check_epic_updates_on_launch", kushi::Kind::Bool, "behavior.auto_check_epic_updates_on_launch")
+        .prop_at("auto_check_gog_updates_on_launch", kushi::Kind::Bool, "behavior.auto_check_gog_updates_on_launch")
+        .prop_at("auto_check_updates_on_boot", kushi::Kind::Bool, "behavior.auto_check_updates_on_boot")
+        .prop_at("show_tray_icon", kushi::Kind::Bool, "behavior.show_tray_icon")
+        .prop_custom_apply("discord_rpc", kushi::Kind::Bool, "behavior.discord_rpc")
+        .prop_custom_apply("ui_scale", kushi::Kind::F64, "display.scale")
+        .prop_at("muted_icons", kushi::Kind::Bool, "display.muted_icons")
+        .prop_at("filled_icons", kushi::Kind::Bool, "display.filled_icons")
+        .prop_at("show_hidden", kushi::Kind::Bool, "display.show_hidden")
+        .prop_at("dim_hidden", kushi::Kind::Bool, "display.dim_hidden")
+        .prop_at("highlight_logs", kushi::Kind::Bool, "display.highlight_logs")
+        .prop_custom_apply("card_flow", kushi::Kind::QString, "display.card_flow")
+        .prop_custom_apply("card_sort", kushi::Kind::QString, "display.card_sort")
+        .prop_at("console_background", kushi::Kind::QString, "console_mode.background")
+        .prop_custom_apply("follow_system_colors", kushi::Kind::Bool, "theme.follow_system_colors")
+        .prop_custom_apply("follow_system_font", kushi::Kind::Bool, "theme.follow_system_font")
+        .prop_custom_apply("font_family", kushi::Kind::QString, "theme.font_family")
+        .prop_readonly("fill_fields", kushi::Kind::Bool, "theme.fill_fields")
+        .prop_readonly("radius_scale", kushi::Kind::F64, "theme.radius_scale")
+        .prop_at("language", kushi::Kind::QString, "language")
+        .qsignal("theme_changed")
+        .json_accessor("categories", "Vec<CategoryEntry>", "categories", "categories_changed")
+        .json_accessor("env_sets", "Vec<KvSet>", "env_sets", "env_sets_changed")
+        .json_accessor("dll_sets", "Vec<KvSet>", "dll_sets", "dll_sets_changed")
+        .json_accessor("log_rules", "Vec<LogRule>", "display.log_rules", "log_rules_changed")
+        .raw_field_persisted("color_overrides", "BTreeMap<String, String>", "s.theme.colors.clone()", "s.theme.colors = self.color_overrides.clone();")
+        .raw_field("watcher", "Option<FileWatcher>", "None")
+        .raw_field("suppress_reload_until", "Option<Instant>", "None")
+        .custom_invokable("initWatcher", "fn init_watcher(self: Pin<&mut UiSettingsBridge>);")
+        .custom_invokable("availableIconsJson", "fn available_icons_json(self: &UiSettingsBridge) -> QString;")
+        .custom_invokable("colorOverride", "fn color_override(self: &UiSettingsBridge, token: &QString) -> QString;")
+        .custom_invokable("setColorOverride", "fn set_color_override(self: Pin<&mut UiSettingsBridge>, token: &QString, hex: &QString);")
+        .custom_invokable("overridesJson", "fn overrides_json(self: &UiSettingsBridge) -> QString;")
+        .custom_invokable("availableFontsJson", "fn available_fonts_json(self: &UiSettingsBridge) -> QString;")
+        .custom_invokable("availableLanguagesJson", "fn available_languages_json(self: &UiSettingsBridge) -> QString;")
+        .reload_hook("reload_extras")
+        .write_into(&out_dir);
+
+    let download_model_bridge = kushi::ListModelBridge::new("DownloadModel")
+        .file_stem("download_model_bridge")
+        .item_type("DownloadEntry")
+        .items_name("entries")
+        .custom_default()
+        .qproperty("count", kushi::Kind::I32)
+        .qproperty("active_count", kushi::Kind::I32)
+        .qproperty("completed_count", kushi::Kind::I32)
+        .qproperty("running_count", kushi::Kind::I32)
+        .qproperty("queued_count", kushi::Kind::I32)
+        .qproperty("failed_count", kushi::Kind::I32)
+        .qproperty("hero_id", kushi::Kind::QString)
+        .role("id", kushi::Kind::QString, "id")
+        .role("source", kushi::Kind::QString, "source")
+        .role("app_id", kushi::Kind::QString, "app_id")
+        .role("display_name", kushi::Kind::QString, "display_name")
+        .role_fn("banner", "role_banner")
+        .role_fn("status", "role_status")
+        .role("progress", kushi::Kind::F64, "progress")
+        .role_fn("speed", "role_speed")
+        .role_fn("bytes_downloaded", "role_bytes_downloaded")
+        .role_fn("bytes_total", "role_bytes_total")
+        .role_fn("error", "role_error")
+        .role_fn("kind", "role_kind")
+        .qsignal_raw("fn download_completed(self: Pin<&mut DownloadModel>, id: &QString, source: &QString, app_id: &QString, display_name: &QString, install_path: &QString, prefix_path: &QString, runner_version: &QString);")
+        .qsignal_raw("fn download_failed(self: Pin<&mut DownloadModel>, id: &QString, error: &QString);")
+        .qsignal_raw("fn state_changed(self: Pin<&mut DownloadModel>);")
+        .custom_invokable_raw("fn enqueue_epic(self: Pin<&mut DownloadModel>, app_id: &QString, display_name: &QString, banner_url: &QString, install_path: &QString, prefix_path: &QString, runner_version: &QString) -> QString;")
+        .custom_invokable_raw("fn enqueue_gacha(self: Pin<&mut DownloadModel>, manifest_id: &QString, edition_id: &QString, voices_csv: &QString, display_name: &QString, install_path: &QString, runner_version: &QString, prefix_path: &QString, temp_path: &QString) -> QString;")
+        .custom_invokable_raw("fn pause(self: Pin<&mut DownloadModel>, id: &QString);")
+        .custom_invokable_raw("fn resume(self: Pin<&mut DownloadModel>, id: &QString);")
+        .custom_invokable_raw("fn cancel(self: Pin<&mut DownloadModel>, id: &QString);")
+        .custom_invokable_raw("fn retry(self: Pin<&mut DownloadModel>, id: &QString);")
+        .custom_invokable_raw("fn dismiss(self: Pin<&mut DownloadModel>, id: &QString);")
+        .custom_invokable_raw("fn drain_events(self: Pin<&mut DownloadModel>);")
+        .custom_invokable_raw("fn epic_state_json(self: &DownloadModel) -> QString;")
+        .custom_invokable_raw("fn gog_state_json(self: &DownloadModel) -> QString;")
+        .custom_invokable_raw("fn active_for_app_id(self: &DownloadModel, app_id: &QString) -> QString;")
+        .custom_invokable("speedHistoryJson", "fn speed_history_json(self: &DownloadModel) -> QString;")
+        .row_ops()
+        .write_into(&out_dir);
+
+    let staged_bridges = kushi::stage_files(
+        [
+            "src/bridge/game_model.rs",
+            "src/bridge/library_watcher.rs",
+            "src/bridge/log_highlighter.rs",
+            "src/bridge/epic_model.rs",
+            "src/bridge/gog_model.rs",
+            "src/bridge/components.rs",
+            "src/bridge/migration.rs",
+            "src/bridge/ofuda.rs",
+            "src/bridge/archive_manager.rs",
+            "src/bridge/defaults.rs",
+            "src/bridge/gamepad.rs",
+            "src/bridge/tray.rs",
+        ],
+        &out_dir,
+    );
+
+    // holy fucking shit this is wild actually
     let builder = CxxQtBuilder::new_qml_module(
         QmlModule::new("omikuji")
             .qml_files([
@@ -280,22 +396,9 @@ fn main() {
             ])
     )
     .qrc_resources(&qrc_paths)
-    .files([
-        "src/bridge/game_model.rs",
-        "src/bridge/library_watcher.rs",
-        "src/bridge/log_highlighter.rs",
-        "src/bridge/epic_model.rs",
-        "src/bridge/gog_model.rs",
-        "src/bridge/download_model.rs",
-        "src/bridge/ui_settings.rs",
-        "src/bridge/components.rs",
-        "src/bridge/migration.rs",
-        "src/bridge/ofuda.rs",
-        "src/bridge/archive_manager.rs",
-        "src/bridge/defaults.rs",
-        "src/bridge/gamepad.rs",
-        "src/bridge/tray.rs",
-    ])
+    .files(staged_bridges)
+    .file(ui_settings_bridge)
+    .file(download_model_bridge)
     ;
 
     // link QtSvg, QIcon uses the image plugin system to load SVGs.

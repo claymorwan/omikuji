@@ -1,188 +1,62 @@
-
 #![allow(clippy::too_many_arguments)]
 
 use std::path::PathBuf;
-use std::pin::Pin;
 
 use cxx_qt::CxxQtType;
-use cxx_qt_lib::{QByteArray, QHash, QHashPair_i32_QByteArray, QModelIndex, QString, QVariant};
+use cxx_qt_lib::{QModelIndex, QString, QVariant};
 
 use omikuji_core::downloads::{
     self, DownloadEntry, DownloadEvent, DownloadKind, DownloadRequest, DownloadStatus,
 };
 
-#[cxx_qt::bridge]
-pub mod qobject {
-    unsafe extern "C++" {
-        include!(<QtCore/QAbstractListModel>);
-        type QAbstractListModel;
+include!(concat!(env!("OUT_DIR"), "/download_model_bridge.rs"));
 
-        include!("cxx-qt-lib/qmodelindex.h");
-        type QModelIndex = cxx_qt_lib::QModelIndex;
-        include!("cxx-qt-lib/qvariant.h");
-        type QVariant = cxx_qt_lib::QVariant;
-        include!("cxx-qt-lib/qstring.h");
-        type QString = cxx_qt_lib::QString;
-        include!("cxx-qt-lib/qbytearray.h");
-        type QByteArray = cxx_qt_lib::QByteArray;
-        include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray =
-            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
-    }
+fn status_label(s: &DownloadStatus) -> &'static str {
+    s.short()
+}
 
-    extern "RustQt" {
-        #[qobject]
-        #[qml_element]
-        #[base = QAbstractListModel]
-        #[qproperty(i32, count)]
-        #[qproperty(i32, active_count, cxx_name = "activeCount")]
-        #[qproperty(i32, completed_count, cxx_name = "completedCount")]
-        #[qproperty(i32, running_count, cxx_name = "runningCount")]
-        #[qproperty(i32, queued_count, cxx_name = "queuedCount")]
-        #[qproperty(i32, failed_count, cxx_name = "failedCount")]
-        #[qproperty(QString, hero_id, cxx_name = "heroId")]
-        type DownloadModel = super::DownloadModelRust;
-    }
-
-    unsafe extern "RustQt" {
-        #[qsignal]
-        fn download_completed(
-            self: Pin<&mut DownloadModel>,
-            id: &QString,
-            source: &QString,
-            app_id: &QString,
-            display_name: &QString,
-            install_path: &QString,
-            prefix_path: &QString,
-            runner_version: &QString,
-        );
-
-        #[qsignal]
-        fn download_failed(self: Pin<&mut DownloadModel>, id: &QString, error: &QString);
-
-        #[cxx_name = "rowCount"]
-        #[cxx_override]
-        fn row_count(self: &DownloadModel, parent: &QModelIndex) -> i32;
-
-        #[cxx_override]
-        fn data(self: &DownloadModel, index: &QModelIndex, role: i32) -> QVariant;
-
-        #[cxx_name = "roleNames"]
-        #[cxx_override]
-        fn role_names(self: &DownloadModel) -> QHash_i32_QByteArray;
-
-        #[qinvokable]
-        fn enqueue_epic(
-            self: Pin<&mut DownloadModel>,
-            app_id: &QString,
-            display_name: &QString,
-            banner_url: &QString,
-            install_path: &QString,
-            prefix_path: &QString,
-            runner_version: &QString,
-        ) -> QString;
-
-        #[qinvokable]
-        fn enqueue_gacha(
-            self: Pin<&mut DownloadModel>,
-            manifest_id: &QString,
-            edition_id: &QString,
-            voices_csv: &QString,
-            display_name: &QString,
-            install_path: &QString,
-            runner_version: &QString,
-            prefix_path: &QString,
-            temp_path: &QString,
-        ) -> QString;
-
-        #[qinvokable]
-        fn pause(self: Pin<&mut DownloadModel>, id: &QString);
-        #[qinvokable]
-        fn resume(self: Pin<&mut DownloadModel>, id: &QString);
-        #[qinvokable]
-        fn cancel(self: Pin<&mut DownloadModel>, id: &QString);
-
-        #[qinvokable]
-        fn retry(self: Pin<&mut DownloadModel>, id: &QString);
-
-        #[qinvokable]
-        fn dismiss(self: Pin<&mut DownloadModel>, id: &QString);
-
-        #[qinvokable]
-        fn drain_events(self: Pin<&mut DownloadModel>);
-
-        #[qinvokable]
-        fn epic_state_json(self: &DownloadModel) -> QString;
-
-        #[qinvokable]
-        fn gog_state_json(self: &DownloadModel) -> QString;
-
-        // match is "equal or prefix-colon" so "zzz:global" also matches
-        // "zzz:global:en-us,ja-jp" (hoyo encodes voice locales in app_id)
-        #[qinvokable]
-        fn active_for_app_id(self: &DownloadModel, app_id: &QString) -> QString;
-
-        #[qinvokable]
-        #[cxx_name = "speedHistoryJson"]
-        fn speed_history_json(self: &DownloadModel) -> QString;
-
-        #[qsignal]
-        fn state_changed(self: Pin<&mut DownloadModel>);
-    }
-
-    unsafe extern "RustQt" {
-        #[cxx_name = "beginInsertRows"]
-        #[inherit]
-        fn begin_insert_rows(self: Pin<&mut DownloadModel>, parent: &QModelIndex, first: i32, last: i32);
-
-        #[cxx_name = "endInsertRows"]
-        #[inherit]
-        fn end_insert_rows(self: Pin<&mut DownloadModel>);
-
-        #[cxx_name = "beginRemoveRows"]
-        #[inherit]
-        fn begin_remove_rows(self: Pin<&mut DownloadModel>, parent: &QModelIndex, first: i32, last: i32);
-
-        #[cxx_name = "endRemoveRows"]
-        #[inherit]
-        fn end_remove_rows(self: Pin<&mut DownloadModel>);
-
-        #[cxx_name = "dataChanged"]
-        #[inherit]
-        fn data_changed(
-            self: Pin<&mut DownloadModel>,
-            top_left: &QModelIndex,
-            bottom_right: &QModelIndex,
-        );
-
-        #[cxx_name = "index"]
-        #[inherit]
-        fn index_for(self: &DownloadModel, row: i32, column: i32, parent: &QModelIndex) -> QModelIndex;
+fn error_text(s: &DownloadStatus) -> String {
+    if let DownloadStatus::Failed(e) = s {
+        e.clone()
+    } else {
+        String::new()
     }
 }
 
-const ROLE_ID: i32 = 0x0200;
-const ROLE_SOURCE: i32 = 0x0201;
-const ROLE_APP_ID: i32 = 0x0202;
-const ROLE_DISPLAY_NAME: i32 = 0x0203;
-const ROLE_BANNER: i32 = 0x0204;
-const ROLE_STATUS: i32 = 0x0205;
-const ROLE_PROGRESS: i32 = 0x0206;
-const ROLE_SPEED: i32 = 0x0207;
-const ROLE_BYTES_DL: i32 = 0x0208;
-const ROLE_BYTES_TOTAL: i32 = 0x0209;
-const ROLE_ERROR: i32 = 0x020A;
-const ROLE_KIND: i32 = 0x020B;
+fn kind_label(k: &DownloadKind) -> &'static str {
+    match k {
+        DownloadKind::Install => "install",
+        DownloadKind::Update { .. } => "update",
+        DownloadKind::Repair => "repair",
+    }
+}
 
-pub struct DownloadModelRust {
-    entries: Vec<DownloadEntry>,
-    count: i32,
-    active_count: i32,
-    completed_count: i32,
-    running_count: i32,
-    queued_count: i32,
-    failed_count: i32,
-    hero_id: QString,
+fn role_banner(e: &DownloadEntry) -> QVariant {
+    QVariant::from(&QString::from(e.banner_url.as_deref().unwrap_or("")))
+}
+
+fn role_status(e: &DownloadEntry) -> QVariant {
+    QVariant::from(&QString::from(status_label(&e.status)))
+}
+
+fn role_speed(e: &DownloadEntry) -> QVariant {
+    QVariant::from(&(e.speed_bps as f64))
+}
+
+fn role_bytes_downloaded(e: &DownloadEntry) -> QVariant {
+    QVariant::from(&(e.bytes_downloaded as f64))
+}
+
+fn role_bytes_total(e: &DownloadEntry) -> QVariant {
+    QVariant::from(&(e.bytes_total as f64))
+}
+
+fn role_error(e: &DownloadEntry) -> QVariant {
+    QVariant::from(&QString::from(&error_text(&e.status)))
+}
+
+fn role_kind(e: &DownloadEntry) -> QVariant {
+    QVariant::from(&QString::from(kind_label(&e.kind)))
 }
 
 impl Default for DownloadModelRust {
@@ -199,18 +73,6 @@ impl Default for DownloadModelRust {
             hero_id: QString::from(&c.hero_id),
             entries,
         }
-    }
-}
-
-fn status_label(s: &DownloadStatus) -> &'static str {
-    s.short()
-}
-
-fn error_text(s: &DownloadStatus) -> String {
-    if let DownloadStatus::Failed(e) = s {
-        e.clone()
-    } else {
-        String::new()
     }
 }
 
@@ -256,58 +118,7 @@ fn recompute(entries: &[DownloadEntry], prev_hero: &str) -> Counts {
     c
 }
 
-fn kind_label(k: &DownloadKind) -> &'static str {
-    match k {
-        DownloadKind::Install => "install",
-        DownloadKind::Update { .. } => "update",
-        DownloadKind::Repair => "repair",
-    }
-}
-
 impl qobject::DownloadModel {
-    fn row_count(&self, _parent: &QModelIndex) -> i32 {
-        self.entries.len() as i32
-    }
-
-    fn role_names(&self) -> QHash<QHashPair_i32_QByteArray> {
-        let mut h = QHash::<QHashPair_i32_QByteArray>::default();
-        h.insert_clone(&ROLE_ID, &QByteArray::from("id"));
-        h.insert_clone(&ROLE_SOURCE, &QByteArray::from("source"));
-        h.insert_clone(&ROLE_APP_ID, &QByteArray::from("appId"));
-        h.insert_clone(&ROLE_DISPLAY_NAME, &QByteArray::from("displayName"));
-        h.insert_clone(&ROLE_BANNER, &QByteArray::from("banner"));
-        h.insert_clone(&ROLE_STATUS, &QByteArray::from("status"));
-        h.insert_clone(&ROLE_PROGRESS, &QByteArray::from("progress"));
-        h.insert_clone(&ROLE_SPEED, &QByteArray::from("speed"));
-        h.insert_clone(&ROLE_BYTES_DL, &QByteArray::from("bytesDownloaded"));
-        h.insert_clone(&ROLE_BYTES_TOTAL, &QByteArray::from("bytesTotal"));
-        h.insert_clone(&ROLE_ERROR, &QByteArray::from("error"));
-        h.insert_clone(&ROLE_KIND, &QByteArray::from("kind"));
-        h
-    }
-
-    fn data(&self, index: &QModelIndex, role: i32) -> QVariant {
-        let row = index.row() as usize;
-        let Some(e) = self.entries.get(row) else {
-            return QVariant::default();
-        };
-        match role {
-            ROLE_ID => QVariant::from(&QString::from(&*e.id)),
-            ROLE_SOURCE => QVariant::from(&QString::from(&*e.source)),
-            ROLE_APP_ID => QVariant::from(&QString::from(&*e.app_id)),
-            ROLE_DISPLAY_NAME => QVariant::from(&QString::from(&*e.display_name)),
-            ROLE_BANNER => QVariant::from(&QString::from(e.banner_url.as_deref().unwrap_or(""))),
-            ROLE_STATUS => QVariant::from(&QString::from(status_label(&e.status))),
-            ROLE_PROGRESS => QVariant::from(&e.progress),
-            ROLE_SPEED => QVariant::from(&(e.speed_bps as f64)),
-            ROLE_BYTES_DL => QVariant::from(&(e.bytes_downloaded as f64)),
-            ROLE_BYTES_TOTAL => QVariant::from(&(e.bytes_total as f64)),
-            ROLE_ERROR => QVariant::from(&QString::from(&error_text(&e.status))),
-            ROLE_KIND => QVariant::from(&QString::from(kind_label(&e.kind))),
-            _ => QVariant::default(),
-        }
-    }
-
     fn enqueue_epic(
         self: Pin<&mut Self>,
         app_id: &QString,
@@ -426,9 +237,7 @@ impl qobject::DownloadModel {
                 DownloadEvent::StatusChanged(id, status) => {
                     if let Some(idx) = self.entries.iter().position(|e| e.id == id) {
                         self.as_mut().rust_mut().get_mut().entries[idx].status = status;
-                        let parent = QModelIndex::default();
-                        let qidx = self.as_ref().index_for(idx as i32, 0, &parent);
-                        self.as_mut().data_changed(&qidx, &qidx);
+                        self.as_mut().notify_row_changed(idx as i32);
                     }
                 }
                 DownloadEvent::Progress {
@@ -446,9 +255,7 @@ impl qobject::DownloadModel {
                             entry.bytes_total = bytes_total;
                         }
                         entry.speed_bps = speed_bps;
-                        let parent = QModelIndex::default();
-                        let qidx = self.as_ref().index_for(idx as i32, 0, &parent);
-                        self.as_mut().data_changed(&qidx, &qidx);
+                        self.as_mut().notify_row_changed(idx as i32);
                     }
                 }
                 DownloadEvent::Completed {
@@ -464,9 +271,7 @@ impl qobject::DownloadModel {
                         let entry = &mut self.as_mut().rust_mut().get_mut().entries[idx];
                         entry.status = DownloadStatus::Completed;
                         entry.progress = 100.0;
-                        let parent = QModelIndex::default();
-                        let qidx = self.as_ref().index_for(idx as i32, 0, &parent);
-                        self.as_mut().data_changed(&qidx, &qidx);
+                        self.as_mut().notify_row_changed(idx as i32);
                     }
                     let prefix_str = prefix_path
                         .as_ref()
@@ -486,9 +291,7 @@ impl qobject::DownloadModel {
                     if let Some(idx) = self.entries.iter().position(|e| e.id == id) {
                         let entry = &mut self.as_mut().rust_mut().get_mut().entries[idx];
                         entry.status = DownloadStatus::Failed(err.clone());
-                        let parent = QModelIndex::default();
-                        let qidx = self.as_ref().index_for(idx as i32, 0, &parent);
-                        self.as_mut().data_changed(&qidx, &qidx);
+                        self.as_mut().notify_row_changed(idx as i32);
                     }
                     self.as_mut()
                         .download_failed(&QString::from(&id), &QString::from(&err));
