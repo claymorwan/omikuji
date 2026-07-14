@@ -30,7 +30,7 @@ pub struct ScriptsSettings {
 impl Default for ScriptsSettings {
     fn default() -> Self {
         Self {
-            fetch_url: "https://raw.githubusercontent.com/reakjra/omikuji-scripts/main".into(),
+            fetch_url: "https://raw.githubusercontent.com/reakjra/omikuji-scripts/master".into(),
         }
     }
 }
