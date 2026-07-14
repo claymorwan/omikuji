@@ -38,6 +38,7 @@ pub struct ScriptMeta {
 #[serde(rename_all = "snake_case")]
 pub enum InputKind {
     Prefix,
+    Runner,
     File,
     Directory,
     Text,
@@ -127,6 +128,10 @@ impl Script {
         self.inputs.iter().find(|i| i.kind == InputKind::Prefix)
     }
 
+    pub fn runner_input(&self) -> Option<&Input> {
+        self.inputs.iter().find(|i| i.kind == InputKind::Runner)
+    }
+
     fn validate(&self) -> Result<()> {
         if self.script.name.trim().is_empty() {
             bail!("script.name is empty");
@@ -175,6 +180,14 @@ impl Script {
         }
         if self.inputs.iter().filter(|i| i.kind == InputKind::Prefix).count() > 1 {
             bail!("more than one prefix input");
+        }
+        if self.inputs.iter().filter(|i| i.kind == InputKind::Runner).count() > 1 {
+            bail!("more than one runner input");
+        }
+        if self.runner_input().is_some()
+            && self.game.as_ref().is_some_and(|g| !g.wine_version.is_empty())
+        {
+            bail!("declare a runner input or game.wine_version, not both");
         }
 
         let mut known: HashSet<&str> = BUILTIN_VARS.iter().copied().collect();
@@ -437,6 +450,10 @@ d3d11 = "n,b"
             let err = Script::parse(&SAMPLE.replace(from, to)).unwrap_err().to_string();
             assert!(err.contains(expect), "{err}");
         }
+        let both = SAMPLE
+            .replace("kind = \"file\"", "kind = \"runner\"")
+            .replace("[game]\nname", "[game]\nwine_version = \"system\"\nname");
+        assert!(Script::parse(&both).unwrap_err().to_string().contains("not both"));
         assert!(interpolate("${broken", &HashMap::new()).is_err());
     }
 }

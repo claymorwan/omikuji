@@ -58,11 +58,14 @@ pub fn execute<F: FnMut(&str)>(
         dirs::home_dir().unwrap_or_default().to_string_lossy().into_owned(),
     );
 
-    let wine_version = script
-        .game
-        .as_ref()
-        .filter(|g| !g.wine_version.is_empty())
-        .map(|g| g.wine_version.clone());
+    let wine_version = match script.runner_input() {
+        Some(input) => vars.get(&input.id).filter(|v| !v.is_empty()).cloned(),
+        None => script
+            .game
+            .as_ref()
+            .filter(|g| !g.wine_version.is_empty())
+            .map(|g| g.wine_version.clone()),
+    };
     let tool_game = Game::with_options(
         script.script.name.clone(),
         PathBuf::new(),

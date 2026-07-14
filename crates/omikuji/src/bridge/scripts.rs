@@ -77,6 +77,7 @@ fn kind_str(kind: core_scripts::InputKind) -> &'static str {
     use core_scripts::InputKind::*;
     match kind {
         Prefix => "prefix",
+        Runner => "runner",
         File => "file",
         Directory => "directory",
         Text => "text",

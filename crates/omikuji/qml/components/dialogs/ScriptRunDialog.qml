@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import "../controls"
 import "../primitives"
+import "../lib/RunnerGrouping.js" as RG
 
 DialogCard {
     id: root
@@ -213,6 +214,7 @@ DialogCard {
                         case "choice": return choiceComp
                         case "bool": return boolComp
                         case "prefix": return modelData.picker === "path" ? prefixPathComp : prefixListComp
+                        case "runner": return runnerComp
                         default: return textComp
                         }
                     }
@@ -275,6 +277,19 @@ DialogCard {
                     color: theme.warning
                     font.pixelSize: 12
                 }
+            }
+        }
+        Component {
+            id: runnerComp
+            M3Dropdown {
+                label: input.label
+                options: RG.groupRunners(JSON.parse(root.gameModel ? root.gameModel.list_runners() : "[]"))
+                currentIndex: {
+                    let f = RG.firstNonHeader(options)
+                    return f >= 0 ? f : 0
+                }
+                onSelected: (v) => root.setValue(input.id, v)
+                Component.onCompleted: if (!root.values[input.id]) root.setValue(input.id, currentValue)
             }
         }
         Component {
