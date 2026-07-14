@@ -300,7 +300,8 @@ pub fn disk_free_space(path: &str) -> u64 {
     }
 }
 
-pub fn show_file_dialog(select_folder: bool, title: &str, default_path: &str) -> String {
+pub fn show_file_dialog(select_folder: bool, title: &str, default_path: &str, filter: &str) -> String {
+    let filter = if select_folder { "" } else { filter };
     if which::which("zenity").is_ok() {
         let mut cmd = Command::new("zenity");
         if select_folder {
@@ -311,6 +312,10 @@ pub fn show_file_dialog(select_folder: bool, title: &str, default_path: &str) ->
         cmd.arg("--title").arg(title);
         if !default_path.is_empty() {
             cmd.arg("--filename").arg(default_path);
+        }
+        if !filter.is_empty() {
+            cmd.arg(format!("--file-filter={filter}"));
+            cmd.arg("--file-filter=All files | *");
         }
 
         match cmd.output() {
@@ -331,8 +336,11 @@ pub fn show_file_dialog(select_folder: bool, title: &str, default_path: &str) ->
             }
         } else {
             cmd.arg("--getopenfilename");
-            if !default_path.is_empty() {
-                cmd.arg(default_path);
+            if !default_path.is_empty() || !filter.is_empty() {
+                cmd.arg(if default_path.is_empty() { "." } else { default_path });
+            }
+            if !filter.is_empty() {
+                cmd.arg(filter);
             }
         }
         cmd.arg("--title").arg(title);

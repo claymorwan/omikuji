@@ -145,6 +145,8 @@ ApplicationWindow {
 
     OfudaBridge { id: ofudaBridge }
 
+    ScriptsBridge { id: scriptsBridge }
+
     MigrationBridge { id: migrationBridge }
 
     property var archiveActiveInstalls: ({})
@@ -252,6 +254,7 @@ ApplicationWindow {
     readonly property var componentsBridgeRef: componentsBridge
     readonly property var archiveManagerRef: archiveManager
     readonly property var ofudaBridgeRef: ofudaBridge
+    readonly property var scriptsBridgeRef: scriptsBridge
 
     GameModel {
         id: gameModel
@@ -660,6 +663,7 @@ property real cardZoom: uiSettings.cardZoom
         showHiddenOption: root.currentView === "library"
 
         onAddClicked: root.activeModal = "addGame"
+        onInstallScriptClicked: scriptBrowserDialog.show()
         onConsoleModeClicked: gameModel.launch_console_mode()
         onZoomMoved: (v) => uiSettings.applyCardZoom(v)
         onSpacingMoved: (v) => uiSettings.applyCardSpacing(v)
@@ -1103,6 +1107,23 @@ property real cardZoom: uiSettings.cardZoom
         ofudaBridge: root.ofudaBridgeRef
     }
 
+    ScriptBrowserDialog {
+        id: scriptBrowserDialog
+        anchors.fill: parent
+        scriptsBridge: root.scriptsBridgeRef
+        gameModel: root.gameModelRef
+        onScriptChosen: (path) => scriptRunDialog.show(path)
+    }
+
+    ScriptRunDialog {
+        id: scriptRunDialog
+        anchors.fill: parent
+        scriptsBridge: root.scriptsBridgeRef
+        gameModel: root.gameModelRef
+        ofudaBridge: root.ofudaBridgeRef
+        onInstalled: (gameId, gameName) => toastManager.show("success", qsTr("Game added"), gameName)
+    }
+
     PrefixPrepDialog {
         id: prefixPrepDialog
         anchors.fill: parent
@@ -1168,7 +1189,7 @@ property real cardZoom: uiSettings.cardZoom
             if (action === "run_exe") {
                 let rid = "wine_run_exe_" + Date.now().toString(36)
                 pendingRunExeRequestId = rid
-                gameModel.open_file_dialog(rid, false, qsTr("Select EXE to run in prefix"), "/home")
+                gameModel.open_file_dialog(rid, false, qsTr("Select EXE to run in prefix"), "/home", "")
             } else {
                 gameModel.run_wine_tool(gid, action)
             }

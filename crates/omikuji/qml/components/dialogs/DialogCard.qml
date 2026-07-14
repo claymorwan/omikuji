@@ -125,6 +125,7 @@ Item {
             anchors.bottom: actionsLoader.active ? actionsLoader.top
                 : (footerLeftLoader.active ? footerLeftLoader.top : parent.bottom)
             anchors.leftMargin: theme.space.xl
+            anchors.rightMargin: theme.space.xl
             anchors.bottomMargin: cardWrap.footerActive ? (root.fillHeight ? theme.space.md : theme.space.xl) : theme.space.lg
             contentWidth: width
             contentHeight: root.fillHeight ? height : bodyLoader.implicitHeight
@@ -135,7 +136,7 @@ Item {
 
             Loader {
                 id: bodyLoader
-                width: bodyFlick.width - (root.fillHeight ? 0 : theme.space.lg)
+                width: bodyFlick.width
                 height: root.fillHeight ? bodyFlick.height : implicitHeight
                 active: cardWrap.visible
                 sourceComponent: root.body

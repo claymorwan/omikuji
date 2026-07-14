@@ -267,6 +267,7 @@ fn main() {
             "src/bridge/components.rs",
             "src/bridge/migration.rs",
             "src/bridge/ofuda.rs",
+            "src/bridge/scripts.rs",
             "src/bridge/archive_manager.rs",
             "src/bridge/defaults.rs",
             "src/bridge/gamepad.rs",
@@ -314,6 +315,8 @@ fn main() {
                 "qml/components/dialogs/GameLogsWindow.qml",
                 "qml/components/dialogs/MigrationDialog.qml",
                 "qml/components/dialogs/SetsDialog.qml",
+                "qml/components/dialogs/ScriptBrowserDialog.qml",
+                "qml/components/dialogs/ScriptRunDialog.qml",
                 "qml/components/dialogs/UpdateAvailableDialog.qml",
                 // downloads
                 "qml/components/downloads/BannerThumb.qml",

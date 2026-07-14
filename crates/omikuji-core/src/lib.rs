@@ -27,6 +27,7 @@ pub mod notifications;
 pub mod prefixes;
 pub mod process;
 pub mod runners;
+pub mod scripts;
 pub mod settings;
 pub mod steam;
 pub mod system_info;
@@ -82,4 +83,8 @@ pub fn logs_dir() -> PathBuf {
 
 pub fn runtime_dir() -> PathBuf {
     settings::expand(&settings::get().paths.runtime_dir)
+}
+
+pub fn scripts_dir() -> PathBuf {
+    settings::expand(&settings::get().paths.scripts_dir)
 }

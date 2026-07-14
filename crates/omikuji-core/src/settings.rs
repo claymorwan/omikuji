@@ -16,8 +16,23 @@ use std::sync::OnceLock;
 pub struct Settings {
     pub paths: PathsSettings,
     pub assets: AssetsSettings,
+    pub scripts: ScriptsSettings,
     pub components: ComponentsSettings,
     pub steam: SteamSettings,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(default)]
+pub struct ScriptsSettings {
+    pub fetch_url: String,
+}
+
+impl Default for ScriptsSettings {
+    fn default() -> Self {
+        Self {
+            fetch_url: "https://raw.githubusercontent.com/reakjra/omikuji-scripts/main".into(),
+        }
+    }
 }
 
 // empty api_key disables remote playtime sync; local process-tracking still works
@@ -42,6 +57,7 @@ pub struct PathsSettings {
     pub cache_dir: String,
     pub logs_dir: String,
     pub runtime_dir: String,
+    pub scripts_dir: String,
 }
 
 impl Default for PathsSettings {
@@ -61,6 +77,7 @@ impl Default for PathsSettings {
             cache_dir: s("cache"),
             logs_dir: s("logs"),
             runtime_dir: s("runtime"),
+            scripts_dir: s("scripts"),
         }
     }
 }

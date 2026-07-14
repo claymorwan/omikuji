@@ -8,6 +8,7 @@ mod updates;
 mod epic;
 mod gog;
 mod gacha;
+mod scripts;
 
 #[cxx_qt::bridge]
 pub mod qobject {
@@ -355,7 +356,7 @@ pub mod qobject {
 
         // result arrives async via file_dialog_result signal, not as a return value
         #[qinvokable]
-        fn open_file_dialog(self: Pin<&mut GameModel>, request_id: &QString, select_folder: bool, title: &QString, default_path: &QString);
+        fn open_file_dialog(self: Pin<&mut GameModel>, request_id: &QString, select_folder: bool, title: &QString, default_path: &QString, filter: &QString);
 
         #[qinvokable]
         fn disk_free_space(self: &GameModel, path: &QString) -> QString;
@@ -393,6 +394,9 @@ pub mod qobject {
 
         #[qinvokable]
         fn home_dir(self: &GameModel) -> QString;
+
+        #[qinvokable]
+        fn register_game_json(self: Pin<&mut GameModel>, game_json: &QString) -> QString;
 
         #[qinvokable]
         fn epic_import_after_install(
@@ -1606,13 +1610,14 @@ impl qobject::GameModel {
         std::env::var("FLATPAK_ID").is_ok()
     }
 
-    fn open_file_dialog(self: Pin<&mut Self>, request_id: &QString, select_folder: bool, title: &QString, default_path: &QString) {
+    fn open_file_dialog(self: Pin<&mut Self>, request_id: &QString, select_folder: bool, title: &QString, default_path: &QString, filter: &QString) {
         let rid = request_id.to_string();
         let title_str = title.to_string();
         let default_str = default_path.to_string();
+        let filter_str = filter.to_string();
 
         std::thread::spawn(move || {
-            let result = omikuji_core::desktop::show_file_dialog(select_folder, &title_str, &default_str);
+            let result = omikuji_core::desktop::show_file_dialog(select_folder, &title_str, &default_str, &filter_str);
             omikuji_core::install_sizes::push_file_dialog(
                 omikuji_core::install_sizes::FileDialogResult {
                     request_id: rid,

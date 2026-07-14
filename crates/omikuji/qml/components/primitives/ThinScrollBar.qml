@@ -15,7 +15,8 @@ ScrollBar {
 
     contentItem: Rectangle {
         implicitWidth: 4
-        radius: width / 2
+        implicitHeight: 4
+        radius: Math.min(width, height) / 2
         color: theme.alpha(theme.text, control.pressed ? 0.5 : (control.hovered ? 0.4 : 0.25))
         opacity: control.active || control.hovered || hideTimer.running ? 1 : 0
 

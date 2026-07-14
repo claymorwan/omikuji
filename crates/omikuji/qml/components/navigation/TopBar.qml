@@ -23,6 +23,7 @@ Item {
     property alias searchText: searchInput.text
 
     signal addClicked()
+    signal installScriptClicked()
     signal zoomMoved(real value)
     signal spacingMoved(int value)
     signal sortSelected(string value)
@@ -144,13 +145,29 @@ Item {
             rounded: true
             anchors.verticalCenter: parent.verticalCenter
             visible: root.showAddButton
-            onClicked: root.addClicked()
+            onClicked: if (Date.now() - addMenu.lastClosedAt > 150) addMenu.open()
 
             Tooltip {
-                text: qsTr("Add Game")
-                tipVisible: addBtn.hovered
+                text: qsTr("Add")
+                tipVisible: addBtn.hovered && !addMenu.visible
                 y: parent.height + 8
             }
+        }
+    }
+
+    ContextMenu {
+        id: addMenu
+        parent: addBtn
+        x: addBtn.width - width
+        y: addBtn.height + 8
+        items: [
+            { text: qsTr("Add game"), action: "add_game" },
+            { text: qsTr("Install script"), action: "install_script" }
+        ]
+        onItemClicked: (action) => {
+            close()
+            if (action === "add_game") root.addClicked()
+            else if (action === "install_script") root.installScriptClicked()
         }
     }
 

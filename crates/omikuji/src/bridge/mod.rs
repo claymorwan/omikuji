@@ -10,5 +10,6 @@ pub mod library_watcher;
 pub mod log_highlighter;
 pub mod migration;
 pub mod ofuda;
+pub mod scripts;
 pub mod tray;
 pub mod ui_settings;

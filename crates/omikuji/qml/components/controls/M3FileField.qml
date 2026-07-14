@@ -9,6 +9,7 @@ Item {
     property string placeholder: ""
     property string text: ""
     property bool selectFolder: false
+    property string filter: ""
     property bool readOnly: false
     property string trailingHint: ""
     property var gameModel: null
@@ -163,6 +164,6 @@ Item {
 
         let id = Date.now().toString(36) + Math.random().toString(36).substring(2, 8)
         root._dialogRequestId = id
-        gameModel.open_file_dialog(id, root.selectFolder, title, defaultPath)
+        gameModel.open_file_dialog(id, root.selectFolder, title, defaultPath, root.filter)
     }
 }
