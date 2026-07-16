@@ -2,14 +2,14 @@
 
 A Qt/QML based games/apps launcher for Linux. Built 'cause I couldn't bear having 3 different launchers for just games.
 
-Manages wine/proton runners, wineprefixes, DXVK/VKD3D, and game launching. Imports from Steam, installs Epic, GOG and Waifu machine slots games directly. 
-
 ## Read the docs! 
 
 > [!IMPORTANT]
 > You feel lost, want more infos or just waste time? Read the [Docs](https://omikuji-launcher.github.io/omikuji/).
+>
+> Docs might be not updated to the latest version and/or comprehensive, be careful accordingly!
 
-- [Configuration](https://omikuji-launcher.github.io/omikuji//user/configuration.html): `settings.toml`, custom runners, DLL packs
+- [Configuration](https://omikuji-launcher.github.io/omikuji//user/configuration.html)
 - [Nix Home Manager options](docs/hm-module.md): Every options available in the Home Manager module
 
 ## Screenshots
@@ -167,12 +167,24 @@ nix develop
 
 ## What does it do?!
 
-- **Game library** one TOML per game, shareable, git-friendly.
-- **Wine / Proton**: auto-detects Steam-installed Proton, has its own fetcher in the settings.
-- **Translation layers**: DXVK, VKD3D, DXVK-NVAPI. Auto-fetched from upstream releases.
-- **Stores**: import from Steam (locally), install Epic games (via legendary), GOG (via gogdl), HoYoverse / Kuro / Gryphline gachas (direct downloads and updates).
-- **Wine tools**: winecfg, winetricks, regedit, cmd, winefile, run-exe, kill-wineserver.
-- **Art fetch**: SteamGridDB for banners, covers, icons.
+\- **Game library**: one TOML per game, shareable, git-friendly (this absolutely means nothing, git friendly games?? but look at [this](https://toolhunter.cc/tools/omikuji) and [this](https://www.linuxeasy.org/omikuji-launcher-giochi-windows-linux-modo-unificato/)! 
+mhhhhhhhh).
+
+\- **Runners**: supports wine, flatpak, steam and native games.
+
+\- **Wine / Proton**: auto-detects Steam-installed Protons, plus you can add your own fetcher for your preferred version in the settings in order to download them directly from the app.
+
+\- **Translation layers**: DXVK, VKD3D, DXVK-NVAPI. Auto-fetched from upstream releases (or you can build them from master with the [build-components scripts](scripts/build-component.sh) as re-usable versions in app).
+
+\- **Wine Prefix Manager (Ofuda)**: create, prep and manages prefixes from the settings page. (cmon ofuda is such a cool name)
+
+\- **Stores**: import from Steam (locally), install Epic games (via legendary), GOG (via gogdl), ~~Waifu machine slots~~ HoYoverse / Kuro / Gryphline gachas (direct downloads and updates).
+
+\- **Community scripts**: [Community TOML scripts](https://github.com/reakjra/omikuji-scripts) that you can run from the launcher. (Hey, they can do a lot! Install launchers, add games entries, kiss you on the lips)
+
+\- **Console mode**: controller driven UI. With glsl shaders backgrounds! crazy right?
+
+\- **Other things that dont need a mention**: SteamGridDB art fetch, shortcuts, Discord RPC, dll/env sets (i love these i need to flex them), cards order/filters, logs regex highlight, customizable look (svgs fill, modals sizes, colors, fonts, etc.), customizable paths (runners, prefixes, scripts, cache, etc.)
 
 #### CLI commands
 
@@ -192,7 +204,7 @@ Data lives in `~/.local/share/omikuji/`.
 Usable. Daily-driven by me. Its pretty pls tell me its pretty
 
 
-QML side held up with tape and prays🙏 
+QML side held up with tape and ~~prays~~ prayers🙏
 
 
 Not implemented/WIP/Planning to add: 
@@ -203,19 +215,26 @@ Not implemented/WIP/Planning to add:
 
 Bug reports (especially these), requests and PRs welcome. A few notes:
 
-- For translations contributions, check the [translation guide](https://omikuji-launcher.github.io/omikuji/dev/translations.html)
-- To get debug logs, in your terminal: RUST_LOG=debug omikuji 
-- Open an issue before a big change so we can talk about it first.
-- Match the existing code style. (literally just make it better than mine)
-- Keep PRs focused. One thing at a time.
-- Be thorough in explaining a issue/request/PR, im dummy
-- Whatever other 20 reasons people usually list in their contributing section
+\- For translations contributions, check the [translation guide](https://omikuji-launcher.github.io/omikuji/dev/translations.html)
+
+\- To get debug logs, in your terminal: RUST_LOG=debug omikuji 
+
+\- Open an issue before a big change so we can talk about it first.
+
+\- Match the existing code style. (literally just make it better than mine)
+
+\- Keep PRs focused. One thing at a time.
+
+\- Be thorough in explaining a issue/request/PR, im dummy
+
+\- Whatever other 20 reasons people usually list in their contributing section
 
 
-- Community scripts: [omikuji-scripts](https://github.com/reakjra/omikuji-scripts)
-- assets repo: [omikuji-assets](https://github.com/reakjra/omikuji-assets)
+\- Community scripts: [omikuji-scripts](https://github.com/reakjra/omikuji-scripts)
 
-> See also: [Dev Infos](https://omikuji-launcher.github.io/omikujihttps://omikuji-launcher.github.io/omikuji//dev/overview.html)
+\- assets repo: [omikuji-assets](https://github.com/reakjra/omikuji-assets)
+
+> See also: [Dev Infos](https://omikuji-launcher.github.io/omikuji/dev/overview.html)
 
 ## License
 
