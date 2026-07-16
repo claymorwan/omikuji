@@ -65,12 +65,13 @@ Item {
             spread: 0.08
             color: Qt.rgba(0, 0, 0, 0.5)
             cornerRadius: theme.radius.xxl + 30
+            opacity: 1 - resizer.hugT
         }
 
         Squircle {
             id: card
             anchors.fill: parent
-            radius: theme.radius.xxl
+            radius: theme.radius.xxl * (1 - resizer.hugT)
             fillColor: theme.bg
         }
 
@@ -184,7 +185,7 @@ Item {
                 anchors.fill: parent
                 color: theme.surface
                 topLeftRadius: theme.radius.lg
-                bottomRightRadius: theme.radius.xxl
+                bottomRightRadius: theme.radius.xxl * (1 - resizer.hugT)
             }
 
             Flickable {

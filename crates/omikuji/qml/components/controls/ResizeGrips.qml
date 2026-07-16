@@ -11,21 +11,39 @@ Item {
     property real fracW: 0
     property real fracH: 0
 
+    property real snapIn: 0.995
+    property real snapOut: 0.96
+    property bool hugging: false
+    property real hugT: hugging ? 1 : 0
+    Behavior on hugT { NumberAnimation { duration: theme.dur.med; easing.type: theme.ease.standard } }
+
     property Item frame: parent ? parent.parent : null
 
     anchors.fill: parent
     z: 10
 
+    onFracWChanged: _updateHug()
+    onFracHChanged: _updateHug()
+
+    function _updateHug() {
+        if (hugging) hugging = fracW >= snapOut && fracH >= snapOut
+        else if (fracW >= snapIn && fracH >= snapIn) hugging = true
+    }
+
     function widthFor(fallback) {
         let avail = frame ? frame.width - frameMargin : fallback
-        if (fracW > 0) return Math.min(Math.max(minWidth, Math.round(fracW * avail)), avail)
-        return Math.min(fallback, avail)
+        let base = fracW > 0
+            ? Math.min(Math.max(minWidth, Math.round(fracW * avail)), avail)
+            : Math.min(fallback, avail)
+        return hugT > 0 && frame ? Math.round(base + (frame.width - base) * hugT) : base
     }
 
     function heightFor(fallback) {
         let avail = frame ? frame.height - frameMargin : fallback
-        if (fracH > 0) return Math.min(Math.max(minHeight, Math.round(fracH * avail)), avail)
-        return Math.min(fallback, avail)
+        let base = fracH > 0
+            ? Math.min(Math.max(minHeight, Math.round(fracH * avail)), avail)
+            : Math.min(fallback, avail)
+        return hugT > 0 && frame ? Math.round(base + (frame.height - base) * hugT) : base
     }
 
     function loadSize() {

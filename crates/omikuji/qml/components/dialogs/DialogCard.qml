@@ -85,12 +85,13 @@ Item {
             spread: 0.06
             color: Qt.rgba(0, 0, 0, 0.45)
             cornerRadius: theme.radius.xl + 26
+            opacity: 1 - resizer.hugT
         }
 
         Squircle {
             id: card
             anchors.fill: parent
-            radius: theme.radius.xl
+            radius: theme.radius.xl * (1 - resizer.hugT)
             fillColor: theme.surface
         }
 
