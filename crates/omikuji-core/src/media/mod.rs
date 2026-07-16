@@ -100,7 +100,7 @@ pub fn media_path(game_id: &str, media_type: &MediaType) -> PathBuf {
 
 pub fn resolve_image(game_id: &str, manual_override: &str, media_type: &MediaType) -> String {
     if !manual_override.is_empty() {
-        return to_qml_url(manual_override);
+        return to_qml_url(&crate::template_vars::TemplateVars::global().expand(manual_override));
     }
 
     let path = media_path(game_id, media_type);

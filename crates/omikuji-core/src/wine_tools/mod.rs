@@ -144,6 +144,10 @@ fn build_wine_command(game: &Game, tool: &WineTool) -> Result<Command> {
 
     let (program, args) = build_command(tool, variant, &wine_exe)?;
 
+    let vars = crate::template_vars::TemplateVars::for_game(g);
+    let env = vars.expand_env(env);
+    let args: Vec<String> = args.into_iter().map(|a| vars.expand(&a)).collect();
+
     let mut cmd = Command::new(&program);
     cmd.args(&args);
     // replace rather than extend so WINEPREFIX etc. from build_env win over anything inherited from the launcher's env

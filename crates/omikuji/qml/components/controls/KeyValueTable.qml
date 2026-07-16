@@ -9,6 +9,8 @@ Item {
     property string keyPlaceholder: "KEY"
     property string valuePlaceholder: "value"
     property string addLabel: "Add variable"
+    property var gameModel: null
+    property bool expandHint: true
 
     signal changed(string json)
 
@@ -85,6 +87,7 @@ Item {
                 M3TextField {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 1
+                    Layout.alignment: Qt.AlignTop
                     placeholder: root.keyPlaceholder
                     text: rowItem.k
                     onTextEdited: (t) => {
@@ -97,14 +100,18 @@ Item {
                     text: "="
                     color: theme.textSubtle
                     font.pixelSize: 14
-                    Layout.alignment: Qt.AlignVCenter
+                    Layout.alignment: Qt.AlignTop
+                    Layout.topMargin: 14
                 }
 
                 M3TextField {
                     Layout.fillWidth: true
                     Layout.preferredWidth: 2
+                    Layout.alignment: Qt.AlignTop
                     placeholder: root.valuePlaceholder
                     text: rowItem.v
+                    gameModel: root.gameModel
+                    expandHint: root.expandHint
                     onTextEdited: (t) => {
                         listModel.setProperty(rowItem.index, "v", t)
                         root._emit()
@@ -115,6 +122,8 @@ Item {
                     icon: "close"
                     size: 32
                     danger: true
+                    Layout.alignment: Qt.AlignTop
+                    Layout.topMargin: 6
                     onClicked: root._removeRow(rowItem.index)
                 }
             }

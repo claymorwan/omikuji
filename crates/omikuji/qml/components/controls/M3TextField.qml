@@ -7,12 +7,18 @@ Item {
     property string placeholder: ""
     property string label: ""
     property bool readOnly: false
+    property var gameModel: null
+    property bool expandHint: true
+    property var expandWith: expandHint && gameModel ? (t) => gameModel.expandVars(t) : null
+
+    readonly property real boxCenterY: field.y + field.height / 2
 
     signal textEdited(string text)
     signal accepted()
 
     implicitWidth: 200
-    implicitHeight: label ? labelText.height + 4 + field.height : field.height
+    implicitHeight: (label ? labelText.height + 4 : 0) + field.height
+                    + (hint.visible ? hint.implicitHeight + 3 : 0)
 
     onTextChanged: if (input.text !== text) input.text = text
 
@@ -33,7 +39,8 @@ Item {
         id: field
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        anchors.top: parent.top
+        anchors.topMargin: root.label ? labelText.height + 4 : 0
         height: 44
         focused: input.activeFocus
 
@@ -63,5 +70,16 @@ Item {
                 visible: !input.text && !input.activeFocus
             }
         }
+    }
+
+    ExpansionHint {
+        id: hint
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: field.bottom
+        anchors.topMargin: 3
+        anchors.leftMargin: 2
+        source: input.text
+        resolver: root.expandWith
     }
 }

@@ -258,6 +258,28 @@ impl super::qobject::GameModel {
         );
     }
 
+    pub fn expand_vars(&self, text: &QString) -> QString {
+        let vars = match self.draft.as_ref() {
+            Some(game) => omikuji_core::template_vars::TemplateVars::for_game(game),
+            None => omikuji_core::template_vars::TemplateVars::global(),
+        };
+        QString::from(&vars.expand(&text.to_string()))
+    }
+
+    pub fn expand_global_vars(&self, text: &QString) -> QString {
+        QString::from(&omikuji_core::template_vars::TemplateVars::global().expand(&text.to_string()))
+    }
+
+    pub fn expand_game_vars(&self, game_id: &QString, text: &QString) -> QString {
+        let id = game_id.to_string();
+        match self.library.game.iter().find(|g| g.metadata.id == id) {
+            Some(game) => QString::from(
+                &omikuji_core::template_vars::TemplateVars::for_game(game).expand(&text.to_string()),
+            ),
+            None => text.clone(),
+        }
+    }
+
     pub fn run_wine_exe(&self, game_id: &QString, exe_path: &QString) {
         let id = game_id.to_string();
         let exe = exe_path.to_string();

@@ -96,6 +96,7 @@ Item {
             onLoaded: {
                 item.defaults = root.defaults
                 item.gameModel = root.gameModel
+                item.uiSettings = root.uiSettings
                 item.applyToExistingRequested.connect(() => root.defaultsApplyToExistingRequested())
                 item.manageSetsRequested.connect((kind) => root.manageSetsRequested(kind))
             }

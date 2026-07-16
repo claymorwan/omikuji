@@ -47,6 +47,7 @@ Item {
                     text: config["meta.exe"] || ""
                     width: parent.width
                     gameModel: root.gameModel
+                    expandHint: false
                     onTextEdited: (t) => updateField("meta.exe", t)
                 }
 
@@ -65,6 +66,7 @@ Item {
                     placeholder: '--skip-intro --windowed --name "John Doe"'
                     text: config["launch.args"] || ""
                     width: parent.width
+                    gameModel: root.gameModel
                     onTextEdited: (t) => updateField("launch.args", t)
                 }
 
@@ -328,6 +330,7 @@ Item {
                 text: config["meta.exe"] || ""
                 width: parent.width
                 gameModel: root.gameModel
+                expandHint: false
                 onTextEdited: (t) => updateField("meta.exe", t)
             }
 
@@ -346,6 +349,7 @@ Item {
                 placeholder: '--skip-intro --windowed'
                 text: config["launch.args"] || ""
                 width: parent.width
+                gameModel: root.gameModel
                 onTextEdited: (t) => updateField("launch.args", t)
             }
 

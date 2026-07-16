@@ -1007,6 +1007,13 @@ property real cardZoom: uiSettings.cardZoom
         manageTitle: qsTr("Manage DLL sets")
     }
 
+    TemplateVarsDialog {
+        id: templateVarsDialog
+        anchors.fill: parent
+        uiSettings: root.uiSettingsRef
+        gameModel: root.gameModelRef
+    }
+
     LogRulesDialog {
         id: logRulesDialog
         anchors.fill: parent
@@ -1195,6 +1202,7 @@ property real cardZoom: uiSettings.cardZoom
         id: gameRunCommandDialog
         anchors.fill: parent
         property string gameId: ""
+        expander: (t) => gameModel.expandGameVars(gameId, t)
         running: gameModel.wineCommandRunning
         onSubmitted: (cmd) => gameModel.run_wine_command(gameId, cmd)
 
@@ -1324,7 +1332,10 @@ property real cardZoom: uiSettings.cardZoom
                     archiveManageDialog.show(category, source, kind)
                 }
                 onAddSourceRequested: (category) => archiveSourceDialog.show(category)
-                onManageSetsRequested: (kind) => (kind === "dll" ? dllSetsDialog : envSetsDialog).openManage()
+                onManageSetsRequested: (kind) => {
+                    if (kind === "vars") templateVarsDialog.open()
+                    else (kind === "dll" ? dllSetsDialog : envSetsDialog).openManage()
+                }
                 onManageLogRulesRequested: logRulesDialog.show()
                 onCategoryAddRequested: categoriesController.showAdd()
                 onCategoryEditRequested: (idx, entry) => categoriesController.showEdit(idx, entry)

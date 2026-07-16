@@ -283,6 +283,7 @@ Item {
                 keyPlaceholder: "VAR_NAME"
                 valuePlaceholder: "value"
                 addLabel: qsTr("Add variable")
+                gameModel: root.gameModel
                 onChanged: (j) => updateField("launch.env", j)
             }
 

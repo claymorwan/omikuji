@@ -120,8 +120,9 @@ impl super::qobject::GameModel {
     ) -> QString {
         let mid = manifest_id.to_string();
         let eid = edition_id.to_string();
-        let path_s = install_path.to_string();
-        let temp_s = temp_path.to_string();
+        let vars = omikuji_core::template_vars::TemplateVars::global();
+        let path_s = vars.expand(&install_path.to_string());
+        let temp_s = vars.expand(&temp_path.to_string());
         if path_s.trim().is_empty() {
             return QString::from(r#"{"bytes":0,"segments":0,"has_install":false}"#);
         }
@@ -166,9 +167,10 @@ impl super::qobject::GameModel {
 
         let mid = manifest_id.to_string();
         let eid = edition_id.to_string();
-        let install_s = install_path.to_string();
+        let vars = omikuji_core::template_vars::TemplateVars::global();
+        let install_s = vars.expand(&install_path.to_string());
         let display_s = display_name.to_string();
-        let prefix_s = prefix_path.to_string();
+        let prefix_s = vars.expand(&prefix_path.to_string());
         let runner_s = runner_version.to_string();
 
         let Some(manifest) = omikuji_core::gachas::manifest::find(&mid) else {

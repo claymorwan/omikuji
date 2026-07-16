@@ -90,6 +90,7 @@ Item {
                 text: config["meta.banner"] || ""
                 width: parent.width
                 gameModel: root.gameModel
+                expandWith: root.gameModel ? (t) => root.gameModel.expandGlobalVars(t) : null
                 onTextEdited: (t) => updateField("meta.banner", t)
             }
 
@@ -99,6 +100,7 @@ Item {
                 text: config["meta.coverart"] || ""
                 width: parent.width
                 gameModel: root.gameModel
+                expandWith: root.gameModel ? (t) => root.gameModel.expandGlobalVars(t) : null
                 onTextEdited: (t) => updateField("meta.coverart", t)
             }
 
@@ -108,6 +110,7 @@ Item {
                 text: config["meta.icon"] || ""
                 width: parent.width
                 gameModel: root.gameModel
+                expandWith: root.gameModel ? (t) => root.gameModel.expandGlobalVars(t) : null
                 onTextEdited: (t) => updateField("meta.icon", t)
             }
 

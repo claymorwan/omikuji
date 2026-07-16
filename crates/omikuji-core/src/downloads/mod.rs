@@ -274,16 +274,18 @@ impl DownloadManager {
         } else {
             DownloadStatus::Queued
         };
+        let vars = crate::template_vars::TemplateVars::global();
+        let expand_path = |p: PathBuf| PathBuf::from(vars.expand(&p.to_string_lossy()));
         let entry = DownloadEntry {
             id: id.clone(),
             source: req.source,
             app_id: req.app_id,
             display_name: req.display_name,
             banner_url: req.banner_url,
-            install_path: req.install_path,
-            prefix_path: req.prefix_path,
+            install_path: expand_path(req.install_path),
+            prefix_path: req.prefix_path.map(expand_path),
             runner_version: req.runner_version,
-            temp_dir: req.temp_dir,
+            temp_dir: req.temp_dir.map(expand_path),
             kind: req.kind,
             destructive_cleanup: req.destructive_cleanup,
             status: initial_status,

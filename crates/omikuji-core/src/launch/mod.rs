@@ -5,6 +5,8 @@ use std::process::{Command, Stdio};
 
 use crate::library::Game;
 
+use crate::template_vars::TemplateVars;
+
 #[derive(Debug)]
 pub struct ComponentMissing {
     pub name: String,
@@ -29,13 +31,14 @@ pub struct LaunchConfig {
 
 impl LaunchConfig {
     fn from_game(game: &Game, command: Vec<String>, env: HashMap<String, String>, working_dir: PathBuf) -> Self {
+        let vars = TemplateVars::for_game(game);
         Self {
-            command,
-            env,
-            working_dir,
+            command: command.into_iter().map(|c| vars.expand(&c)).collect(),
+            env: vars.expand_env(env),
+            working_dir: PathBuf::from(vars.expand(&working_dir.to_string_lossy())),
             game_id: game.metadata.id.clone(),
             game_name: game.metadata.name.clone(),
-            post_exit_script: game.launch.post_exit_script.clone(),
+            post_exit_script: vars.expand(&game.launch.post_exit_script),
         }
     }
 }
@@ -95,7 +98,7 @@ fn reject_slop_env(config: &LaunchConfig) -> Result<()> {
 }
 
 fn run_pre_launch_script(game: &Game, config: &LaunchConfig) {
-    let script = &game.launch.pre_launch_script;
+    let script = &TemplateVars::for_game(game).expand(&game.launch.pre_launch_script);
     if script.is_empty() {
         return;
     }
@@ -759,7 +762,7 @@ fn is_executable(_path: &Path) -> bool {
 
 pub fn prefix_path_for(game: &Game) -> PathBuf {
     if !game.wine.prefix.is_empty() {
-        return PathBuf::from(&game.wine.prefix);
+        return PathBuf::from(TemplateVars::base(game).expand(&game.wine.prefix));
     }
 
     let dir = prefixes_dir();
@@ -776,6 +779,20 @@ pub fn prefix_path_for(game: &Game) -> PathBuf {
         format!("{}-{}", slug, game.metadata.id)
     };
     dir.join(folder)
+}
+
+pub fn effective_prefix(game: &Game) -> Option<PathBuf> {
+    match game.runner.runner_type.as_str() {
+        "native" | "flatpak" => None,
+        "steam" => {
+            if game.source.app_id.is_empty() {
+                None
+            } else {
+                crate::steam::local::find_steam_prefix(&game.source.app_id)
+            }
+        }
+        _ => Some(prefix_path_for(game)),
+    }
 }
 
 pub fn resolve_prefix(game: &Game) -> PathBuf {

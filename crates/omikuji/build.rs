@@ -203,6 +203,7 @@ fn main() {
         .json_accessor("dll_sets", "Vec<KvSet>", "dll_sets", "dll_sets_changed")
         .json_accessor("log_rules", "Vec<LogRule>", "display.log_rules", "log_rules_changed")
         .json_accessor("dialog_sizes", "BTreeMap<String, [f64; 2]>", "dialog_sizes", "dialog_sizes_changed")
+        .json_accessor("template_vars", "BTreeMap<String, String>", "template_vars", "template_vars_changed")
         .raw_field_persisted("color_overrides", "BTreeMap<String, String>", "s.theme.colors.clone()", "s.theme.colors = self.color_overrides.clone();")
         .raw_field("watcher", "Option<FileWatcher>", "None")
         .raw_field("suppress_reload_until", "Option<Instant>", "None")
@@ -313,6 +314,8 @@ fn main() {
                 "qml/components/dialogs/PrefixDetailDialog.qml",
                 "qml/components/dialogs/PrefixPrepDialog.qml",
                 "qml/components/dialogs/RunCommandDialog.qml",
+                "qml/components/dialogs/TemplateVarsDialog.qml",
+                "qml/components/controls/ExpansionHint.qml",
                 "qml/components/dialogs/LogRulesDialog.qml",
                 "qml/components/dialogs/GameLogsWindow.qml",
                 "qml/components/dialogs/MigrationDialog.qml",

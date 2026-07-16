@@ -31,6 +31,7 @@ pub mod scripts;
 pub mod settings;
 pub mod steam;
 pub mod system_info;
+pub mod template_vars;
 pub mod ui_settings;
 pub mod wine_tools;
 

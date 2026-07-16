@@ -11,6 +11,7 @@ Item {
 
     property var defaults: null
     property var gameModel: null
+    property var uiSettings: null
 
     signal applyToExistingRequested()
     signal manageSetsRequested(string kind)
@@ -180,7 +181,7 @@ Item {
                     onAccepted: (p) => root.update("wine.prefix", p)
                 }
                 ResetBadge {
-                    anchors.verticalCenter: prefixField.verticalCenter
+                    y: prefixField.boxCenterY - height / 2
                     fieldKey: "wine.prefix"
                 }
             }
@@ -369,10 +370,11 @@ Item {
                     placeholder: qsTr("prepended to every game's command")
                     text: root.cfg["launch.command_prefix"] || ""
                     width: parent.width - 32
+                    gameModel: root.gameModel
                     onTextEdited: (t) => root.update("launch.command_prefix", t)
                 }
                 ResetBadge {
-                    anchors.verticalCenter: cmdPrefixTf.verticalCenter
+                    y: cmdPrefixTf.boxCenterY - height / 2
                     fieldKey: "launch.command_prefix"
                 }
             }
@@ -393,6 +395,7 @@ Item {
                     keyPlaceholder: "VAR_NAME"
                     valuePlaceholder: "value"
                     addLabel: qsTr("Add variable")
+                    gameModel: root.gameModel
                     onChanged: (j) => root.update("launch.env", j)
                 }
                 ResetBadge {
@@ -447,6 +450,30 @@ Item {
                     text: qsTr("Manage")
                     variant: "tonal"
                     onClicked: root.manageSetsRequested("dll")
+                }
+            }
+        }
+
+        SettingsSection {
+            label: qsTr("Template Literals")
+            icon: "code"
+            width: parent.width
+
+            RowLayout {
+                width: parent.width
+
+                Text {
+                    Layout.fillWidth: true
+                    text: qsTr("Custom ${variable} tokens, usable in launch fields, prefix, install paths, scripts and image overrides.")
+                    color: theme.textSubtle
+                    font.pixelSize: 13
+                    wrapMode: Text.WordWrap
+                }
+
+                M3Button {
+                    text: qsTr("Manage")
+                    variant: "tonal"
+                    onClicked: root.manageSetsRequested("vars")
                 }
             }
         }

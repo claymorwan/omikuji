@@ -34,7 +34,7 @@ pub fn execute<F: FnMut(&str)>(
     let cache = crate::cache_dir().join("scripts").join(format!("{slug}-{id}"));
     std::fs::create_dir_all(&cache)?;
 
-    let mut vars: HashMap<String, String> = HashMap::new();
+    let mut vars: HashMap<String, String> = crate::template_vars::TemplateVars::global().into_map();
     for input in &script.inputs {
         let value = values
             .get(&input.id)

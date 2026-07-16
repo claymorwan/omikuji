@@ -13,6 +13,10 @@ Item {
     property bool readOnly: false
     property string trailingHint: ""
     property var gameModel: null
+    property bool expandHint: true
+    property var expandWith: expandHint && gameModel ? (t) => gameModel.expandVars(t) : null
+
+    readonly property real boxCenterY: fieldRow.y + fieldRow.height / 2
 
     signal textEdited(string text)
     signal accepted(string path)
@@ -20,7 +24,8 @@ Item {
     onTextChanged: if (inputArea.text !== text) inputArea.text = text
 
     implicitWidth: 200
-    implicitHeight: label ? labelText.height + 4 + fieldRow.height : fieldRow.height
+    implicitHeight: (label ? labelText.height + 4 : 0) + fieldRow.height
+                    + (expansion.visible ? expansion.implicitHeight + 3 : 0)
 
     Text {
         id: labelText
@@ -39,7 +44,8 @@ Item {
         id: fieldRow
         anchors.left: parent.left
         anchors.right: parent.right
-        anchors.bottom: parent.bottom
+        anchors.top: parent.top
+        anchors.topMargin: root.label ? labelText.height + 4 : 0
         height: 44
         spacing: 8
 
@@ -137,6 +143,17 @@ Item {
                 onClicked: openFileDialog()
             }
         }
+    }
+
+    ExpansionHint {
+        id: expansion
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.top: fieldRow.bottom
+        anchors.topMargin: 3
+        anchors.leftMargin: 2
+        source: inputArea.text
+        resolver: root.expandWith
     }
 
     property string _dialogRequestId: ""

@@ -29,6 +29,8 @@ pub struct UiSettings {
     pub dll_sets: Vec<KvSet>,
     #[serde(default)]
     pub dialog_sizes: BTreeMap<String, [f64; 2]>,
+    #[serde(default)]
+    pub template_vars: BTreeMap<String, String>,
 }
 
 impl Default for UiSettings {
@@ -46,6 +48,7 @@ impl Default for UiSettings {
             env_sets: Vec::new(),
             dll_sets: Vec::new(),
             dialog_sizes: BTreeMap::new(),
+            template_vars: BTreeMap::new(),
         }
     }
 }

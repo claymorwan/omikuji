@@ -8,6 +8,7 @@ DialogCard {
 
     property string contextTitle: ""
     property string contextText: ""
+    property var expander: null
     property bool running: false
     property string commandValue: ""
     property string outputText: ""
@@ -36,7 +37,7 @@ DialogCard {
     function submit() {
         let cmd = commandValue.trim()
         if (running || cmd === "") return
-        appendLine((outputText.length ? "\n" : "") + "$ " + cmd)
+        appendLine((outputText.length ? "\n" : "") + "$ " + (expander ? expander(cmd) : cmd))
         commandValue = ""
         submitted(cmd)
     }

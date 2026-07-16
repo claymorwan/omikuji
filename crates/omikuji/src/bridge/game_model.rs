@@ -272,6 +272,18 @@ pub mod qobject {
         fn run_wine_command(self: Pin<&mut GameModel>, game_id: &QString, command: &QString);
 
         #[qinvokable]
+        #[cxx_name = "expandVars"]
+        fn expand_vars(self: &GameModel, text: &QString) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "expandGameVars"]
+        fn expand_game_vars(self: &GameModel, game_id: &QString, text: &QString) -> QString;
+
+        #[qinvokable]
+        #[cxx_name = "expandGlobalVars"]
+        fn expand_global_vars(self: &GameModel, text: &QString) -> QString;
+
+        #[qinvokable]
         fn run_wine_exe(self: &GameModel, game_id: &QString, exe_path: &QString);
 
         #[qinvokable]
@@ -1383,11 +1395,7 @@ impl qobject::GameModel {
             QString::from("favourite"),
             QVariant::from(&game.metadata.favourite),
         );
-        let prefix_path = if game.source.kind == "steam" && !game.source.app_id.is_empty() {
-            omikuji_core::steam::local::find_steam_prefix(&game.source.app_id).unwrap_or_default()
-        } else {
-            omikuji_core::launch::prefix_path_for(game)
-        };
+        let prefix_path = omikuji_core::launch::effective_prefix(game).unwrap_or_default();
         map.insert(
             QString::from("prefixPath"),
             QVariant::from(&QString::from(&*prefix_path.to_string_lossy())),
