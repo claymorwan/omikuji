@@ -980,3 +980,85 @@ fn resolve_gog_image(app_name: &str, kind: &str, cdn_url: Option<&str>) -> Optio
         format!("gog_{}_{}", app_name, kind),
     )
 }
+
+pub async fn fetch_game_details(app_name: &str) -> Result<String> {
+    let client = reqwest::Client::new();
+
+    // summary comes from gamesdb because v2's own description field is promo html with inline css. genuinely why
+    let mut description = String::new();
+    if let Ok(resp) = client
+        .get(format!(
+            "https://gamesdb.gog.com/platforms/gog/external_releases/{app_name}"
+        ))
+        .send()
+        .await
+        && let Ok(v) = resp.json::<serde_json::Value>().await
+        && let Some(s) = v.pointer("/summary/*").and_then(|s| s.as_str())
+    {
+        description = s.trim().to_string();
+    }
+
+    let mut reqs = Vec::new();
+    if let Ok(resp) = client
+        .get(format!("https://api.gog.com/v2/games/{app_name}?locale=en-US"))
+        .send()
+        .await
+        && let Ok(v) = resp.json::<serde_json::Value>().await
+    {
+        reqs = extract_windows_reqs(&v);
+    }
+
+    if description.is_empty() && reqs.is_empty() {
+        anyhow::bail!("no details available for {app_name}");
+    }
+    Ok(serde_json::json!({ "description": description, "reqs": reqs }).to_string())
+}
+
+fn extract_windows_reqs(v: &serde_json::Value) -> Vec<serde_json::Value> {
+    let groups = v
+        .pointer("/_embedded/supportedOperatingSystems")
+        .and_then(|o| o.as_array())
+        .and_then(|oss| {
+            oss.iter().find(|o| {
+                o.pointer("/operatingSystem/name").and_then(|n| n.as_str()) == Some("windows")
+            })
+        })
+        .and_then(|win| win.get("systemRequirements"))
+        .and_then(|r| r.as_array());
+    let Some(groups) = groups else {
+        return Vec::new();
+    };
+
+    let group = |ty: &str| {
+        groups
+            .iter()
+            .find(|g| g.get("type").and_then(|t| t.as_str()) == Some(ty))
+            .and_then(|g| g.get("requirements"))
+            .and_then(|r| r.as_array())
+    };
+    let Some(minimum) = group("minimum") else {
+        return Vec::new();
+    };
+    let recommended = group("recommended");
+
+    minimum
+        .iter()
+        .filter_map(|r| {
+            let name = r.get("name")?.as_str()?.trim_end_matches(':').to_string();
+            let desc = r.get("description")?.as_str()?.trim();
+            if desc.is_empty() {
+                return None;
+            }
+            let id = r.get("id").and_then(|i| i.as_str()).unwrap_or_default();
+            let rec = recommended
+                .and_then(|rs| {
+                    rs.iter()
+                        .find(|c| c.get("id").and_then(|i| i.as_str()) == Some(id))
+                })
+                .and_then(|c| c.get("description"))
+                .and_then(|d| d.as_str())
+                .unwrap_or_default();
+            Some(serde_json::json!({ "title": name, "minimum": desc, "recommended": rec }))
+        })
+        .collect()
+}

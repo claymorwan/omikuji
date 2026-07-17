@@ -65,6 +65,13 @@ pub mod qobject {
         );
 
         #[qsignal]
+        fn game_details_result(
+            self: Pin<&mut GameModel>,
+            request_id: &QString,
+            payload: &QString,
+        );
+
+        #[qsignal]
         fn notification(
             self: Pin<&mut GameModel>,
             level: &QString,
@@ -400,10 +407,20 @@ pub mod qobject {
         );
 
         #[qinvokable]
+        fn fetch_epic_game_details(
+            self: Pin<&mut GameModel>,
+            request_id: &QString,
+            app_name: &QString,
+        );
+
+        #[qinvokable]
         fn drain_install_sizes(self: Pin<&mut GameModel>);
 
         #[qinvokable]
         fn drain_file_dialog_results(self: Pin<&mut GameModel>);
+
+        #[qinvokable]
+        fn drain_game_details(self: Pin<&mut GameModel>);
 
         // calls glibc malloc_trim to return freed heap to the os
         #[qinvokable]
@@ -440,6 +457,13 @@ pub mod qobject {
 
         #[qinvokable]
         fn fetch_gog_install_size(
+            self: Pin<&mut GameModel>,
+            request_id: &QString,
+            app_name: &QString,
+        );
+
+        #[qinvokable]
+        fn fetch_gog_game_details(
             self: Pin<&mut GameModel>,
             request_id: &QString,
             app_name: &QString,

@@ -471,6 +471,7 @@ ApplicationWindow {
             gameModel.drain_errors()
             gameModel.drain_install_sizes()
             gameModel.drain_file_dialog_results()
+            gameModel.drain_game_details()
             gameModel.drain_game_log_events()
         }
     }

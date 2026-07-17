@@ -31,16 +31,28 @@ pub fn take_pending() -> Vec<InstallSizeResult> {
 }
 
 // os thread + fresh runtime: cant call block_on inside the app's existing tokio context
-pub fn spawn_fetch<F, Fut>(request_id: String, fetch: F)
+fn spawn_blocking_fetch<F, Fut, T, C>(fetch: F, complete: C)
 where
     F: FnOnce() -> Fut + Send + 'static,
-    Fut: std::future::Future<Output = Result<(u64, u64), String>>,
+    Fut: std::future::Future<Output = Result<T, String>>,
+    T: Send + 'static,
+    C: FnOnce(Result<T, String>) + Send + 'static,
 {
     std::thread::spawn(move || {
         let result = match tokio::runtime::Runtime::new() {
             Ok(rt) => rt.block_on(fetch()),
             Err(e) => Err(format!("tokio runtime: {}", e)),
         };
+        complete(result);
+    });
+}
+
+pub fn spawn_fetch<F, Fut>(request_id: String, fetch: F)
+where
+    F: FnOnce() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = Result<(u64, u64), String>>,
+{
+    spawn_blocking_fetch(fetch, move |result| {
         let pushed = match result {
             Ok((download_bytes, install_bytes)) => InstallSizeResult {
                 request_id,
@@ -59,6 +71,44 @@ where
             }
         };
         push(pushed);
+    });
+}
+
+#[derive(Debug, Clone)]
+pub struct GameDetailsResult {
+    pub request_id: String,
+    pub payload: String,
+}
+
+lazy_static::lazy_static! {
+    static ref DETAILS_QUEUE: Mutex<VecDeque<GameDetailsResult>> = Mutex::new(VecDeque::new());
+}
+
+pub fn take_details_pending() -> Vec<GameDetailsResult> {
+    DETAILS_QUEUE
+        .lock()
+        .map(|mut q| q.drain(..).collect())
+        .unwrap_or_default()
+}
+
+pub fn spawn_fetch_details<F, Fut>(request_id: String, fetch: F)
+where
+    F: FnOnce() -> Fut + Send + 'static,
+    Fut: std::future::Future<Output = Result<String, String>>,
+{
+    spawn_blocking_fetch(fetch, move |result| {
+        let payload = match result {
+            Ok(p) => p,
+            Err(e) => {
+                tracing::warn!("game details fetch failed: {}", e);
+                String::new()
+            }
+        };
+        let Ok(mut q) = DETAILS_QUEUE.lock() else { return };
+        q.push_back(GameDetailsResult { request_id, payload });
+        while q.len() > 20 {
+            q.pop_front();
+        }
     });
 }
 

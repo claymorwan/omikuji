@@ -41,6 +41,21 @@ impl super::qobject::GameModel {
         });
     }
 
+    pub fn fetch_gog_game_details(
+        self: Pin<&mut Self>,
+        request_id: &QString,
+        app_name: &QString,
+    ) {
+        let rid = request_id.to_string();
+        let app_name_str = app_name.to_string();
+
+        omikuji_core::install_sizes::spawn_fetch_details(rid, move || async move {
+            omikuji_core::gog::fetch_game_details(&app_name_str)
+                .await
+                .map_err(|e| e.to_string())
+        });
+    }
+
     pub fn gog_import_after_install(
         mut self: Pin<&mut Self>,
         app_name: &QString,

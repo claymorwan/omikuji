@@ -517,3 +517,176 @@ fn resolve_epic_image(app_name: &str, kind: &str, cdn_url: Option<&str>) -> Opti
         format!("epic_{}_{}", app_name, kind),
     )
 }
+
+pub async fn fetch_game_details(app_name: &str) -> Result<String> {
+    let path = dirs::config_dir()
+        .ok_or_else(|| anyhow!("no config dir"))?
+        .join("legendary")
+        .join("metadata")
+        .join(format!("{app_name}.json"));
+    let meta: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(path)?)?;
+    let title = meta
+        .pointer("/metadata/title")
+        .and_then(|t| t.as_str())
+        .unwrap_or_default()
+        .trim()
+        .to_string();
+    let namespace = meta
+        .pointer("/metadata/namespace")
+        .and_then(|n| n.as_str())
+        .unwrap_or_default()
+        .to_string();
+
+    let mut description = String::new();
+    let mut reqs = Vec::new();
+
+    if !namespace.is_empty() {
+        let client = reqwest::Client::new();
+        let slug = product_slug(&client, &namespace, &title).await;
+        if let Ok(resp) = client
+            .get(format!(
+                "https://store-content.ak.epicgames.com/api/en-US/content/products/{slug}"
+            ))
+            .send()
+            .await
+            && let Ok(v) = resp.json::<serde_json::Value>().await
+            && let Some(home) = v.get("pages").and_then(|p| p.as_array()).and_then(|ps| {
+                ps.iter()
+                    .find(|p| p.get("type").and_then(|t| t.as_str()) == Some("productHome"))
+            })
+        {
+            description = home
+                .pointer("/data/about/description")
+                .and_then(|d| d.as_str())
+                .filter(|s| !s.trim().is_empty())
+                .or_else(|| {
+                    home.pointer("/data/about/shortDescription")
+                        .and_then(|d| d.as_str())
+                })
+                .map(strip_markdown_headers)
+                .unwrap_or_default();
+            reqs = extract_store_reqs(home);
+        }
+    }
+
+    if description.is_empty() {
+        description = local_description(&meta, &title).unwrap_or_default();
+    }
+    if description.is_empty() && reqs.is_empty() {
+        anyhow::bail!("no details available for {app_name}");
+    }
+    Ok(serde_json::json!({ "description": description, "reqs": reqs }).to_string())
+}
+
+async fn product_slug(client: &reqwest::Client, namespace: &str, title: &str) -> String {
+    let query = serde_json::json!({
+        "query": format!(
+            "{{ Catalog {{ catalogNs(namespace: \"{namespace}\") {{ mappings (pageType: \"productHome\") {{ pageSlug pageType }} }} }} }}"
+        )
+    });
+    if let Ok(resp) = client
+        .post("https://launcher.store.epicgames.com/graphql")
+        .header(
+            "User-Agent",
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) EpicGamesLauncher",
+        )
+        .json(&query)
+        .send()
+        .await
+        && let Ok(v) = resp.json::<serde_json::Value>().await
+        && let Some(slug) = v
+            .pointer("/data/Catalog/catalogNs/mappings")
+            .and_then(|m| m.as_array())
+            .and_then(|ms| {
+                ms.iter()
+                    .find(|m| m.get("pageType").and_then(|t| t.as_str()) == Some("productHome"))
+            })
+            .and_then(|m| m.get("pageSlug"))
+            .and_then(|s| s.as_str())
+    {
+        return slug.to_string();
+    }
+    slug_from_title(title)
+}
+
+fn slug_from_title(title: &str) -> String {
+    let mut out = String::new();
+    let mut dash = false;
+    for c in title.to_lowercase().chars() {
+        if c.is_ascii_alphanumeric() {
+            out.push(c);
+            dash = false;
+        } else if !dash && !out.is_empty() {
+            out.push('-');
+            dash = true;
+        }
+    }
+    out.trim_end_matches('-').to_string()
+}
+
+fn strip_markdown_headers(s: &str) -> String {
+    s.lines()
+        .map(|l| l.trim_start_matches('#').trim_start())
+        .collect::<Vec<_>>()
+        .join("\n")
+        .trim()
+        .to_string()
+}
+
+fn extract_store_reqs(home: &serde_json::Value) -> Vec<serde_json::Value> {
+    let Some(systems) = home
+        .pointer("/data/requirements/systems")
+        .and_then(|s| s.as_array())
+    else {
+        return Vec::new();
+    };
+    let Some(system) = systems
+        .iter()
+        .find(|s| s.get("systemType").and_then(|t| t.as_str()) == Some("Windows"))
+        .or_else(|| systems.first())
+    else {
+        return Vec::new();
+    };
+    system
+        .get("details")
+        .and_then(|d| d.as_array())
+        .map(|ds| {
+            ds.iter()
+                .filter_map(|d| {
+                    let t = d.get("title")?.as_str()?.trim();
+                    let min = d
+                        .get("minimum")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or_default()
+                        .trim();
+                    let rec = d
+                        .get("recommended")
+                        .and_then(|m| m.as_str())
+                        .unwrap_or_default()
+                        .trim();
+                    if t.is_empty() || min.is_empty() {
+                        return None;
+                    }
+                    let rec = if rec == min { "" } else { rec };
+                    Some(serde_json::json!({ "title": t, "minimum": min, "recommended": rec }))
+                })
+                .collect()
+        })
+        .unwrap_or_default()
+}
+
+fn local_description(meta: &serde_json::Value, title: &str) -> Option<String> {
+    [
+        "/metadata/longDescription",
+        "/metadata/description",
+        "/metadata/shortDescription",
+    ]
+    .iter()
+    .find_map(|p| {
+        meta.pointer(p)
+            .and_then(|d| d.as_str())
+            .map(str::trim)
+            .filter(|s| s.len() > 40 && *s != title)
+    })
+    .map(str::to_string)
+}

@@ -367,6 +367,7 @@ fn main() {
                 "qml/components/settings/TabSystem.qml",
                 // store
                 "qml/components/store/EpicLibrary.qml",
+                "qml/components/store/StoreGameDetails.qml",
                 "qml/components/store/GachaLibrary.qml",
                 "qml/components/store/GogLibrary.qml",
                 "qml/components/store/EpicController.qml",

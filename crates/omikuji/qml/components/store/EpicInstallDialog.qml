@@ -35,6 +35,12 @@ DialogCard {
     property string sizeError: ""
     property string _sizeRequestId: ""
 
+    property var gameDetails: null
+    property string _detailsRequestId: ""
+    property bool detailsExpanded: false
+    readonly property bool _hasDesc: gameDetails !== null && !!gameDetails.description
+    readonly property bool _hasReqs: gameDetails !== null && !!gameDetails.reqs && gameDetails.reqs.length > 0
+
     property real existingInstallBytes: 0
     property bool hasResumeState: false
 
@@ -50,6 +56,9 @@ DialogCard {
     }
 
     maxWidth: 480
+    panelsShown: detailsExpanded
+    leftPanel: _hasDesc ? detailsAboutPanel : null
+    rightPanel: _hasReqs ? detailsReqsPanel : null
 
     function hasEnoughSpace() {
         if (freeSpaceBytes < 0) return false
@@ -105,6 +114,11 @@ DialogCard {
                 root.installBytes = parseInt(p.install) || 0
             }
         }
+        function onGame_details_result(requestId, payload) {
+            if (requestId !== root._detailsRequestId) return
+            root._detailsRequestId = ""
+            try { root.gameDetails = JSON.parse(payload) } catch (e) { root.gameDetails = null }
+        }
     }
 
     onInstallPathChanged: refreshFreeSpace()
@@ -123,12 +137,20 @@ DialogCard {
         _sizeRequestId = ""
         existingInstallBytes = 0
         hasResumeState = false
+        gameDetails = null
+        _detailsRequestId = ""
+        detailsExpanded = false
     }
 
     function show() {
         if (!epicModel || gameIndex < 0) return
         resetState()
         gameData = epicModel.get_game_at(gameIndex)
+        if (gameData && gameData.appName) {
+            let did = "epicd-" + Date.now().toString(36) + "-" + Math.random().toString(36).substring(2, 8)
+            _detailsRequestId = did
+            gameModel.fetch_epic_game_details(did, gameData.appName)
+        }
         let legendaryGameDir = gameData && gameData.installPath ? gameData.installPath : ""
         if (gameData && gameData.isInstalled === true && legendaryGameDir !== "") {
             let slash = legendaryGameDir.lastIndexOf("/")
@@ -309,6 +331,23 @@ DialogCard {
                 }
             }
         }
+    }
+
+    Component {
+        id: detailsAboutPanel
+        StoreGameDetails { kind: "about"; details: root.gameDetails }
+    }
+
+    Component {
+        id: detailsReqsPanel
+        StoreGameDetails { kind: "reqs"; details: root.gameDetails }
+    }
+
+    footerLeft: M3Button {
+        visible: root._hasDesc || root._hasReqs
+        variant: "text"
+        text: root.detailsExpanded ? qsTr("Hide details") : qsTr("Show details")
+        onClicked: root.detailsExpanded = !root.detailsExpanded
     }
 
     actions: Row {

@@ -76,4 +76,13 @@ impl super::qobject::GameModel {
             );
         }
     }
+
+    pub fn drain_game_details(mut self: Pin<&mut Self>) {
+        for r in omikuji_core::install_sizes::take_details_pending() {
+            self.as_mut().game_details_result(
+                &QString::from(&r.request_id),
+                &QString::from(&r.payload),
+            );
+        }
+    }
 }

@@ -14,6 +14,18 @@ Item {
     property bool shown: false
     property string title: ""
     property real maxWidth: 440
+    property Component leftPanel: null
+    property Component rightPanel: null
+    property bool panelsShown: false
+    property real leftPanelWidth: 300
+    property real rightPanelWidth: 460
+
+    readonly property bool _leftActive: panelsShown && leftPanel !== null
+    readonly property bool _rightActive: panelsShown && rightPanel !== null
+    readonly property real _panelGap: theme.space.lg
+    readonly property real _sideSpace: (width - cardWrap.width) / 2 - _panelGap - theme.space.lg
+    readonly property real _leftW: _leftActive && _sideSpace >= 140 ? Math.min(leftPanelWidth, _sideSpace) : 0
+    readonly property real _rightW: _rightActive && _sideSpace >= 140 ? Math.min(rightPanelWidth, _sideSpace) : 0
     property bool scrollable: true
     property bool fillHeight: false
     property real preferredHeight: 560
@@ -41,6 +53,55 @@ Item {
         sequence: "Escape"
         enabled: root.shown && root.escEnabled
         onActivated: root.closeRequested()
+    }
+
+    component SidePanel: Item {
+        property alias panelContent: panelLoader.sourceComponent
+        property real panelWidth: 300
+
+        width: panelWidth
+        height: Math.min(panelLoader.implicitHeight + theme.space.lg * 2, cardWrap.height)
+        opacity: root.panelsShown && panelLoader.sourceComponent !== null && width > 0 ? 1 : 0
+        visible: opacity > 0.01
+
+        Behavior on opacity { NumberAnimation { duration: theme.dur.fast; easing.type: theme.ease.standard } }
+
+        RectangularGlow {
+            anchors.fill: panelSurf
+            glowRadius: 26
+            spread: 0.06
+            color: Qt.rgba(0, 0, 0, 0.45)
+            cornerRadius: theme.radius.xl + 26
+        }
+
+        Squircle {
+            id: panelSurf
+            anchors.fill: parent
+            radius: theme.radius.xl
+            fillColor: theme.surface
+        }
+
+        Flickable {
+            id: panelFlick
+            anchors.fill: parent
+            anchors.margins: theme.space.lg
+            contentWidth: width
+            contentHeight: panelLoader.implicitHeight
+            clip: true
+            boundsBehavior: Flickable.StopAtBounds
+            ScrollBar.vertical: ThinScrollBar {
+                parent: panelFlick.parent
+                anchors.top: panelFlick.top
+                anchors.bottom: panelFlick.bottom
+                anchors.right: parent.right
+                anchors.rightMargin: theme.space.xs
+            }
+
+            Loader {
+                id: panelLoader
+                width: panelFlick.width
+            }
+        }
     }
 
     Rectangle {
@@ -102,6 +163,22 @@ Item {
             onWheel: (wheel) => wheel.accepted = true
         }
 
+        SidePanel {
+            panelContent: root.leftPanel
+            panelWidth: root._leftW
+            anchors.right: parent.left
+            anchors.rightMargin: root._panelGap
+            anchors.top: parent.top
+        }
+
+        SidePanel {
+            panelContent: root.rightPanel
+            panelWidth: root._rightW
+            anchors.left: parent.right
+            anchors.leftMargin: root._panelGap
+            anchors.top: parent.top
+        }
+
         Item {
             id: header
             anchors.top: parent.top
@@ -141,7 +218,13 @@ Item {
             clip: true
             interactive: root.scrollable && !root.fillHeight && contentHeight > height
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: ThinScrollBar {}
+            ScrollBar.vertical: ThinScrollBar {
+                parent: cardWrap
+                anchors.top: bodyFlick.top
+                anchors.bottom: bodyFlick.bottom
+                anchors.right: parent.right
+                anchors.rightMargin: theme.space.xs
+            }
 
             Loader {
                 id: bodyLoader
