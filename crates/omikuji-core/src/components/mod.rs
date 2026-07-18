@@ -3,7 +3,7 @@ pub mod specs;
 
 pub use spec::{ComponentSpec, ComponentStatus, ExtractStrategy, SettingsKey, Source, Trigger};
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::collections::VecDeque;
 use std::fs;
 use std::io::Write;
@@ -54,7 +54,12 @@ pub fn eager_pending() -> Vec<&'static ComponentSpec> {
 pub fn epic_tools() -> Vec<&'static ComponentSpec> {
     specs::all()
         .iter()
-        .filter(|s| matches!(s.settings_key, SettingsKey::Legendary | SettingsKey::EglDummy))
+        .filter(|s| {
+            matches!(
+                s.settings_key,
+                SettingsKey::Legendary | SettingsKey::EglDummy
+            )
+        })
         .collect()
 }
 
@@ -95,10 +100,22 @@ pub async fn ensure(specs: &[&'static ComponentSpec]) -> Result<()> {
 
 #[derive(Debug, Clone)]
 pub enum ComponentEvent {
-    Started { name: String },
-    Progress { name: String, phase: String, percent: f64 },
-    Completed { name: String, version: String },
-    Failed { name: String, error: String },
+    Started {
+        name: String,
+    },
+    Progress {
+        name: String,
+        phase: String,
+        percent: f64,
+    },
+    Completed {
+        name: String,
+        version: String,
+    },
+    Failed {
+        name: String,
+        error: String,
+    },
 }
 
 static EVENTS: OnceLock<Mutex<VecDeque<ComponentEvent>>> = OnceLock::new();
@@ -148,7 +165,9 @@ async fn fetch_latest_release(api_url: &str) -> Result<GhRelease> {
 }
 
 pub async fn install_one(spec: &'static ComponentSpec) -> Result<()> {
-    push(ComponentEvent::Started { name: spec.name.to_string() });
+    push(ComponentEvent::Started {
+        name: spec.name.to_string(),
+    });
 
     match install_one_inner(spec).await {
         Ok(tag) => {
@@ -260,8 +279,7 @@ async fn install_one_inner(spec: &ComponentSpec) -> Result<String> {
 
     install_bytes(spec, &bytes).map_err(|e| anyhow!("extract/install: {}", e))?;
 
-    write_version(spec.name, &tag)
-        .map_err(|e| anyhow!("write version marker: {}", e))?;
+    write_version(spec.name, &tag).map_err(|e| anyhow!("write version marker: {}", e))?;
 
     Ok(tag)
 }
@@ -287,7 +305,7 @@ async fn download_bytes(url: &str, name: &str) -> Result<Vec<u8>> {
         buf.extend_from_slice(&chunk);
         if total > 0 {
             let pct = (buf.len() as f64 / total as f64) * 100.0;
-                if pct - last_pct >= 1.0 {
+            if pct - last_pct >= 1.0 {
                 push(ComponentEvent::Progress {
                     name: name.to_string(),
                     phase: "downloading".into(),
@@ -327,7 +345,9 @@ fn install_bytes(spec: &ComponentSpec, bytes: &[u8]) -> Result<()> {
 
             let idx = (0..archive.len())
                 .find(|&i| {
-                    let Ok(e) = archive.by_index(i) else { return false };
+                    let Ok(e) = archive.by_index(i) else {
+                        return false;
+                    };
                     let name = e.name();
                     name == *inner_path
                         || name.ends_with(&format!("/{}", inner_path))
@@ -409,7 +429,9 @@ fn chmod_exec(path: &Path) -> std::io::Result<()> {
 fn find_by_filename(root: &Path, target: &str) -> Option<PathBuf> {
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        let Ok(entries) = fs::read_dir(&dir) else { continue };
+        let Ok(entries) = fs::read_dir(&dir) else {
+            continue;
+        };
         for e in entries.flatten() {
             let p = e.path();
             if p.is_dir() {
@@ -426,7 +448,9 @@ fn list_tree(root: &Path) -> String {
     let mut out: Vec<String> = Vec::new();
     let mut stack = vec![root.to_path_buf()];
     while let Some(dir) = stack.pop() {
-        let Ok(entries) = fs::read_dir(&dir) else { continue };
+        let Ok(entries) = fs::read_dir(&dir) else {
+            continue;
+        };
         for e in entries.flatten() {
             let p = e.path();
             if p.is_dir() {

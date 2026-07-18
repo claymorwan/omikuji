@@ -1,14 +1,14 @@
 #![allow(clippy::too_many_arguments)]
 
 mod drains;
+mod epic;
+mod gacha;
+mod gog;
+mod launch;
+mod scripts;
 mod shortcuts;
 mod steam;
-mod launch;
 mod updates;
-mod epic;
-mod gog;
-mod gacha;
-mod scripts;
 
 #[cxx_qt::bridge]
 pub mod qobject {
@@ -25,8 +25,7 @@ pub mod qobject {
         include!("cxx-qt-lib/qbytearray.h");
         type QByteArray = cxx_qt_lib::QByteArray;
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray =
-            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
         type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
         include!("cxx-qt-lib/qlist.h");
@@ -49,27 +48,15 @@ pub mod qobject {
 
         // request_id matches the open_file_dialog call that triggered this
         #[qsignal]
-        fn file_dialog_result(
-            self: Pin<&mut GameModel>,
-            request_id: &QString,
-            path: &QString,
-        );
+        fn file_dialog_result(self: Pin<&mut GameModel>, request_id: &QString, path: &QString);
 
         // payload is json: { "download": "123", "install": "456", "error": "" }
         // sizes are stringified u64 becuase js Number loses precision above 2^53
         #[qsignal]
-        fn install_size_result(
-            self: Pin<&mut GameModel>,
-            request_id: &QString,
-            payload: &QString,
-        );
+        fn install_size_result(self: Pin<&mut GameModel>, request_id: &QString, payload: &QString);
 
         #[qsignal]
-        fn game_details_result(
-            self: Pin<&mut GameModel>,
-            request_id: &QString,
-            payload: &QString,
-        );
+        fn game_details_result(self: Pin<&mut GameModel>, request_id: &QString, payload: &QString);
 
         #[qsignal]
         fn notification(
@@ -236,7 +223,12 @@ pub mod qobject {
         fn get_game_config(self: &GameModel, index: i32) -> QMap_QString_QVariant;
 
         #[qinvokable]
-        fn update_game_field(self: Pin<&mut GameModel>, index: i32, key: &QString, value: &QString) -> bool;
+        fn update_game_field(
+            self: Pin<&mut GameModel>,
+            index: i32,
+            key: &QString,
+            value: &QString,
+        ) -> bool;
 
         // id is safer than index here; index can shift during a concurrent refresh
         #[qinvokable]
@@ -387,7 +379,14 @@ pub mod qobject {
 
         // result arrives async via file_dialog_result signal, not as a return value
         #[qinvokable]
-        fn open_file_dialog(self: Pin<&mut GameModel>, request_id: &QString, select_folder: bool, title: &QString, default_path: &QString, filter: &QString);
+        fn open_file_dialog(
+            self: Pin<&mut GameModel>,
+            request_id: &QString,
+            select_folder: bool,
+            title: &QString,
+            default_path: &QString,
+            filter: &QString,
+        );
 
         #[qinvokable]
         fn disk_free_space(self: &GameModel, path: &QString) -> QString;
@@ -431,7 +430,6 @@ pub mod qobject {
 
         #[qinvokable]
         fn launch_desktop_mode(self: &GameModel);
-
 
         #[qinvokable]
         fn home_dir(self: &GameModel) -> QString;
@@ -527,11 +525,7 @@ pub mod qobject {
         ) -> QString;
 
         #[qinvokable]
-        fn epic_toggle_overlay(
-            self: Pin<&mut GameModel>,
-            game_id: &QString,
-            enable: bool,
-        ) -> bool;
+        fn epic_toggle_overlay(self: Pin<&mut GameModel>, game_id: &QString, enable: bool) -> bool;
 
         #[qinvokable]
         fn epic_uninstall(self: Pin<&mut GameModel>, game_id: &QString) -> bool;
@@ -540,11 +534,8 @@ pub mod qobject {
         fn epic_overlay_is_installed(self: &GameModel) -> bool;
 
         #[qinvokable]
-        fn epic_set_cloud_saves(
-            self: Pin<&mut GameModel>,
-            game_id: &QString,
-            enable: bool,
-        ) -> bool;
+        fn epic_set_cloud_saves(self: Pin<&mut GameModel>, game_id: &QString, enable: bool)
+        -> bool;
     }
 
     unsafe extern "RustQt" {
@@ -625,9 +616,12 @@ use std::path::PathBuf;
 use std::pin::Pin;
 
 use cxx_qt::{CxxQtType, Threading};
-use cxx_qt_lib::{QByteArray, QHash, QHashPair_i32_QByteArray, QModelIndex, QMap, QMapPair_QString_QVariant, QString, QVariant};
+use cxx_qt_lib::{
+    QByteArray, QHash, QHashPair_i32_QByteArray, QMap, QMapPair_QString_QVariant, QModelIndex,
+    QString, QVariant,
+};
 
-use omikuji_core::library::{rfc3339_now, Game, Library};
+use omikuji_core::library::{Game, Library, rfc3339_now};
 use omikuji_core::media::{self, MediaType};
 use omikuji_core::ui_settings::UiSettings;
 
@@ -693,7 +687,15 @@ impl Default for GameModelRust {
         let sort_mode = SortMode::parse(&UiSettings::load().display.card_sort);
         library.game.sort_by(|a, b| sort_mode.cmp(a, b));
         let count = library.game.len() as i32;
-        Self { library, count, draft: None, preparing: false, wine_command_running: false, sort_mode, dirty_order: Default::default() }
+        Self {
+            library,
+            count,
+            draft: None,
+            preparing: false,
+            wine_command_running: false,
+            sort_mode,
+            dirty_order: Default::default(),
+        }
     }
 }
 
@@ -711,7 +713,10 @@ fn args_to_text(args: &[String]) -> String {
         .map(|a| {
             if a.is_empty() {
                 "\"\"".to_string()
-            } else if a.chars().any(|c| c.is_whitespace() || matches!(c, '"' | '\'' | '\\')) {
+            } else if a
+                .chars()
+                .any(|c| c.is_whitespace() || matches!(c, '"' | '\'' | '\\'))
+            {
                 let escaped = a.replace('\\', "\\\\").replace('"', "\\\"");
                 format!("\"{}\"", escaped)
             } else {
@@ -771,7 +776,10 @@ macro_rules! field_get {
         $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v)));
     };
     (path, $m:ident, $key:literal, $v:expr) => {
-        $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v.to_string_lossy())));
+        $m.insert(
+            QString::from($key),
+            QVariant::from(&QString::from(&*$v.to_string_lossy())),
+        );
     };
     (bool, $m:ident, $key:literal, $v:expr) => {
         $m.insert(QString::from($key), QVariant::from(&$v));
@@ -785,7 +793,10 @@ macro_rules! field_get {
         }
     };
     (args, $m:ident, $key:literal, $v:expr) => {
-        $m.insert(QString::from($key), QVariant::from(&QString::from(&*args_to_text(&$v))));
+        $m.insert(
+            QString::from($key),
+            QVariant::from(&QString::from(&*args_to_text(&$v))),
+        );
     };
 }
 
@@ -943,10 +954,17 @@ fn media_changed_notifier(
     move |_| {
         let id_inner = game_id.clone();
         let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GameModel>| {
-            let Some(row) = obj.library.game.iter().position(|g| g.metadata.id == id_inner) else {
+            let Some(row) = obj
+                .library
+                .game
+                .iter()
+                .position(|g| g.metadata.id == id_inner)
+            else {
                 return;
             };
-            let idx = obj.as_ref().model_index(row as i32, 0, &QModelIndex::default());
+            let idx = obj
+                .as_ref()
+                .model_index(row as i32, 0, &QModelIndex::default());
             let roles = cxx_qt_lib::QList::<i32>::default();
             obj.as_mut().data_changed(&idx, &idx, &roles);
         });
@@ -966,9 +984,16 @@ impl qobject::GameModel {
 
         // debug: log first data() call per game
         if role == ROLE_NAME {
-            tracing::debug!("row={} name='{}' coverart='{}'",
-                row, game.metadata.name,
-                media::resolve_image(&game.metadata.id, &game.metadata.coverart, &MediaType::Coverart));
+            tracing::debug!(
+                "row={} name='{}' coverart='{}'",
+                row,
+                game.metadata.name,
+                media::resolve_image(
+                    &game.metadata.id,
+                    &game.metadata.coverart,
+                    &MediaType::Coverart
+                )
+            );
         }
 
         match role {
@@ -982,26 +1007,33 @@ impl qobject::GameModel {
 
             // resolve order: manual override > cached file > empty string
             ROLE_BANNER => {
-                let path = media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
+                let path = media::resolve_image(
+                    &game.metadata.id,
+                    &game.metadata.banner,
+                    &MediaType::Banner,
+                );
                 QVariant::from(&QString::from(&*path))
             }
             ROLE_COVERART => {
-                let path = media::resolve_image(&game.metadata.id, &game.metadata.coverart, &MediaType::Coverart);
+                let path = media::resolve_image(
+                    &game.metadata.id,
+                    &game.metadata.coverart,
+                    &MediaType::Coverart,
+                );
                 QVariant::from(&QString::from(&*path))
             }
             ROLE_ICON => {
-                let path = media::resolve_image(&game.metadata.id, &game.metadata.icon, &MediaType::Icon);
+                let path =
+                    media::resolve_image(&game.metadata.id, &game.metadata.icon, &MediaType::Icon);
                 QVariant::from(&QString::from(&*path))
             }
             ROLE_FAVOURITE => QVariant::from(&game.metadata.favourite),
             ROLE_HIDDEN => QVariant::from(&game.metadata.hidden),
             ROLE_RUNNER_TYPE => QVariant::from(&QString::from(&*game.runner.runner_type)),
-            ROLE_CATEGORIES => {
-                match serde_json::to_string(&game.metadata.categories) {
-                    Ok(json) => QVariant::from(&QString::from(&json)),
-                    Err(_) => QVariant::from(&QString::from("[]")),
-                }
-            }
+            ROLE_CATEGORIES => match serde_json::to_string(&game.metadata.categories) {
+                Ok(json) => QVariant::from(&QString::from(&json)),
+                Err(_) => QVariant::from(&QString::from("[]")),
+            },
             _ => QVariant::default(),
         }
     }
@@ -1055,8 +1087,14 @@ impl qobject::GameModel {
             .library
             .game
             .partition_point(|g| mode.cmp(g, &game) != Ordering::Greater) as i32;
-        self.as_mut().begin_insert_rows(&QModelIndex::default(), row, row);
-        self.as_mut().rust_mut().get_mut().library.game.insert(row as usize, game);
+        self.as_mut()
+            .begin_insert_rows(&QModelIndex::default(), row, row);
+        self.as_mut()
+            .rust_mut()
+            .get_mut()
+            .library
+            .game
+            .insert(row as usize, game);
         let count = self.library.game.len() as i32;
         self.as_mut().set_count(count);
         self.as_mut().end_insert_rows();
@@ -1073,7 +1111,12 @@ impl qobject::GameModel {
             return;
         }
         self.as_mut().begin_reset_model();
-        self.as_mut().rust_mut().get_mut().library.game.sort_by(|a, b| mode.cmp(a, b));
+        self.as_mut()
+            .rust_mut()
+            .get_mut()
+            .library
+            .game
+            .sort_by(|a, b| mode.cmp(a, b));
         self.as_mut().end_reset_model();
     }
 
@@ -1232,7 +1275,9 @@ impl qobject::GameModel {
             return false;
         }
         self.as_mut().rust_mut().get_mut().library.game[idx] = draft;
-        let model_idx = self.as_ref().model_index(idx as i32, 0, &QModelIndex::default());
+        let model_idx = self
+            .as_ref()
+            .model_index(idx as i32, 0, &QModelIndex::default());
         let roles = cxx_qt_lib::QList::<i32>::default();
         self.as_mut().data_changed(&model_idx, &model_idx, &roles);
         self.as_mut().resort_reset();
@@ -1295,7 +1340,9 @@ impl qobject::GameModel {
             self.library
                 .game
                 .iter()
-                .filter(|g| g.uses_wine_prefix() && omikuji_core::launch::prefix_path_for(g) == path)
+                .filter(|g| {
+                    g.uses_wine_prefix() && omikuji_core::launch::prefix_path_for(g) == path
+                })
                 .map(|g| g.metadata.name.clone())
                 .collect()
         } else {
@@ -1348,7 +1395,9 @@ impl qobject::GameModel {
 
     fn refresh(mut self: Pin<&mut Self>, selected_index: i32) -> QString {
         let selected_id = if selected_index >= 0 {
-            self.library.game.get(selected_index as usize)
+            self.library
+                .game
+                .get(selected_index as usize)
                 .map(|g| g.metadata.id.clone())
                 .unwrap_or_default()
         } else {
@@ -1428,16 +1477,22 @@ impl qobject::GameModel {
             QString::from("hidden"),
             QVariant::from(&game.metadata.hidden),
         );
-        let cats_json = serde_json::to_string(&game.metadata.categories)
-            .unwrap_or_else(|_| "[]".to_string());
+        let cats_json =
+            serde_json::to_string(&game.metadata.categories).unwrap_or_else(|_| "[]".to_string());
         map.insert(
             QString::from("categories"),
             QVariant::from(&QString::from(&cats_json)),
         );
 
-        let banner_path = media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
-        let coverart_path = media::resolve_image(&game.metadata.id, &game.metadata.coverart, &MediaType::Coverart);
-        let icon_path = media::resolve_image(&game.metadata.id, &game.metadata.icon, &MediaType::Icon);
+        let banner_path =
+            media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
+        let coverart_path = media::resolve_image(
+            &game.metadata.id,
+            &game.metadata.coverart,
+            &MediaType::Coverart,
+        );
+        let icon_path =
+            media::resolve_image(&game.metadata.id, &game.metadata.icon, &MediaType::Icon);
 
         map.insert(
             QString::from("banner"),
@@ -1497,7 +1552,12 @@ impl qobject::GameModel {
         config_map(game)
     }
 
-    fn update_game_field(mut self: Pin<&mut Self>, index: i32, key: &QString, value: &QString) -> bool {
+    fn update_game_field(
+        mut self: Pin<&mut Self>,
+        index: i32,
+        key: &QString,
+        value: &QString,
+    ) -> bool {
         let idx = index as usize;
         let k = key.to_string();
         let v = value.to_string();
@@ -1524,7 +1584,11 @@ impl qobject::GameModel {
             }
         };
 
-        tracing::debug!("saving game '{}' id '{}'", game.metadata.name, game.metadata.id);
+        tracing::debug!(
+            "saving game '{}' id '{}'",
+            game.metadata.name,
+            game.metadata.id
+        );
 
         if let Err(e) = Library::save_game_static(&game) {
             tracing::error!("failed to save game config: {}", e);
@@ -1550,11 +1614,13 @@ impl qobject::GameModel {
 
         let qt_thread = self.as_mut().qt_thread();
         let on_asset = media_changed_notifier(qt_thread, id.clone());
-        std::thread::spawn(move || {
-            match (gacha_manifest, steam_appid) {
-                (Some(m), _) => omikuji_core::gachas::art::fetch_into_library_cache(&m, &id, on_asset),
-                (_, Some(appid)) => { let _ = media::fetch_steam_media_blocking_with(&appid, on_asset); }
-                _ => { let _ = media::fetch_media_blocking_with(&id, &name, on_asset); }
+        std::thread::spawn(move || match (gacha_manifest, steam_appid) {
+            (Some(m), _) => omikuji_core::gachas::art::fetch_into_library_cache(&m, &id, on_asset),
+            (_, Some(appid)) => {
+                let _ = media::fetch_steam_media_blocking_with(&appid, on_asset);
+            }
+            _ => {
+                let _ = media::fetch_media_blocking_with(&id, &name, on_asset);
             }
         });
     }
@@ -1583,10 +1649,9 @@ impl qobject::GameModel {
             defaults.apply_sections_to(game, &sections, replace_maps);
             match Library::save_game_static(game) {
                 Ok(_) => written += 1,
-                Err(e) => tracing::error!(
-                    "apply_defaults save failed for {}: {}",
-                    game.metadata.id, e
-                ),
+                Err(e) => {
+                    tracing::error!("apply_defaults save failed for {}: {}", game.metadata.id, e)
+                }
             }
         }
         self.as_mut().end_reset_model();
@@ -1611,7 +1676,10 @@ impl qobject::GameModel {
 
     fn system_info(&self) -> QString {
         let qt = option_env!("OMIKUJI_QT_VERSION").unwrap_or("unknown");
-        QString::from(&omikuji_core::system_info::report(env!("CARGO_PKG_VERSION"), qt))
+        QString::from(&omikuji_core::system_info::report(
+            env!("CARGO_PKG_VERSION"),
+            qt,
+        ))
     }
 
     fn app_version(&self) -> QString {
@@ -1649,8 +1717,12 @@ impl qobject::GameModel {
                 let new_id = new_game.metadata.id.clone();
                 self.as_mut().insert_game_sorted(new_game);
 
-                tracing::info!("duplicated game '{}' -> '{}' (id: {})",
-                    game.metadata.name, new_name, new_id);
+                tracing::info!(
+                    "duplicated game '{}' -> '{}' (id: {})",
+                    game.metadata.name,
+                    new_name,
+                    new_id
+                );
                 true
             }
             Err(e) => {
@@ -1664,14 +1736,26 @@ impl qobject::GameModel {
         std::env::var("FLATPAK_ID").is_ok()
     }
 
-    fn open_file_dialog(self: Pin<&mut Self>, request_id: &QString, select_folder: bool, title: &QString, default_path: &QString, filter: &QString) {
+    fn open_file_dialog(
+        self: Pin<&mut Self>,
+        request_id: &QString,
+        select_folder: bool,
+        title: &QString,
+        default_path: &QString,
+        filter: &QString,
+    ) {
         let rid = request_id.to_string();
         let title_str = title.to_string();
         let default_str = default_path.to_string();
         let filter_str = filter.to_string();
 
         std::thread::spawn(move || {
-            let result = omikuji_core::desktop::show_file_dialog(select_folder, &title_str, &default_str, &filter_str);
+            let result = omikuji_core::desktop::show_file_dialog(
+                select_folder,
+                &title_str,
+                &default_str,
+                &filter_str,
+            );
             omikuji_core::install_sizes::push_file_dialog(
                 omikuji_core::install_sizes::FileDialogResult {
                     request_id: rid,
@@ -1699,6 +1783,4 @@ impl qobject::GameModel {
         let path = dirs::home_dir().unwrap_or_default();
         QString::from(&*path.to_string_lossy())
     }
-
 }
-

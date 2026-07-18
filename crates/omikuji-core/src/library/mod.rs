@@ -1,10 +1,9 @@
-use crate::media::slugify;use anyhow::{Context, Result};
+use crate::media::slugify;
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
-
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Game {
@@ -84,13 +83,11 @@ pub struct SourceConfig {
     pub patch: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-#[derive(Default)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct RunnerConfig {
     #[serde(alias = "runner_type", rename = "type", default)]
     pub runner_type: String, // "wine", "steam", "flatpak"
 }
-
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct WineConfig {
@@ -142,9 +139,15 @@ pub struct WineConfig {
     pub graphics_driver: String,
 }
 
-fn default_prefix_arch() -> String { "win64".to_string() }
-fn default_true() -> bool { true }
-fn default_dpi() -> u32 { 96 }
+fn default_prefix_arch() -> String {
+    "win64".to_string()
+}
+fn default_true() -> bool {
+    true
+}
+fn default_dpi() -> u32 {
+    96
+}
 
 impl Default for WineConfig {
     fn default() -> Self {
@@ -234,7 +237,6 @@ pub struct GamescopeConfig {
     pub fsr_sharpness: u32,
 }
 
-
 #[derive(Debug, Clone, Default, Serialize, Deserialize, PartialEq)]
 pub struct SystemConfig {
     #[serde(default)]
@@ -246,7 +248,6 @@ pub struct SystemConfig {
     #[serde(default)]
     pub cpu_limit: u32,
 }
-
 
 pub fn default_color() -> String {
     "#1a1a2e".to_string()
@@ -298,14 +299,20 @@ impl Library {
     pub fn app_ids_for_source(kind: &str) -> Vec<String> {
         let mut out = Vec::new();
         let dir = Self::library_dir();
-        let Ok(entries) = std::fs::read_dir(&dir) else { return out };
+        let Ok(entries) = std::fs::read_dir(&dir) else {
+            return out;
+        };
         for entry in entries.flatten() {
             let path = entry.path();
             if path.extension().and_then(|e| e.to_str()) != Some("toml") {
                 continue;
             }
-            let Ok(content) = std::fs::read_to_string(&path) else { continue };
-            let Ok(game) = toml::from_str::<Game>(&content) else { continue };
+            let Ok(content) = std::fs::read_to_string(&path) else {
+                continue;
+            };
+            let Ok(game) = toml::from_str::<Game>(&content) else {
+                continue;
+            };
             if game.source.kind == kind && !game.source.app_id.is_empty() {
                 out.push(game.source.app_id);
             }
@@ -358,10 +365,10 @@ impl Library {
     }
 
     fn load_game(path: &PathBuf) -> Result<Game> {
-        let contents = fs::read_to_string(path)
-            .with_context(|| format!("reading {}", path.display()))?;
-        let game: Game = toml::from_str(&contents)
-            .with_context(|| format!("parsing {}", path.display()))?;
+        let contents =
+            fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
+        let game: Game =
+            toml::from_str(&contents).with_context(|| format!("parsing {}", path.display()))?;
         Ok(game)
     }
 
@@ -506,21 +513,34 @@ impl Game {
         }
     }
 
-    pub fn id(&self) -> &str { &self.metadata.id }
-    pub fn name(&self) -> &str { &self.metadata.name }
-    pub fn exe(&self) -> &PathBuf { &self.metadata.exe }
+    pub fn id(&self) -> &str {
+        &self.metadata.id
+    }
+    pub fn name(&self) -> &str {
+        &self.metadata.name
+    }
+    pub fn exe(&self) -> &PathBuf {
+        &self.metadata.exe
+    }
 
     pub fn added_key(&self) -> (&str, &str) {
         (&self.metadata.added, &self.metadata.id)
     }
 
     pub fn custom_key(&self) -> (u32, (&str, &str)) {
-        (self.metadata.custom_pos.unwrap_or(u32::MAX), self.added_key())
+        (
+            self.metadata.custom_pos.unwrap_or(u32::MAX),
+            self.added_key(),
+        )
     }
 
     pub fn display_sort_key(&self) -> String {
         let m = &self.metadata;
-        let s = if m.sort_name.trim().is_empty() { &m.name } else { &m.sort_name };
+        let s = if m.sort_name.trim().is_empty() {
+            &m.name
+        } else {
+            &m.sort_name
+        };
         s.trim().to_lowercase()
     }
 
@@ -531,14 +551,20 @@ impl Game {
 
     // steam/flatpak/native launch outside wine, so they don't use an omikuji-managed prefix, damn gaijin...
     pub fn uses_wine_prefix(&self) -> bool {
-        !matches!(self.runner.runner_type.as_str(), "steam" | "flatpak" | "native")
+        !matches!(
+            self.runner.runner_type.as_str(),
+            "steam" | "flatpak" | "native"
+        )
     }
 
     // skips fields the caller already set so per-source picks (steam:appid etc) survive
     pub fn seed_from_defaults(&mut self, d: &crate::defaults::Defaults) {
         fn seed<T: PartialEq + Clone>(field: &mut T, stock: &T, default: &Option<T>) {
             if *field == *stock
-                && let Some(v) = default { *field = v.clone(); }
+                && let Some(v) = default
+            {
+                *field = v.clone();
+            }
         }
 
         let w = WineConfig::default();
@@ -549,35 +575,85 @@ impl Game {
 
         seed(&mut self.wine.version, &w.version, &d.wine.version);
         seed(&mut self.wine.prefix, &w.prefix, &d.wine.prefix);
-        seed(&mut self.wine.prefix_arch, &w.prefix_arch, &d.wine.prefix_arch);
+        seed(
+            &mut self.wine.prefix_arch,
+            &w.prefix_arch,
+            &d.wine.prefix_arch,
+        );
         seed(&mut self.wine.esync, &w.esync, &d.wine.esync);
         seed(&mut self.wine.fsync, &w.fsync, &d.wine.fsync);
         seed(&mut self.wine.ntsync, &w.ntsync, &d.wine.ntsync);
         seed(&mut self.wine.dxvk, &w.dxvk, &d.wine.dxvk);
-        seed(&mut self.wine.dxvk_version, &w.dxvk_version, &d.wine.dxvk_version);
+        seed(
+            &mut self.wine.dxvk_version,
+            &w.dxvk_version,
+            &d.wine.dxvk_version,
+        );
         seed(&mut self.wine.vkd3d, &w.vkd3d, &d.wine.vkd3d);
-        seed(&mut self.wine.vkd3d_version, &w.vkd3d_version, &d.wine.vkd3d_version);
+        seed(
+            &mut self.wine.vkd3d_version,
+            &w.vkd3d_version,
+            &d.wine.vkd3d_version,
+        );
         seed(&mut self.wine.d3d_extras, &w.d3d_extras, &d.wine.d3d_extras);
-        seed(&mut self.wine.d3d_extras_version, &w.d3d_extras_version, &d.wine.d3d_extras_version);
+        seed(
+            &mut self.wine.d3d_extras_version,
+            &w.d3d_extras_version,
+            &d.wine.d3d_extras_version,
+        );
         seed(&mut self.wine.dxvk_nvapi, &w.dxvk_nvapi, &d.wine.dxvk_nvapi);
-        seed(&mut self.wine.dxvk_nvapi_version, &w.dxvk_nvapi_version, &d.wine.dxvk_nvapi_version);
+        seed(
+            &mut self.wine.dxvk_nvapi_version,
+            &w.dxvk_nvapi_version,
+            &d.wine.dxvk_nvapi_version,
+        );
         seed(&mut self.wine.fsr, &w.fsr, &d.wine.fsr);
         seed(&mut self.wine.battleye, &w.battleye, &d.wine.battleye);
-        seed(&mut self.wine.easyanticheat, &w.easyanticheat, &d.wine.easyanticheat);
-        seed(&mut self.wine.dpi_scaling, &w.dpi_scaling, &d.wine.dpi_scaling);
+        seed(
+            &mut self.wine.easyanticheat,
+            &w.easyanticheat,
+            &d.wine.easyanticheat,
+        );
+        seed(
+            &mut self.wine.dpi_scaling,
+            &w.dpi_scaling,
+            &d.wine.dpi_scaling,
+        );
         seed(&mut self.wine.dpi, &w.dpi, &d.wine.dpi);
-        seed(&mut self.wine.audio_driver, &w.audio_driver, &d.wine.audio_driver);
-        seed(&mut self.wine.graphics_driver, &w.graphics_driver, &d.wine.graphics_driver);
+        seed(
+            &mut self.wine.audio_driver,
+            &w.audio_driver,
+            &d.wine.audio_driver,
+        );
+        seed(
+            &mut self.wine.graphics_driver,
+            &w.graphics_driver,
+            &d.wine.graphics_driver,
+        );
         for (k, v) in &d.wine.dll_overrides {
-            self.wine.dll_overrides.entry(k.clone()).or_insert_with(|| v.clone());
+            self.wine
+                .dll_overrides
+                .entry(k.clone())
+                .or_insert_with(|| v.clone());
         }
 
-        seed(&mut self.launch.command_prefix, &l.command_prefix, &d.launch.command_prefix);
+        seed(
+            &mut self.launch.command_prefix,
+            &l.command_prefix,
+            &d.launch.command_prefix,
+        );
         for (k, v) in &d.launch.env {
-            self.launch.env.entry(k.clone()).or_insert_with(|| v.clone());
+            self.launch
+                .env
+                .entry(k.clone())
+                .or_insert_with(|| v.clone());
         }
 
-        seed(&mut self.graphics.mangohud, &g.mangohud, &d.graphics.mangohud);
+        seed(
+            &mut self.graphics.mangohud,
+            &g.mangohud,
+            &d.graphics.mangohud,
+        );
         seed(&mut self.graphics.gpu, &g.gpu, &d.graphics.gpu);
 
         let gs = &mut self.graphics.gamescope;
@@ -588,18 +664,41 @@ impl Game {
         seed(&mut gs.game_width, &gs_def.game_width, &dgs.game_width);
         seed(&mut gs.game_height, &gs_def.game_height, &dgs.game_height);
         seed(&mut gs.fps, &gs_def.fps, &dgs.fps);
-        seed(&mut gs.refresh_rate, &gs_def.refresh_rate, &dgs.refresh_rate);
+        seed(
+            &mut gs.refresh_rate,
+            &gs_def.refresh_rate,
+            &dgs.refresh_rate,
+        );
         seed(&mut gs.fullscreen, &gs_def.fullscreen, &dgs.fullscreen);
         seed(&mut gs.borderless, &gs_def.borderless, &dgs.borderless);
-        seed(&mut gs.integer_scaling, &gs_def.integer_scaling, &dgs.integer_scaling);
+        seed(
+            &mut gs.integer_scaling,
+            &gs_def.integer_scaling,
+            &dgs.integer_scaling,
+        );
         seed(&mut gs.hdr, &gs_def.hdr, &dgs.hdr);
         seed(&mut gs.filter, &gs_def.filter, &dgs.filter);
-        seed(&mut gs.fsr_sharpness, &gs_def.fsr_sharpness, &dgs.fsr_sharpness);
+        seed(
+            &mut gs.fsr_sharpness,
+            &gs_def.fsr_sharpness,
+            &dgs.fsr_sharpness,
+        );
 
         seed(&mut self.system.gamemode, &s.gamemode, &d.system.gamemode);
-        seed(&mut self.system.prevent_sleep, &s.prevent_sleep, &d.system.prevent_sleep);
-        seed(&mut self.system.pulse_latency, &s.pulse_latency, &d.system.pulse_latency);
-        seed(&mut self.system.cpu_limit, &s.cpu_limit, &d.system.cpu_limit);
+        seed(
+            &mut self.system.prevent_sleep,
+            &s.prevent_sleep,
+            &d.system.prevent_sleep,
+        );
+        seed(
+            &mut self.system.pulse_latency,
+            &s.pulse_latency,
+            &d.system.pulse_latency,
+        );
+        seed(
+            &mut self.system.cpu_limit,
+            &s.cpu_limit,
+            &d.system.cpu_limit,
+        );
     }
 }
-

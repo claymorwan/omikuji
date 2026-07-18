@@ -1,4 +1,3 @@
-
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Mutex;
 
@@ -43,7 +42,8 @@ pub fn append_line(game_id: &str, line: String) {
         map.entry(game_id.to_string()).or_default().push(line);
     }
     let mut d = DIRTY.lock().unwrap();
-    d.get_or_insert_with(HashSet::new).insert(game_id.to_string());
+    d.get_or_insert_with(HashSet::new)
+        .insert(game_id.to_string());
 }
 
 pub fn get_log(game_id: &str) -> String {
@@ -58,10 +58,11 @@ pub fn get_log(game_id: &str) -> String {
 pub fn clear_log(game_id: &str) {
     let mut guard = BUFFERS.lock().unwrap();
     if let Some(map) = guard.as_mut()
-        && let Some(buf) = map.get_mut(game_id) {
-            buf.lines.clear();
-            buf.bytes = 0;
-        }
+        && let Some(buf) = map.get_mut(game_id)
+    {
+        buf.lines.clear();
+        buf.bytes = 0;
+    }
 }
 
 pub fn reset_log(game_id: &str) {

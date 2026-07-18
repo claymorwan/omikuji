@@ -3,7 +3,7 @@
 //  2. re-fetch every manifest so users pick up assets-repo changes mid-session (not pulling if cached was braindead what the fuck i was doing)
 // adding a game = push manifest + push art + add 1 line to assets-repo's gacha/index.json. zero rust touch.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
@@ -89,7 +89,10 @@ async fn fetch_one(
     let _parsed: super::manifest::GachaManifest = serde_json::from_slice(&body)
         .map_err(|e| anyhow!("invalid manifest from {}: {}", url, e))?;
 
-    let path = crate::gachas_dir().join(publisher).join(game).join("manifest.json");
+    let path = crate::gachas_dir()
+        .join(publisher)
+        .join(game)
+        .join("manifest.json");
     crate::fs_util::write_atomic(&path, &body)?;
     Ok(())
 }

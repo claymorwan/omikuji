@@ -1,11 +1,10 @@
-
 //!update tries in order:
 // 1. per-file resource diffs (preferred): patch.json manifests with HDiffPatch
 //      variants keyed by base_md5. a 1.2.3 -> 1.2.4 update is ~160MB this way vs the 46GB full reinstall the top-level patch field would claim.
 // 2. overlay archive bundle (patch.patches[]), used when patch.json has no applicable variants for the installed version.
 // 3. error "full reinstall required" if server has no diff path.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use md5::{Digest, Md5};
 use std::fs::File;
@@ -14,8 +13,8 @@ use std::path::{Path, PathBuf};
 
 use super::api;
 use crate::downloads::{
-    check_control, report_progress, set_status, ControlSignal, DownloadEntry, DownloadKind,
-    DownloadSource, DownloadStatus,
+    ControlSignal, DownloadEntry, DownloadKind, DownloadSource, DownloadStatus, check_control,
+    report_progress, set_status,
 };
 use crate::gachas::manifest::GachaManifest;
 
@@ -38,18 +37,19 @@ fn parse_endfield_app(app_id: &str) -> Result<ParsedEndfieldApp> {
         .map(|e| e.label.clone())
         .unwrap_or_else(|| edition_id.clone());
     let cfg = api::EditionConfig::from_manifest(&manifest, &edition_id)?;
-    Ok(ParsedEndfieldApp { manifest, edition_id, edition_label, cfg })
+    Ok(ParsedEndfieldApp {
+        manifest,
+        edition_id,
+        edition_label,
+        cfg,
+    })
 }
 
 #[async_trait]
 impl DownloadSource for EndfieldSource {
     async fn install(&self, entry: &DownloadEntry) -> Result<()> {
         let parsed = parse_endfield_app(&entry.app_id)?;
-        tracing::info!(
-            "install: {} ({})",
-            entry.display_name,
-            parsed.edition_label
-        );
+        tracing::info!("install: {} ({})", entry.display_name, parsed.edition_label);
 
         let resp = api::fetch_latest(&parsed.cfg, "").await?;
         let target_version = resp.version.clone();
@@ -71,7 +71,11 @@ impl DownloadSource for EndfieldSource {
             return Ok(());
         }
 
-        super::set_installed_version(&parsed.manifest.game_slug, &parsed.edition_id, &target_version);
+        super::set_installed_version(
+            &parsed.manifest.game_slug,
+            &parsed.edition_id,
+            &target_version,
+        );
         tracing::info!(
             "install complete: {} {}",
             parsed.edition_label,
@@ -84,7 +88,7 @@ impl DownloadSource for EndfieldSource {
         let from_version = match &entry.kind {
             DownloadKind::Update { from_version } => from_version.clone(),
             DownloadKind::Install | DownloadKind::Repair => {
-                return Err(anyhow!("update() called on a non-update entry"))
+                return Err(anyhow!("update() called on a non-update entry"));
             }
         };
 
@@ -109,12 +113,19 @@ impl DownloadSource for EndfieldSource {
 
         if !rand.is_empty() && !game_version.is_empty() {
             tried_v2 = true;
-            match apply_resource_patches(entry, &parsed.cfg, &game_version, &target_version, &rand).await {
+            match apply_resource_patches(entry, &parsed.cfg, &game_version, &target_version, &rand)
+                .await
+            {
                 Ok(true) => {
-                    super::set_installed_version(&parsed.manifest.game_slug, &parsed.edition_id, &target_version);
+                    super::set_installed_version(
+                        &parsed.manifest.game_slug,
+                        &parsed.edition_id,
+                        &target_version,
+                    );
                     tracing::info!(
                         "update complete via resource patches: {} -> {}",
-                        from_version, target_version
+                        from_version,
+                        target_version
                     );
                     return Ok(());
                 }
@@ -156,10 +167,15 @@ impl DownloadSource for EndfieldSource {
             return Ok(());
         }
 
-        super::set_installed_version(&parsed.manifest.game_slug, &parsed.edition_id, &target_version);
+        super::set_installed_version(
+            &parsed.manifest.game_slug,
+            &parsed.edition_id,
+            &target_version,
+        );
         tracing::info!(
             "update complete via overlay: {} -> {}",
-            from_version, target_version
+            from_version,
+            target_version
         );
         Ok(())
     }
@@ -193,10 +209,7 @@ async fn apply_resource_patches(
         if check_control(&entry.id) != ControlSignal::None {
             return Ok(false);
         }
-        tracing::debug!(
-            "fetching patch.json for resource {}",
-            resource.name
-        );
+        tracing::debug!("fetching patch.json for resource {}", resource.name);
         match api::fetch_resource_patch(&resource.path).await {
             Ok(m) => {
                 tracing::debug!(
@@ -243,7 +256,8 @@ async fn apply_resource_patches(
                 Err(e) => {
                     tracing::warn!(
                         "hpatchz failed for {}: {} - counting as unpatchable",
-                        file.name, e
+                        file.name,
+                        e
                     );
                     unpatchable += 1;
                 }
@@ -256,7 +270,11 @@ async fn apply_resource_patches(
 
     tracing::info!(
         "resource patch pass: {} applied, {} already at target, {} lazy-loaded (skipped ok), {} unpatchable (of {} total)",
-        applied, already, not_materialized, unpatchable, total_files
+        applied,
+        already,
+        not_materialized,
+        unpatchable,
+        total_files
     );
 
     // lazy-loaded bundle assets are fine; the game's own resource manager
@@ -294,16 +312,14 @@ async fn apply_one_file(
     if file.diff_type != 1 {
         tracing::warn!(
             "{} has diffType={}, skipping (unsupported)",
-            file.name, file.diff_type
+            file.name,
+            file.diff_type
         );
         return Ok(FileOutcome::Unpatchable);
     }
 
     if let Some(target_abs) = resolve_on_disk(&entry.install_path, &file.name, &file.md5)? {
-        tracing::debug!(
-            "{} already at target md5, skip",
-            target_abs.display()
-        );
+        tracing::debug!("{} already at target md5, skip", target_abs.display());
         return Ok(FileOutcome::AlreadyCurrent);
     }
 
@@ -328,12 +344,16 @@ async fn apply_one_file(
 
     tracing::warn!(
         "UNPATCHABLE {} - target_md5={}, variants={}",
-        file.name, file.md5, file.patch.len()
+        file.name,
+        file.md5,
+        file.patch.len()
     );
     for (i, v) in file.patch.iter().enumerate() {
         tracing::debug!(
             "  variant[{}]: base_file={} base_md5={}",
-            i, v.base_file, v.base_md5
+            i,
+            v.base_file,
+            v.base_md5
         );
     }
     Ok(FileOutcome::Unpatchable)
@@ -385,8 +405,13 @@ async fn apply_variant(
             .await?;
     }
 
-    let target_abs = install_path_for(&entry.install_path, base_abs, &variant.base_file, &file.name)
-        .ok_or_else(|| anyhow!("couldn't locate install root for {}", file.name))?;
+    let target_abs = install_path_for(
+        &entry.install_path,
+        base_abs,
+        &variant.base_file,
+        &file.name,
+    )
+    .ok_or_else(|| anyhow!("couldn't locate install root for {}", file.name))?;
 
     let tmp_out = scratch.join(format!("{}.out", blob_name));
     crate::external::hpatchz::patch(base_abs, &blob_path, &tmp_out)
@@ -406,8 +431,14 @@ async fn apply_variant(
     if let Some(parent) = target_abs.parent() {
         let _ = std::fs::create_dir_all(parent);
     }
-    std::fs::rename(&tmp_out, &target_abs)
-        .map_err(|e| anyhow!("rename {} -> {}: {}", tmp_out.display(), target_abs.display(), e))?;
+    std::fs::rename(&tmp_out, &target_abs).map_err(|e| {
+        anyhow!(
+            "rename {} -> {}: {}",
+            tmp_out.display(),
+            target_abs.display(),
+            e
+        )
+    })?;
 
     let _ = std::fs::remove_file(&blob_path);
     Ok(FileOutcome::Applied)
@@ -522,14 +553,8 @@ async fn download_and_extract(
             format_bytes(f.package_size)
         );
 
-        crate::hoyo::source::download_file(
-            &f.url,
-            &temp_path,
-            &entry.id,
-            so_far,
-            total_bytes,
-        )
-        .await?;
+        crate::hoyo::source::download_file(&f.url, &temp_path, &entry.id, so_far, total_bytes)
+            .await?;
 
         so_far += f.package_size;
     }
@@ -539,11 +564,7 @@ async fn download_and_extract(
     }
 
     if let Some(first) = &first_segment {
-        tracing::info!(
-            "extracting {} to {}",
-            label,
-            entry.install_path.display()
-        );
+        tracing::info!("extracting {} to {}", label, entry.install_path.display());
         crate::notifications::info(
             &entry.display_name,
             if label == "patch" {
@@ -572,17 +593,13 @@ pub fn cleanup_endfield_state(app_id: &str, install_path: &Path, temp_dir: Optio
     if let Some(t) = temp_dir {
         candidates.push(t.join(&dirname));
     }
-    candidates.push(
-        install_path
-            .parent()
-            .unwrap_or(install_path)
-            .join(&dirname),
-    );
+    candidates.push(install_path.parent().unwrap_or(install_path).join(&dirname));
     for dir in candidates {
         if dir.exists()
-            && let Err(e) = std::fs::remove_dir_all(&dir) {
-                tracing::warn!("clean {} failed: {}", dir.display(), e);
-            }
+            && let Err(e) = std::fs::remove_dir_all(&dir)
+        {
+            tracing::warn!("clean {} failed: {}", dir.display(), e);
+        }
     }
 }
 
@@ -599,12 +616,7 @@ pub fn inspect_endfield_temp(
         if let Some(t) = temp_dir {
             v.push(t.join(&dirname));
         }
-        v.push(
-            install_path
-                .parent()
-                .unwrap_or(install_path)
-                .join(&dirname),
-        );
+        v.push(install_path.parent().unwrap_or(install_path).join(&dirname));
         v
     };
 
@@ -614,16 +626,19 @@ pub fn inspect_endfield_temp(
         if !dir.is_dir() {
             continue;
         }
-        let Ok(rd) = std::fs::read_dir(dir) else { continue };
+        let Ok(rd) = std::fs::read_dir(dir) else {
+            continue;
+        };
         for entry in rd.flatten() {
             if let Ok(meta) = entry.metadata()
-                && meta.is_file() {
-                    total_bytes += meta.len();
-                    let name = entry.file_name().to_string_lossy().to_string();
-                    if name.contains(".zip.") {
-                        segments += 1;
-                    }
+                && meta.is_file()
+            {
+                total_bytes += meta.len();
+                let name = entry.file_name().to_string_lossy().to_string();
+                if name.contains(".zip.") {
+                    segments += 1;
                 }
+            }
         }
     }
     (total_bytes, segments)

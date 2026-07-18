@@ -1,4 +1,3 @@
-
 pub mod api;
 pub mod sophon;
 pub mod source;
@@ -145,4 +144,3 @@ pub fn read_install_version(install_path: &std::path::Path, data_folder: &str) -
 pub fn jadeite_dir() -> PathBuf {
     crate::runtime_dir().join("jadeite")
 }
-

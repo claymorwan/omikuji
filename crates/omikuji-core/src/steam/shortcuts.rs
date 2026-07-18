@@ -1,5 +1,5 @@
 use crate::library::Game;
-use crate::media::{media_path, MediaType};
+use crate::media::{MediaType, media_path};
 use anyhow::{Context, Result};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -231,9 +231,15 @@ pub fn create_shortcut(game: &Game) -> Result<PathBuf> {
 
     entries.push(vec![
         ("appid".to_string(), Value::Int(appid)),
-        ("AppName".to_string(), Value::Str(game.metadata.name.clone())),
+        (
+            "AppName".to_string(),
+            Value::Str(game.metadata.name.clone()),
+        ),
         ("Exe".to_string(), Value::Str(quoted_exe)),
-        ("StartDir".to_string(), Value::Str(format!("\"{}\"", start_dir))),
+        (
+            "StartDir".to_string(),
+            Value::Str(format!("\"{}\"", start_dir)),
+        ),
         ("icon".to_string(), Value::Str(icon)),
         ("LaunchOptions".to_string(), Value::Str(options)),
         ("IsHidden".to_string(), Value::Int(0)),
@@ -282,10 +288,12 @@ fn set_artwork(config: &Path, appid: u32, game: &Game) {
     ];
 
     for (source, target) in assets {
-        if source.exists() && !target.exists()
-            && let Err(e) = fs::copy(source, &target) {
-                tracing::warn!("steam artwork copy to {} failed: {}", target.display(), e);
-            }
+        if source.exists()
+            && !target.exists()
+            && let Err(e) = fs::copy(source, &target)
+        {
+            tracing::warn!("steam artwork copy to {} failed: {}", target.display(), e);
+        }
     }
 }
 
@@ -297,7 +305,10 @@ mod tests {
         vec![
             ("appid".to_string(), Value::Int(0x8000_0001)),
             ("AppName".to_string(), Value::Str(name.to_string())),
-            ("Exe".to_string(), Value::Str("\"/usr/bin/omikuji\"".to_string())),
+            (
+                "Exe".to_string(),
+                Value::Str("\"/usr/bin/omikuji\"".to_string()),
+            ),
             ("LaunchOptions".to_string(), Value::Str(options.to_string())),
             ("LastPlayTime".to_string(), Value::Int(0)),
             (
@@ -329,12 +340,18 @@ mod tests {
         let mut game = Game::new("Test".to_string(), std::path::PathBuf::from("/g/t.exe"));
         game.metadata.id = "abc123".to_string();
 
-        assert!(matches_game(&sample_entry("Test", "run test_abc123"), &game));
+        assert!(matches_game(
+            &sample_entry("Test", "run test_abc123"),
+            &game
+        ));
         assert!(matches_game(
             &sample_entry("Test", "run io.github.omikuji run test_abc123"),
             &game
         ));
-        assert!(!matches_game(&sample_entry("Other", "run other_zzz999"), &game));
+        assert!(!matches_game(
+            &sample_entry("Other", "run other_zzz999"),
+            &game
+        ));
         assert!(!matches_game(&vec![], &game));
     }
 

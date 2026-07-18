@@ -1,10 +1,9 @@
-
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use prost::Message;
 
 use super::api::{SophonDiff, SophonManifestEntry};
-use super::protos::SophonPatchProto;
 use super::protos::SophonManifest as SophonManifestProto;
+use super::protos::SophonPatchProto;
 
 pub async fn fetch_patch_manifest(diff: &SophonDiff) -> Result<SophonPatchProto> {
     let url = diff.manifest_download.url_for(&diff.manifest.id);

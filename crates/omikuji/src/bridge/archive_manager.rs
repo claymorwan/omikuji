@@ -1,8 +1,8 @@
 // unified bridge for runners and dll packs. both use the same settings-driven fetch pipeline
-// (see core::archive_source), so theres no reason to doubel the qobject surface; 
+// (see core::archive_source), so theres no reason to doubel the qobject surface;
 // the category argument ("runners" / "dll_packs") picks the right source list and install target.
 //
-// async ops run on a detached os thread with a fresh tokio runtime. nesting a runtime from a cxx-qt invokable panics becuase main is #[tokio::main]; 
+// async ops run on a detached os thread with a fresh tokio runtime. nesting a runtime from a cxx-qt invokable panics becuase main is #[tokio::main];
 // results flow back as events on the archive_source queue, drained by drainEvents on a qml timer.
 
 use cxx_qt::Threading;
@@ -111,11 +111,7 @@ pub mod qobject {
 
         #[qinvokable]
         #[cxx_name = "fetchVersions"]
-        fn fetch_versions(
-            self: Pin<&mut ArchiveManagerBridge>,
-            category: QString,
-            source: QString,
-        );
+        fn fetch_versions(self: Pin<&mut ArchiveManagerBridge>, category: QString, source: QString);
 
         // release_json is a single ReleaseInfo object (from a previous versionsReady payload).
         // passing it rather than just the tag avoids a second list round-trip to resolve asset_url.
@@ -155,10 +151,7 @@ pub mod qobject {
 
         #[qinvokable]
         #[cxx_name = "dllPackActiveVersion"]
-        fn dll_pack_active_version(
-            self: &ArchiveManagerBridge,
-            source: QString,
-        ) -> QString;
+        fn dll_pack_active_version(self: &ArchiveManagerBridge, source: QString) -> QString;
 
         #[qinvokable]
         #[cxx_name = "setDllPackActiveVersion"]
@@ -187,7 +180,11 @@ fn sources_for(category: &str) -> Vec<ArchiveSource> {
 
 // the ui speaks "dll_packs", components.toml calls them layers
 fn core_category(category: &str) -> &str {
-    if category == "dll_packs" { "layers" } else { category }
+    if category == "dll_packs" {
+        "layers"
+    } else {
+        category
+    }
 }
 
 fn source_lookup(category: &str, name: &str) -> Option<ArchiveSource> {
@@ -254,8 +251,8 @@ impl qobject::ArchiveManagerBridge {
                 }
             };
             let result = rt.block_on(archive_source::fetch_versions(&src));
-            let _ = qt_thread.queue(
-                move |mut this: Pin<&mut qobject::ArchiveManagerBridge>| match result {
+            let _ = qt_thread.queue(move |mut this: Pin<&mut qobject::ArchiveManagerBridge>| {
+                match result {
                     Ok(list) => {
                         let json = serde_json::to_string(&list).unwrap_or_else(|_| "[]".into());
                         this.as_mut().versions_ready(
@@ -271,8 +268,8 @@ impl qobject::ArchiveManagerBridge {
                             QString::from(&format!("{:#}", e)),
                         );
                     }
-                },
-            );
+                }
+            });
         });
     }
 
@@ -337,12 +334,7 @@ impl qobject::ArchiveManagerBridge {
         });
     }
 
-    fn delete_version(
-        mut self: Pin<&mut Self>,
-        category: QString,
-        source: QString,
-        tag: QString,
-    ) {
+    fn delete_version(mut self: Pin<&mut Self>, category: QString, source: QString, tag: QString) {
         let cat = category.to_string();
         let name = source.to_string();
         let tag_s = tag.to_string();
@@ -396,11 +388,7 @@ impl qobject::ArchiveManagerBridge {
         QString::from(&components_config::active_version(&name))
     }
 
-    fn set_dll_pack_active_version(
-        self: Pin<&mut Self>,
-        source: QString,
-        tag: QString,
-    ) {
+    fn set_dll_pack_active_version(self: Pin<&mut Self>, source: QString, tag: QString) {
         let name = source.to_string();
         let tag_s = tag.to_string();
         if let Err(e) = components_config::set_active_version(&name, &tag_s) {
@@ -411,7 +399,11 @@ impl qobject::ArchiveManagerBridge {
     fn drain_events(mut self: Pin<&mut Self>) {
         for ev in archive_source::drain_events() {
             match ev {
-                archive_source::ArchiveEvent::Started { category, source, tag } => {
+                archive_source::ArchiveEvent::Started {
+                    category,
+                    source,
+                    tag,
+                } => {
                     self.as_mut().install_started(
                         QString::from(&category),
                         QString::from(&source),
@@ -419,7 +411,11 @@ impl qobject::ArchiveManagerBridge {
                     );
                 }
                 archive_source::ArchiveEvent::Progress {
-                    category, source, tag, phase, percent,
+                    category,
+                    source,
+                    tag,
+                    phase,
+                    percent,
                 } => {
                     self.as_mut().install_progress(
                         QString::from(&category),
@@ -430,7 +426,10 @@ impl qobject::ArchiveManagerBridge {
                     );
                 }
                 archive_source::ArchiveEvent::Completed {
-                    category, source, tag, install_dir,
+                    category,
+                    source,
+                    tag,
+                    install_dir,
                 } => {
                     self.as_mut().install_completed(
                         QString::from(&category),
@@ -440,7 +439,10 @@ impl qobject::ArchiveManagerBridge {
                     );
                 }
                 archive_source::ArchiveEvent::Failed {
-                    category, source, tag, error,
+                    category,
+                    source,
+                    tag,
+                    error,
                 } => {
                     self.as_mut().install_failed(
                         QString::from(&category),

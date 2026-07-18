@@ -1,4 +1,3 @@
-
 use cxx_qt::CxxQtType;
 use cxx_qt_lib::QString;
 use omikuji_core::components as core_components;
@@ -180,7 +179,11 @@ impl qobject::ComponentsBridge {
                     }
                 }
             };
-            self.as_mut().rust_mut().get_mut().statuses.insert(spec.name.into(), entry);
+            self.as_mut()
+                .rust_mut()
+                .get_mut()
+                .statuses
+                .insert(spec.name.into(), entry);
         }
 
         let pc = pending.len() as i32;
@@ -189,7 +192,10 @@ impl qobject::ComponentsBridge {
     }
 
     // spawn an OS thread then block_on; we're inside #[tokio::main], so building a runtime directly would panic.
-    fn spawn_install(mut self: Pin<&mut Self>, specs: Vec<&'static core_components::ComponentSpec>) {
+    fn spawn_install(
+        mut self: Pin<&mut Self>,
+        specs: Vec<&'static core_components::ComponentSpec>,
+    ) {
         if self.in_progress || specs.is_empty() {
             return;
         }
@@ -221,7 +227,10 @@ impl qobject::ComponentsBridge {
 
     fn reinstall_component(mut self: Pin<&mut Self>, name: QString) {
         let target = name.to_string();
-        let Some(spec) = core_components::specs::all().iter().find(|s| s.name == target) else {
+        let Some(spec) = core_components::specs::all()
+            .iter()
+            .find(|s| s.name == target)
+        else {
             omikuji_core::components::push_fail_event(
                 &target,
                 "unknown component (not in specs::all())",
@@ -234,10 +243,12 @@ impl qobject::ComponentsBridge {
     fn drain_events(mut self: Pin<&mut Self>) {
         let events = core_components::drain_events();
         if events.is_empty() {
-                let has_active = self
-                .statuses
-                .values()
-                .any(|s| matches!(s.status.as_str(), "installing" | "downloading" | "extracting"));
+            let has_active = self.statuses.values().any(|s| {
+                matches!(
+                    s.status.as_str(),
+                    "installing" | "downloading" | "extracting"
+                )
+            });
             if !has_active && self.in_progress {
                 self.as_mut().set_in_progress(false);
                 self.as_mut().refresh();
@@ -259,8 +270,13 @@ impl qobject::ComponentsBridge {
                     );
                     self.as_mut().component_started(QString::from(&name));
                 }
-                core_components::ComponentEvent::Progress { name, phase, percent } => {
-                    if let Some(entry) = self.as_mut().rust_mut().get_mut().statuses.get_mut(&name) {
+                core_components::ComponentEvent::Progress {
+                    name,
+                    phase,
+                    percent,
+                } => {
+                    if let Some(entry) = self.as_mut().rust_mut().get_mut().statuses.get_mut(&name)
+                    {
                         entry.status = phase.clone();
                         entry.percent = percent;
                     }
@@ -271,27 +287,25 @@ impl qobject::ComponentsBridge {
                     );
                 }
                 core_components::ComponentEvent::Completed { name, version } => {
-                    if let Some(entry) = self.as_mut().rust_mut().get_mut().statuses.get_mut(&name) {
+                    if let Some(entry) = self.as_mut().rust_mut().get_mut().statuses.get_mut(&name)
+                    {
                         entry.status = "completed".into();
                         entry.percent = 100.0;
                         entry.version = version.clone();
                         entry.error.clear();
                     }
-                    self.as_mut().component_completed(
-                        QString::from(&name),
-                        QString::from(&version),
-                    );
+                    self.as_mut()
+                        .component_completed(QString::from(&name), QString::from(&version));
                     self.as_mut().refresh();
                 }
                 core_components::ComponentEvent::Failed { name, error } => {
-                    if let Some(entry) = self.as_mut().rust_mut().get_mut().statuses.get_mut(&name) {
+                    if let Some(entry) = self.as_mut().rust_mut().get_mut().statuses.get_mut(&name)
+                    {
                         entry.status = "failed".into();
                         entry.error = error.clone();
                     }
-                    self.as_mut().component_failed(
-                        QString::from(&name),
-                        QString::from(&error),
-                    );
+                    self.as_mut()
+                        .component_failed(QString::from(&name), QString::from(&error));
                 }
             }
         }

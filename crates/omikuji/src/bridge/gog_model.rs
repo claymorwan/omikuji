@@ -1,13 +1,13 @@
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QByteArray, QModelIndex, QString, QVariant};
+use lazy_static::lazy_static;
+use omikuji_core::downloads::{self, DownloadRequest};
+use omikuji_core::gog::{GogGame, GogStore};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use lazy_static::lazy_static;
-use omikuji_core::gog::{GogStore, GogGame};
-use omikuji_core::downloads::{self, DownloadRequest};
 
 lazy_static! {
     static ref GOG_STORE: Arc<Mutex<GogStore>> = Arc::new(Mutex::new(GogStore::new()));
@@ -28,8 +28,7 @@ pub mod qobject {
         include!("cxx-qt-lib/qbytearray.h");
         type QByteArray = cxx_qt_lib::QByteArray;
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray =
-            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
         type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
     }
@@ -155,9 +154,18 @@ impl qobject::GogModel {
         roles.insert_clone(&(GogRoles::Banner as i32), &QByteArray::from("banner"));
         roles.insert_clone(&(GogRoles::Coverart as i32), &QByteArray::from("coverart"));
         roles.insert_clone(&(GogRoles::Icon as i32), &QByteArray::from("icon"));
-        roles.insert_clone(&(GogRoles::IsInstalled as i32), &QByteArray::from("isInstalled"));
-        roles.insert_clone(&(GogRoles::HasLibraryEntry as i32), &QByteArray::from("hasLibraryEntry"));
-        roles.insert_clone(&(GogRoles::InstallPath as i32), &QByteArray::from("installPath"));
+        roles.insert_clone(
+            &(GogRoles::IsInstalled as i32),
+            &QByteArray::from("isInstalled"),
+        );
+        roles.insert_clone(
+            &(GogRoles::HasLibraryEntry as i32),
+            &QByteArray::from("hasLibraryEntry"),
+        );
+        roles.insert_clone(
+            &(GogRoles::InstallPath as i32),
+            &QByteArray::from("installPath"),
+        );
         roles
     }
 
@@ -172,9 +180,15 @@ impl qobject::GogModel {
         match role {
             r if r == GogRoles::AppName as i32 => QVariant::from(&QString::from(&game.app_name)),
             r if r == GogRoles::Title as i32 => QVariant::from(&QString::from(&game.title)),
-            r if r == GogRoles::Banner as i32 => QVariant::from(&QString::from(game.banner.as_deref().unwrap_or(""))),
-            r if r == GogRoles::Coverart as i32 => QVariant::from(&QString::from(game.coverart.as_deref().unwrap_or(""))),
-            r if r == GogRoles::Icon as i32 => QVariant::from(&QString::from(game.icon.as_deref().unwrap_or(""))),
+            r if r == GogRoles::Banner as i32 => {
+                QVariant::from(&QString::from(game.banner.as_deref().unwrap_or("")))
+            }
+            r if r == GogRoles::Coverart as i32 => {
+                QVariant::from(&QString::from(game.coverart.as_deref().unwrap_or("")))
+            }
+            r if r == GogRoles::Icon as i32 => {
+                QVariant::from(&QString::from(game.icon.as_deref().unwrap_or("")))
+            }
             r if r == GogRoles::IsInstalled as i32 => QVariant::from(&game.is_installed),
             r if r == GogRoles::HasLibraryEntry as i32 => {
                 QVariant::from(&self.rust().imported.contains(&game.app_name))
@@ -311,8 +325,8 @@ impl qobject::GogModel {
                     .unwrap_or_default();
 
                     let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GogModel>| {
-                        let unchanged = obj.as_ref().games == games
-                            && obj.as_ref().imported == imported;
+                        let unchanged =
+                            obj.as_ref().games == games && obj.as_ref().imported == imported;
                         if !unchanged {
                             obj.as_mut().begin_reset_model();
                             let rust = obj.as_mut().rust_mut().get_mut();
@@ -347,10 +361,7 @@ impl qobject::GogModel {
             return QString::default();
         };
 
-        let banner_url = game
-            .coverart
-            .clone()
-            .or(game.banner.clone());
+        let banner_url = game.coverart.clone().or(game.banner.clone());
 
         let prefix = prefix_path.to_string();
 
@@ -360,7 +371,11 @@ impl qobject::GogModel {
             display_name: game.title.clone(),
             banner_url,
             install_path: PathBuf::from(install_path.to_string()),
-            prefix_path: if prefix.is_empty() { None } else { Some(PathBuf::from(prefix)) },
+            prefix_path: if prefix.is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(prefix))
+            },
             runner_version: runner_version.to_string(),
             temp_dir: None,
             kind: omikuji_core::downloads::DownloadKind::Install,
@@ -372,17 +387,40 @@ impl qobject::GogModel {
         QString::from(&id)
     }
 
-    pub fn get_game_at(&self, index: i32) -> cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant> {
+    pub fn get_game_at(
+        &self,
+        index: i32,
+    ) -> cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant> {
         let mut m = cxx_qt_lib::QMap::<cxx_qt_lib::QMapPair_QString_QVariant>::default();
         let i = index as usize;
-        let Some(g) = self.rust().games.get(i) else { return m };
+        let Some(g) = self.rust().games.get(i) else {
+            return m;
+        };
 
-        m.insert(QString::from("appName"), QVariant::from(&QString::from(&g.app_name)));
-        m.insert(QString::from("title"), QVariant::from(&QString::from(&g.title)));
-        m.insert(QString::from("banner"), QVariant::from(&QString::from(g.banner.as_deref().unwrap_or(""))));
-        m.insert(QString::from("coverart"), QVariant::from(&QString::from(g.coverart.as_deref().unwrap_or(""))));
-        m.insert(QString::from("icon"), QVariant::from(&QString::from(g.icon.as_deref().unwrap_or(""))));
-        m.insert(QString::from("isInstalled"), QVariant::from(&g.is_installed));
+        m.insert(
+            QString::from("appName"),
+            QVariant::from(&QString::from(&g.app_name)),
+        );
+        m.insert(
+            QString::from("title"),
+            QVariant::from(&QString::from(&g.title)),
+        );
+        m.insert(
+            QString::from("banner"),
+            QVariant::from(&QString::from(g.banner.as_deref().unwrap_or(""))),
+        );
+        m.insert(
+            QString::from("coverart"),
+            QVariant::from(&QString::from(g.coverart.as_deref().unwrap_or(""))),
+        );
+        m.insert(
+            QString::from("icon"),
+            QVariant::from(&QString::from(g.icon.as_deref().unwrap_or(""))),
+        );
+        m.insert(
+            QString::from("isInstalled"),
+            QVariant::from(&g.is_installed),
+        );
         m.insert(
             QString::from("hasLibraryEntry"),
             QVariant::from(&self.rust().imported.contains(&g.app_name)),
@@ -392,7 +430,10 @@ impl qobject::GogModel {
             .as_ref()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
-        m.insert(QString::from("installPath"), QVariant::from(&QString::from(&install_path)));
+        m.insert(
+            QString::from("installPath"),
+            QVariant::from(&QString::from(&install_path)),
+        );
         m
     }
 }

@@ -25,11 +25,7 @@ impl super::qobject::GameModel {
         ))
     }
 
-    pub fn fetch_gog_install_size(
-        self: Pin<&mut Self>,
-        request_id: &QString,
-        app_name: &QString,
-    ) {
+    pub fn fetch_gog_install_size(self: Pin<&mut Self>, request_id: &QString, app_name: &QString) {
         let rid = request_id.to_string();
         let app_name_str = app_name.to_string();
 
@@ -41,11 +37,7 @@ impl super::qobject::GameModel {
         });
     }
 
-    pub fn fetch_gog_game_details(
-        self: Pin<&mut Self>,
-        request_id: &QString,
-        app_name: &QString,
-    ) {
+    pub fn fetch_gog_game_details(self: Pin<&mut Self>, request_id: &QString, app_name: &QString) {
         let rid = request_id.to_string();
         let app_name_str = app_name.to_string();
 
@@ -64,12 +56,18 @@ impl super::qobject::GameModel {
         runner_version: &QString,
     ) -> QString {
         use omikuji_core::library::{
-            GraphicsConfig, LaunchConfig, Metadata, RunnerConfig, SourceConfig, SystemConfig, WineConfig,
+            GraphicsConfig, LaunchConfig, Metadata, RunnerConfig, SourceConfig, SystemConfig,
+            WineConfig,
         };
 
         let app_name_s = app_name.to_string();
 
-        if self.library.game.iter().any(|g| g.metadata.id == app_name_s) {
+        if self
+            .library
+            .game
+            .iter()
+            .any(|g| g.metadata.id == app_name_s)
+        {
             tracing::info!("already in library: {}", app_name_s);
             return QString::from(&app_name_s);
         }
@@ -80,10 +78,13 @@ impl super::qobject::GameModel {
         };
 
         let display_str = display_name.to_string();
-        let title = info
-            .title
-            .clone()
-            .unwrap_or_else(|| if display_str.is_empty() { app_name_s.clone() } else { display_str });
+        let title = info.title.clone().unwrap_or_else(|| {
+            if display_str.is_empty() {
+                app_name_s.clone()
+            } else {
+                display_str
+            }
+        });
         let prefix_str = prefix_path.to_string();
         let runner_str = runner_version.to_string();
 
@@ -172,24 +173,26 @@ impl super::qobject::GameModel {
 
             omikuji_core::notifications::info(&name, "Removing GOG game...");
             if let Some(path) = install_path
-                && path.exists() {
-                    if let Err(e) = std::fs::remove_dir_all(&path) {
-                        omikuji_core::process::notify_error(
-                            omikuji_core::process::ErrorNotification {
-                                game_id: game_id_owned.clone(),
-                                title: "Uninstall failed".to_string(),
-                                message: format!("Failed to remove install dir: {}", e),
-                                action: omikuji_core::process::ErrorAction::None,
-                            },
-                        );
-                        return;
-                    }
-                    if !wrapper_name.is_empty()
-                        && let Some(parent) = path.parent()
-                            && parent.file_name().is_some_and(|n| n.to_string_lossy() == wrapper_name) {
-                                let _ = std::fs::remove_dir(parent);
-                            }
+                && path.exists()
+            {
+                if let Err(e) = std::fs::remove_dir_all(&path) {
+                    omikuji_core::process::notify_error(omikuji_core::process::ErrorNotification {
+                        game_id: game_id_owned.clone(),
+                        title: "Uninstall failed".to_string(),
+                        message: format!("Failed to remove install dir: {}", e),
+                        action: omikuji_core::process::ErrorAction::None,
+                    });
+                    return;
                 }
+                if !wrapper_name.is_empty()
+                    && let Some(parent) = path.parent()
+                    && parent
+                        .file_name()
+                        .is_some_and(|n| n.to_string_lossy() == wrapper_name)
+                {
+                    let _ = std::fs::remove_dir(parent);
+                }
+            }
             if let Err(e) = omikuji_core::gog::remove_install(&app_id) {
                 tracing::error!("registry remove failed: {}", e);
             }

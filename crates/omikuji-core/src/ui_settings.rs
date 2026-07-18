@@ -4,7 +4,6 @@
 // that the user edits and the app reads once at startup. ui.toml is the app's own scratch
 // for zom/tabs/layout prefs; app writes, qml reads live through the bridge, no restart needed.
 
-
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -65,15 +64,47 @@ pub struct CategoryEntry {
     pub value: String,
 }
 
-fn default_true() -> bool { true }
+fn default_true() -> bool {
+    true
+}
 
 fn default_categories() -> Vec<CategoryEntry> {
     vec![
-        CategoryEntry { enabled: true, name: "All Games".into(), icon: "sports_esports".into(), kind: "all".into(), value: String::new() },
-        CategoryEntry { enabled: true, name: "Favourites".into(), icon: "star".into(), kind: "favourite".into(), value: String::new() },
-        CategoryEntry { enabled: true, name: "Recent".into(), icon: "schedule".into(), kind: "recent".into(), value: String::new() },
-        CategoryEntry { enabled: true, name: "Wine".into(), icon: "wine_bar".into(), kind: "runner".into(), value: "wine".into() },
-        CategoryEntry { enabled: true, name: "Native".into(), icon: "terminal".into(), kind: "runner".into(), value: "native".into() },
+        CategoryEntry {
+            enabled: true,
+            name: "All Games".into(),
+            icon: "sports_esports".into(),
+            kind: "all".into(),
+            value: String::new(),
+        },
+        CategoryEntry {
+            enabled: true,
+            name: "Favourites".into(),
+            icon: "star".into(),
+            kind: "favourite".into(),
+            value: String::new(),
+        },
+        CategoryEntry {
+            enabled: true,
+            name: "Recent".into(),
+            icon: "schedule".into(),
+            kind: "recent".into(),
+            value: String::new(),
+        },
+        CategoryEntry {
+            enabled: true,
+            name: "Wine".into(),
+            icon: "wine_bar".into(),
+            kind: "runner".into(),
+            value: "wine".into(),
+        },
+        CategoryEntry {
+            enabled: true,
+            name: "Native".into(),
+            icon: "terminal".into(),
+            kind: "runner".into(),
+            value: "native".into(),
+        },
     ]
 }
 
@@ -125,7 +156,12 @@ pub struct TabsSettings {
 
 impl Default for TabsSettings {
     fn default() -> Self {
-        Self { show_gachas: true, show_epic: true, show_gog: true, show_steam: true }
+        Self {
+            show_gachas: true,
+            show_epic: true,
+            show_gog: true,
+            show_steam: true,
+        }
     }
 }
 
@@ -138,7 +174,10 @@ pub struct NavSettings {
 
 impl Default for NavSettings {
     fn default() -> Self {
-        Self { width: 180, collapsed: false }
+        Self {
+            width: 180,
+            collapsed: false,
+        }
     }
 }
 
@@ -155,7 +194,6 @@ pub struct BehaviorSettings {
     pub discord_rpc: bool,
     pub double_click_launches: bool,
 }
-
 
 #[derive(Debug, Clone, Default, Deserialize, Serialize)]
 #[serde(default)]
@@ -184,7 +222,18 @@ pub struct DisplaySettings {
 
 impl Default for DisplaySettings {
     fn default() -> Self {
-        Self { scale: 1.0, muted_icons: false, filled_icons: false, show_hidden: false, dim_hidden: false, card_flow: "center".into(), card_sort: "default".into(), card_style: "normal".into(), highlight_logs: true, log_rules: Vec::new() }
+        Self {
+            scale: 1.0,
+            muted_icons: false,
+            filled_icons: false,
+            show_hidden: false,
+            dim_hidden: false,
+            card_flow: "center".into(),
+            card_sort: "default".into(),
+            card_style: "normal".into(),
+            highlight_logs: true,
+            log_rules: Vec::new(),
+        }
     }
 }
 
@@ -223,7 +272,10 @@ pub struct ConsoleModeSettings {
 
 impl Default for ConsoleModeSettings {
     fn default() -> Self {
-        Self { background: "wave".into(), active: false }
+        Self {
+            background: "wave".into(),
+            active: false,
+        }
     }
 }
 
@@ -240,7 +292,11 @@ impl UiSettings {
         if !path.exists() {
             let defaults = Self::default();
             if let Err(e) = defaults.save() {
-                tracing::warn!("couldn't write defaults to {}: {} - running in-memory only", path.display(), e);
+                tracing::warn!(
+                    "couldn't write defaults to {}: {} - running in-memory only",
+                    path.display(),
+                    e
+                );
             }
             return defaults;
         }
@@ -265,8 +321,7 @@ impl UiSettings {
 
     // atomic write (tmp + rename) so a crash mid-save cant leave a half-written file (hopefully)
     pub fn save(&self) -> std::io::Result<()> {
-        let body = toml::to_string_pretty(self)
-            .map_err(std::io::Error::other)?;
+        let body = toml::to_string_pretty(self).map_err(std::io::Error::other)?;
         crate::fs_util::write_atomic(&ui_settings_path(), body)
     }
 }

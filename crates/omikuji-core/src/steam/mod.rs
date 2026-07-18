@@ -1,4 +1,3 @@
-
 pub mod api;
 pub mod local;
 pub mod shortcuts;
@@ -6,7 +5,10 @@ pub mod shortcuts;
 use anyhow::Result;
 
 pub use api::{SteamApi, SteamGame};
-pub use local::{AppManifest, SteamUser, get_active_steamid64, get_installed_games, get_steam_users, find_steam_dir};
+pub use local::{
+    AppManifest, SteamUser, find_steam_dir, get_active_steamid64, get_installed_games,
+    get_steam_users,
+};
 
 pub fn is_steam_installed() -> bool {
     find_steam_dir().is_some()
@@ -30,8 +32,7 @@ pub fn fetch_playtime_data(api_key: &str) -> Result<SteamPlaytimeMap> {
         return Ok(SteamPlaytimeMap::default());
     }
 
-    let steamid = get_active_steamid64()
-        .ok_or_else(|| anyhow::anyhow!("no steam user found"))?;
+    let steamid = get_active_steamid64().ok_or_else(|| anyhow::anyhow!("no steam user found"))?;
 
     let api = SteamApi::with_key(api_key.to_string());
     let steam_games = api.get_owned_games(&steamid)?;
@@ -52,7 +53,9 @@ pub fn apply_playtime_data(
     steam_data: &SteamPlaytimeMap,
 ) -> (usize, usize) {
     let mut updated = 0;
-    let steam_game_count = library.game.iter()
+    let steam_game_count = library
+        .game
+        .iter()
         .filter(|g| g.runner.runner_type == "steam")
         .count();
 

@@ -1,4 +1,3 @@
-
 use std::path::{Path, PathBuf};
 
 pub fn game_state_dir(publisher_slug: &str, game_slug: &str) -> PathBuf {
@@ -30,10 +29,11 @@ pub fn write_installed_version(
 ) {
     let path = version_file(publisher_slug, game_slug, edition_id);
     if let Some(parent) = path.parent()
-        && let Err(e) = std::fs::create_dir_all(parent) {
-            tracing::error!("create_dir_all({}) failed: {}", parent.display(), e);
-            return;
-        }
+        && let Err(e) = std::fs::create_dir_all(parent)
+    {
+        tracing::error!("create_dir_all({}) failed: {}", parent.display(), e);
+        return;
+    }
     if let Err(e) = std::fs::write(&path, version) {
         tracing::error!("write({}) failed: {}", path.display(), e);
     }
@@ -72,12 +72,7 @@ pub fn scan_globalgamemanagers(
     scan_unity_file(&path, 4000, 524288, terminator)
 }
 
-pub fn scan_unity_file(
-    file_path: &Path,
-    skip: u64,
-    take: usize,
-    terminator: u8,
-) -> Option<String> {
+pub fn scan_unity_file(file_path: &Path, skip: u64, take: usize, terminator: u8) -> Option<String> {
     use std::io::{Read, Seek, SeekFrom};
     let mut file = std::fs::File::open(file_path).ok()?;
     file.seek(SeekFrom::Start(skip)).ok()?;

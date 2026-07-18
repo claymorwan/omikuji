@@ -150,7 +150,11 @@ where
 
     // coverart first, card binds to this and it's ~5x smaller than hero
     let tasks = [
-        (MediaType::Coverart, "grids", vec![("dimensions", "600x900")]),
+        (
+            MediaType::Coverart,
+            "grids",
+            vec![("dimensions", "600x900")],
+        ),
         (MediaType::Banner, "heroes", vec![]),
         (MediaType::Icon, "icons", vec![]),
     ];
@@ -207,14 +211,20 @@ fn sgdb_get<T: serde::de::DeserializeOwned>(url: reqwest::Url) -> Result<T> {
 }
 
 pub fn sgdb_icon_url(name: &str) -> Result<Option<String>> {
-    let Some(id) = sgdb_search(name)? else { return Ok(None); };
+    let Some(id) = sgdb_search(name)? else {
+        return Ok(None);
+    };
     let mut url = reqwest::Url::parse(SGDB_BASE).unwrap();
-    url.path_segments_mut().unwrap().extend(["icons", "game", &id.to_string()]);
+    url.path_segments_mut()
+        .unwrap()
+        .extend(["icons", "game", &id.to_string()]);
     let resp: SgdbResponse<Vec<SgdbAsset>> = sgdb_get(url)?;
     if !resp.success {
         anyhow::bail!("sgdb icons api reported failure for game {}", id);
     }
-    let Some(assets) = resp.data else { return Ok(None) };
+    let Some(assets) = resp.data else {
+        return Ok(None);
+    };
     let pick = assets.into_iter().find(|a| {
         let lower = a.url.to_lowercase();
         lower.ends_with(".png")
@@ -235,7 +245,9 @@ fn sgdb_search(name: &str) -> Result<Option<u64>> {
     if !resp.success {
         anyhow::bail!("sgdb search api reported failure for '{}'", name);
     }
-    let Some(games) = resp.data else { return Ok(None) };
+    let Some(games) = resp.data else {
+        return Ok(None);
+    };
     if games.is_empty() {
         return Ok(None);
     }
@@ -248,11 +260,21 @@ fn sgdb_search(name: &str) -> Result<Option<u64>> {
         .or_else(|| games.iter().find(|g| g.verified))
         .unwrap_or(&games[0]);
 
-    tracing::debug!("sgdb match for '{}' -> '{}' (id {}, verified {})", name, pick.name, pick.id, pick.verified);
+    tracing::debug!(
+        "sgdb match for '{}' -> '{}' (id {}, verified {})",
+        name,
+        pick.name,
+        pick.id,
+        pick.verified
+    );
     Ok(Some(pick.id))
 }
 
-fn sgdb_first_asset(endpoint: &str, game_id: u64, query: &[(&str, &str)]) -> Result<Option<String>> {
+fn sgdb_first_asset(
+    endpoint: &str,
+    game_id: u64,
+    query: &[(&str, &str)],
+) -> Result<Option<String>> {
     let mut url = reqwest::Url::parse(SGDB_BASE).unwrap();
     url.path_segments_mut()
         .unwrap()
@@ -262,14 +284,17 @@ fn sgdb_first_asset(endpoint: &str, game_id: u64, query: &[(&str, &str)]) -> Res
     }
     let resp: SgdbResponse<Vec<SgdbAsset>> = sgdb_get(url)?;
     if !resp.success {
-        anyhow::bail!("sgdb {} api reported failure for game {}", endpoint, game_id);
+        anyhow::bail!(
+            "sgdb {} api reported failure for game {}",
+            endpoint,
+            game_id
+        );
     }
     Ok(resp.data.and_then(|v| v.into_iter().next().map(|a| a.url)))
 }
 
 fn download_blocking(url: &str, dest: &PathBuf) -> Result<usize> {
-    let resp = reqwest::blocking::get(url)
-        .with_context(|| format!("downloading {}", url))?;
+    let resp = reqwest::blocking::get(url).with_context(|| format!("downloading {}", url))?;
 
     if !resp.status().is_success() {
         anyhow::bail!("image download failed: {} for {}", resp.status(), url);
@@ -300,7 +325,7 @@ where
     F: FnMut(&MediaType),
 {
     let mut result = FetchResult::default();
-    
+
     let dir = cache_dir();
     if let Err(e) = fs::create_dir_all(&dir) {
         tracing::error!("failed to create cache dir: {}", e);
@@ -308,13 +333,25 @@ where
     }
 
     let tasks = vec![
-        (MediaType::Coverart, format!("https://cdn.akamai.steamstatic.com/steam/apps/{}/library_600x900.jpg", appid)),
-        (MediaType::Banner, format!("https://cdn.akamai.steamstatic.com/steam/apps/{}/header.jpg", appid)),
+        (
+            MediaType::Coverart,
+            format!(
+                "https://cdn.akamai.steamstatic.com/steam/apps/{}/library_600x900.jpg",
+                appid
+            ),
+        ),
+        (
+            MediaType::Banner,
+            format!(
+                "https://cdn.akamai.steamstatic.com/steam/apps/{}/header.jpg",
+                appid
+            ),
+        ),
     ];
-    
+
     for (media_type, url) in tasks {
         let dest = media_path(appid, &media_type);
-        
+
         match download_blocking(&url, &dest) {
             Ok(_) => {
                 match media_type {
@@ -327,7 +364,7 @@ where
             Err(e) => tracing::error!("steam {} download failed: {}", media_type.suffix(), e),
         }
     }
-    
+
     result
 }
 
@@ -338,7 +375,11 @@ pub fn remove_cached_media(game_id: &str) {
             if let Err(e) = fs::remove_file(&path) {
                 tracing::warn!("failed to remove cached {}: {}", media_type.suffix(), e);
             } else {
-                tracing::debug!("removed cached {} for game {}", media_type.suffix(), game_id);
+                tracing::debug!(
+                    "removed cached {} for game {}",
+                    media_type.suffix(),
+                    game_id
+                );
             }
         }
     }
@@ -366,9 +407,10 @@ pub fn fetch_cached_image(cache_path: &std::path::Path, url: &str, key: String) 
         match reqwest::get(&fetch_url).await {
             Ok(resp) if resp.status().is_success() => {
                 if let Ok(bytes) = resp.bytes().await
-                    && let Err(e) = crate::fs_util::write_atomic(&path, &bytes) {
-                        tracing::error!("image cache write failed {}: {}", path.display(), e);
-                    }
+                    && let Err(e) = crate::fs_util::write_atomic(&path, &bytes)
+                {
+                    tracing::error!("image cache write failed {}: {}", path.display(), e);
+                }
             }
             Ok(resp) => tracing::warn!("image fetch {} returned {}", fetch_url, resp.status()),
             Err(e) => tracing::error!("image fetch failed {}: {}", fetch_url, e),
@@ -387,7 +429,10 @@ mod tests {
     #[test]
     fn test_slugify() {
         assert_eq!(slugify("Honkai: Star Rail"), "honkai-star-rail");
-        assert_eq!(slugify("The Witcher 3: Wild Hunt"), "the-witcher-3-wild-hunt");
+        assert_eq!(
+            slugify("The Witcher 3: Wild Hunt"),
+            "the-witcher-3-wild-hunt"
+        );
         assert_eq!(slugify("DOOM"), "doom");
         assert_eq!(slugify("Half-Life 2"), "half-life-2");
         assert_eq!(slugify("  spaces  everywhere  "), "spaces-everywhere");

@@ -5,7 +5,7 @@
 //  - numeric bytes come back as strings (can exceed js Number.MAX_SAFE_INTEGER), hence custom deserializers below
 //  - get_latest does NOT take rand_str; only the resources endpoint needs it,and its not actually random: it's a stable per-release token extracted from a prior get_latest response's pkg.file_path
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Deserializer, Serialize};
 
 use crate::gachas::manifest::GachaManifest;
@@ -180,15 +180,21 @@ pub fn patches_from(resp: &GetLatestData) -> &[PackFile] {
     resp.patch.as_ref().map(|p| &p.patches[..]).unwrap_or(&[])
 }
 
-// pkg.file_path is shaped .../{version}_{randstr}/files. pull the 16-char randstr out; it's stable per-release (not per-request) and get_latest_resources 
+// pkg.file_path is shaped .../{version}_{randstr}/files. pull the 16-char randstr out; it's stable per-release (not per-request) and get_latest_resources
 // requires it as a query param. returns empty string if shape doesnt match.
 pub fn rand_str_from(resp: &GetLatestData) -> String {
-    let Some(pkg) = resp.pkg.as_ref() else { return String::new() };
+    let Some(pkg) = resp.pkg.as_ref() else {
+        return String::new();
+    };
     let fp = &pkg.file_path;
     // match _<rand>/<tail>$ via manual scan, no regex dep
-    let Some(tail_slash) = fp.rfind('/') else { return String::new() };
+    let Some(tail_slash) = fp.rfind('/') else {
+        return String::new();
+    };
     let before = &fp[..tail_slash];
-    let Some(us) = before.rfind('_') else { return String::new() };
+    let Some(us) = before.rfind('_') else {
+        return String::new();
+    };
     before[us + 1..].to_string()
 }
 
@@ -250,8 +256,13 @@ pub async fn fetch_resources(
         .text()
         .await
         .map_err(|e| anyhow!("GET {} read failed: {}", url, e))?;
-    serde_json::from_str::<ResourceList>(&body)
-        .map_err(|e| anyhow!("get_latest_resources bad json: {} — body head: {}", e, head(&body)))
+    serde_json::from_str::<ResourceList>(&body).map_err(|e| {
+        anyhow!(
+            "get_latest_resources bad json: {} — body head: {}",
+            e,
+            head(&body)
+        )
+    })
 }
 
 // shape from live capture (resource=main, v1.2.4):

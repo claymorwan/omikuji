@@ -86,7 +86,13 @@ pub fn list_prefixes() -> Vec<PrefixInfo> {
 
 fn preset_verbs(preset: &str) -> Vec<String> {
     let verbs: &[&str] = match preset {
-        "game" => &["d3dx9", "d3dcompiler_43", "d3dcompiler_47", "corefonts", "msls31"],
+        "game" => &[
+            "d3dx9",
+            "d3dcompiler_43",
+            "d3dcompiler_47",
+            "corefonts",
+            "msls31",
+        ],
         _ => &["corefonts"],
     };
     verbs.iter().map(|s| s.to_string()).collect()
@@ -122,7 +128,11 @@ pub fn prefix_needs_bootstrap(game: &crate::library::Game) -> bool {
         return false;
     }
     let prefix = prefix_path_for(game);
-    !prefix.join("drive_c").join("windows").join("system32").is_dir()
+    !prefix
+        .join("drive_c")
+        .join("windows")
+        .join("system32")
+        .is_dir()
 }
 
 pub fn bootstrap_prefix<F: FnMut(&str)>(
@@ -134,7 +144,12 @@ pub fn bootstrap_prefix<F: FnMut(&str)>(
     let env = crate::launch::build_env(game, variant, &wine_exe, crate::launch::EnvPurpose::Tool);
     let prefix = crate::launch::resolve_prefix(game);
 
-    if prefix.join("drive_c").join("windows").join("system32").is_dir() {
+    if prefix
+        .join("drive_c")
+        .join("windows")
+        .join("system32")
+        .is_dir()
+    {
         return Ok(());
     }
 
@@ -152,7 +167,10 @@ pub fn bootstrap_prefix<F: FnMut(&str)>(
     let mut child = cmd.spawn()?;
     if let Some(stderr) = child.stderr.take() {
         use std::io::BufRead;
-        for line in std::io::BufReader::new(stderr).lines().map_while(Result::ok) {
+        for line in std::io::BufReader::new(stderr)
+            .lines()
+            .map_while(Result::ok)
+        {
             on_line(&line);
         }
     }
@@ -169,7 +187,10 @@ pub fn delete_prefix(target: &Path) -> bool {
         return false;
     }
     if !list_prefixes().iter().any(|p| p.path == target) {
-        tracing::warn!("delete_prefix refused, not a known prefix: {}", target.display());
+        tracing::warn!(
+            "delete_prefix refused, not a known prefix: {}",
+            target.display()
+        );
         return false;
     }
     match std::fs::remove_dir_all(target) {

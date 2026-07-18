@@ -143,37 +143,79 @@ impl Defaults {
         let has = |s: &str| sections.iter().any(|x| x == s);
 
         if has("wine") {
-            if let Some(v) = &self.wine.version { game.wine.version = v.clone(); }
-            if let Some(v) = &self.wine.prefix { game.wine.prefix = v.clone(); }
-            if let Some(v) = &self.wine.prefix_arch { game.wine.prefix_arch = v.clone(); }
+            if let Some(v) = &self.wine.version {
+                game.wine.version = v.clone();
+            }
+            if let Some(v) = &self.wine.prefix {
+                game.wine.prefix = v.clone();
+            }
+            if let Some(v) = &self.wine.prefix_arch {
+                game.wine.prefix_arch = v.clone();
+            }
         }
         if has("sync") {
-            if let Some(v) = self.wine.esync { game.wine.esync = v; }
-            if let Some(v) = self.wine.fsync { game.wine.fsync = v; }
-            if let Some(v) = self.wine.ntsync { game.wine.ntsync = v; }
+            if let Some(v) = self.wine.esync {
+                game.wine.esync = v;
+            }
+            if let Some(v) = self.wine.fsync {
+                game.wine.fsync = v;
+            }
+            if let Some(v) = self.wine.ntsync {
+                game.wine.ntsync = v;
+            }
         }
         if has("translation_layers") {
-            if let Some(v) = self.wine.dxvk { game.wine.dxvk = v; }
-            if let Some(v) = &self.wine.dxvk_version { game.wine.dxvk_version = v.clone(); }
-            if let Some(v) = self.wine.vkd3d { game.wine.vkd3d = v; }
-            if let Some(v) = &self.wine.vkd3d_version { game.wine.vkd3d_version = v.clone(); }
-            if let Some(v) = self.wine.d3d_extras { game.wine.d3d_extras = v; }
-            if let Some(v) = &self.wine.d3d_extras_version { game.wine.d3d_extras_version = v.clone(); }
-            if let Some(v) = self.wine.dxvk_nvapi { game.wine.dxvk_nvapi = v; }
-            if let Some(v) = &self.wine.dxvk_nvapi_version { game.wine.dxvk_nvapi_version = v.clone(); }
+            if let Some(v) = self.wine.dxvk {
+                game.wine.dxvk = v;
+            }
+            if let Some(v) = &self.wine.dxvk_version {
+                game.wine.dxvk_version = v.clone();
+            }
+            if let Some(v) = self.wine.vkd3d {
+                game.wine.vkd3d = v;
+            }
+            if let Some(v) = &self.wine.vkd3d_version {
+                game.wine.vkd3d_version = v.clone();
+            }
+            if let Some(v) = self.wine.d3d_extras {
+                game.wine.d3d_extras = v;
+            }
+            if let Some(v) = &self.wine.d3d_extras_version {
+                game.wine.d3d_extras_version = v.clone();
+            }
+            if let Some(v) = self.wine.dxvk_nvapi {
+                game.wine.dxvk_nvapi = v;
+            }
+            if let Some(v) = &self.wine.dxvk_nvapi_version {
+                game.wine.dxvk_nvapi_version = v.clone();
+            }
         }
         if has("compatibility") {
-            if let Some(v) = self.wine.battleye { game.wine.battleye = v; }
-            if let Some(v) = self.wine.easyanticheat { game.wine.easyanticheat = v; }
-            if let Some(v) = self.wine.fsr { game.wine.fsr = v; }
+            if let Some(v) = self.wine.battleye {
+                game.wine.battleye = v;
+            }
+            if let Some(v) = self.wine.easyanticheat {
+                game.wine.easyanticheat = v;
+            }
+            if let Some(v) = self.wine.fsr {
+                game.wine.fsr = v;
+            }
         }
         if has("display") {
-            if let Some(v) = self.wine.dpi_scaling { game.wine.dpi_scaling = v; }
-            if let Some(v) = self.wine.dpi { game.wine.dpi = v; }
+            if let Some(v) = self.wine.dpi_scaling {
+                game.wine.dpi_scaling = v;
+            }
+            if let Some(v) = self.wine.dpi {
+                game.wine.dpi = v;
+            }
         }
         if has("drivers") {
-            if let Some(v) = &self.wine.audio_driver { game.wine.audio_driver = v.clone(); }
-            if let Some(v) = &self.wine.graphics_driver { game.wine.graphics_driver = v.clone(); }
+            if let Some(v) = &self.wine.audio_driver {
+                game.wine.audio_driver = v.clone();
+            }
+            if let Some(v) = &self.wine.graphics_driver {
+                game.wine.graphics_driver = v.clone();
+            }
         }
         if has("dll_overrides") {
             if replace_maps {
@@ -185,7 +227,10 @@ impl Defaults {
             }
         }
         if has("launch")
-            && let Some(v) = &self.launch.command_prefix { game.launch.command_prefix = v.clone(); }
+            && let Some(v) = &self.launch.command_prefix
+        {
+            game.launch.command_prefix = v.clone();
+        }
         if has("environment") {
             if replace_maps {
                 game.launch.env = self.launch.env.clone();
@@ -196,52 +241,102 @@ impl Defaults {
             }
         }
         if has("graphics") {
-            if let Some(v) = self.graphics.mangohud { game.graphics.mangohud = v; }
-            if let Some(v) = &self.graphics.gpu { game.graphics.gpu = v.clone(); }
+            if let Some(v) = self.graphics.mangohud {
+                game.graphics.mangohud = v;
+            }
+            if let Some(v) = &self.graphics.gpu {
+                game.graphics.gpu = v.clone();
+            }
         }
         if has("gamescope") {
             let gs = &mut game.graphics.gamescope;
             let dgs = &self.graphics.gamescope;
-            if let Some(v) = dgs.enabled { gs.enabled = v; }
-            if let Some(v) = dgs.width { gs.width = v; }
-            if let Some(v) = dgs.height { gs.height = v; }
-            if let Some(v) = dgs.game_width { gs.game_width = v; }
-            if let Some(v) = dgs.game_height { gs.game_height = v; }
-            if let Some(v) = dgs.fps { gs.fps = v; }
-            if let Some(v) = dgs.refresh_rate { gs.refresh_rate = v; }
-            if let Some(v) = dgs.fullscreen { gs.fullscreen = v; }
-            if let Some(v) = dgs.borderless { gs.borderless = v; }
-            if let Some(v) = dgs.integer_scaling { gs.integer_scaling = v; }
-            if let Some(v) = dgs.hdr { gs.hdr = v; }
-            if let Some(v) = &dgs.filter { gs.filter = v.clone(); }
-            if let Some(v) = dgs.fsr_sharpness { gs.fsr_sharpness = v; }
+            if let Some(v) = dgs.enabled {
+                gs.enabled = v;
+            }
+            if let Some(v) = dgs.width {
+                gs.width = v;
+            }
+            if let Some(v) = dgs.height {
+                gs.height = v;
+            }
+            if let Some(v) = dgs.game_width {
+                gs.game_width = v;
+            }
+            if let Some(v) = dgs.game_height {
+                gs.game_height = v;
+            }
+            if let Some(v) = dgs.fps {
+                gs.fps = v;
+            }
+            if let Some(v) = dgs.refresh_rate {
+                gs.refresh_rate = v;
+            }
+            if let Some(v) = dgs.fullscreen {
+                gs.fullscreen = v;
+            }
+            if let Some(v) = dgs.borderless {
+                gs.borderless = v;
+            }
+            if let Some(v) = dgs.integer_scaling {
+                gs.integer_scaling = v;
+            }
+            if let Some(v) = dgs.hdr {
+                gs.hdr = v;
+            }
+            if let Some(v) = &dgs.filter {
+                gs.filter = v.clone();
+            }
+            if let Some(v) = dgs.fsr_sharpness {
+                gs.fsr_sharpness = v;
+            }
         }
         if has("performance") {
-            if let Some(v) = self.system.gamemode { game.system.gamemode = v; }
-            if let Some(v) = self.system.cpu_limit { game.system.cpu_limit = v; }
+            if let Some(v) = self.system.gamemode {
+                game.system.gamemode = v;
+            }
+            if let Some(v) = self.system.cpu_limit {
+                game.system.cpu_limit = v;
+            }
         }
         if has("audio")
-            && let Some(v) = self.system.pulse_latency { game.system.pulse_latency = v; }
+            && let Some(v) = self.system.pulse_latency
+        {
+            game.system.pulse_latency = v;
+        }
         if has("power")
-            && let Some(v) = self.system.prevent_sleep { game.system.prevent_sleep = v; }
+            && let Some(v) = self.system.prevent_sleep
+        {
+            game.system.prevent_sleep = v;
+        }
     }
 
     pub fn populated_sections(&self) -> Vec<String> {
         let mut out = Vec::new();
-        if self.wine.version.is_some() || self.wine.prefix.is_some() || self.wine.prefix_arch.is_some() {
+        if self.wine.version.is_some()
+            || self.wine.prefix.is_some()
+            || self.wine.prefix_arch.is_some()
+        {
             out.push("wine".into());
         }
         if self.wine.esync.is_some() || self.wine.fsync.is_some() || self.wine.ntsync.is_some() {
             out.push("sync".into());
         }
-        if self.wine.dxvk.is_some() || self.wine.dxvk_version.is_some()
-            || self.wine.vkd3d.is_some() || self.wine.vkd3d_version.is_some()
-            || self.wine.d3d_extras.is_some() || self.wine.d3d_extras_version.is_some()
-            || self.wine.dxvk_nvapi.is_some() || self.wine.dxvk_nvapi_version.is_some()
+        if self.wine.dxvk.is_some()
+            || self.wine.dxvk_version.is_some()
+            || self.wine.vkd3d.is_some()
+            || self.wine.vkd3d_version.is_some()
+            || self.wine.d3d_extras.is_some()
+            || self.wine.d3d_extras_version.is_some()
+            || self.wine.dxvk_nvapi.is_some()
+            || self.wine.dxvk_nvapi_version.is_some()
         {
             out.push("translation_layers".into());
         }
-        if self.wine.battleye.is_some() || self.wine.easyanticheat.is_some() || self.wine.fsr.is_some() {
+        if self.wine.battleye.is_some()
+            || self.wine.easyanticheat.is_some()
+            || self.wine.fsr.is_some()
+        {
             out.push("compatibility".into());
         }
         if self.wine.dpi_scaling.is_some() || self.wine.dpi.is_some() {
@@ -263,11 +358,19 @@ impl Defaults {
             out.push("graphics".into());
         }
         let gs = &self.graphics.gamescope;
-        if gs.enabled.is_some() || gs.width.is_some() || gs.height.is_some()
-            || gs.game_width.is_some() || gs.game_height.is_some() || gs.fps.is_some() || gs.refresh_rate.is_some()
-            || gs.fullscreen.is_some() || gs.borderless.is_some()
-            || gs.integer_scaling.is_some() || gs.hdr.is_some()
-            || gs.filter.is_some() || gs.fsr_sharpness.is_some()
+        if gs.enabled.is_some()
+            || gs.width.is_some()
+            || gs.height.is_some()
+            || gs.game_width.is_some()
+            || gs.game_height.is_some()
+            || gs.fps.is_some()
+            || gs.refresh_rate.is_some()
+            || gs.fullscreen.is_some()
+            || gs.borderless.is_some()
+            || gs.integer_scaling.is_some()
+            || gs.hdr.is_some()
+            || gs.filter.is_some()
+            || gs.fsr_sharpness.is_some()
         {
             out.push("gamescope".into());
         }
@@ -290,19 +393,26 @@ impl Defaults {
         }
         match std::fs::read_to_string(&path) {
             Ok(body) => toml::from_str::<Defaults>(&body).unwrap_or_else(|e| {
-                tracing::warn!("couldn't parse {}: {} - using empty defaults", path.display(), e);
+                tracing::warn!(
+                    "couldn't parse {}: {} - using empty defaults",
+                    path.display(),
+                    e
+                );
                 Self::default()
             }),
             Err(e) => {
-                tracing::warn!("couldn't read {}: {} - using empty defaults", path.display(), e);
+                tracing::warn!(
+                    "couldn't read {}: {} - using empty defaults",
+                    path.display(),
+                    e
+                );
                 Self::default()
             }
         }
     }
 
     pub fn save(&self) -> std::io::Result<()> {
-        let body = toml::to_string_pretty(self)
-            .map_err(std::io::Error::other)?;
+        let body = toml::to_string_pretty(self).map_err(std::io::Error::other)?;
         crate::fs_util::write_atomic(&defaults_path(), body)
     }
 }

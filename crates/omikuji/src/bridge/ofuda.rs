@@ -180,12 +180,7 @@ impl qobject::OfudaBridge {
         ok
     }
 
-    fn create_prefix(
-        mut self: Pin<&mut Self>,
-        name: &QString,
-        runner: &QString,
-        preset: &QString,
-    ) {
+    fn create_prefix(mut self: Pin<&mut Self>, name: &QString, runner: &QString, preset: &QString) {
         if self.creating {
             return;
         }

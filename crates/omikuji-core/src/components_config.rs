@@ -45,18 +45,60 @@ fn src(name: &str, kind: &str, api_url: &str, asset_pattern: &str, extract: &str
 
 pub fn default_runners() -> Vec<ArchiveSource> {
     vec![
-        src("Proton-Spritz", "proton", "https://api.github.com/repos/NelloKudo/proton-cachyos/releases", "-x86_64.tar.xz", "tar_xz"),
-        src("Proton-GE", "proton", "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases", ".tar.gz", "tar_gz"),
-        src("Dawn Winery Proton", "proton", "https://dawn.wine/api/v1/repos/dawn-winery/dwproton/releases", ".tar.xz", "tar_xz"),
-        src("Proton-Cachyos", "proton", "https://api.github.com/repos/CachyOS/proton-cachyos/releases", ".tar.xz", "tar_xz"),
+        src(
+            "Proton-Spritz",
+            "proton",
+            "https://api.github.com/repos/NelloKudo/proton-cachyos/releases",
+            "-x86_64.tar.xz",
+            "tar_xz",
+        ),
+        src(
+            "Proton-GE",
+            "proton",
+            "https://api.github.com/repos/GloriousEggroll/proton-ge-custom/releases",
+            ".tar.gz",
+            "tar_gz",
+        ),
+        src(
+            "Dawn Winery Proton",
+            "proton",
+            "https://dawn.wine/api/v1/repos/dawn-winery/dwproton/releases",
+            ".tar.xz",
+            "tar_xz",
+        ),
+        src(
+            "Proton-Cachyos",
+            "proton",
+            "https://api.github.com/repos/CachyOS/proton-cachyos/releases",
+            ".tar.xz",
+            "tar_xz",
+        ),
     ]
 }
 
 pub fn default_layers() -> Vec<ArchiveSource> {
     vec![
-        src("DXVK", "dxvk", "https://api.github.com/repos/doitsujin/dxvk/releases", ".tar.gz", "tar_gz"),
-        src("VKD3D-Proton", "vkd3d", "https://api.github.com/repos/HansKristian-Work/vkd3d-proton/releases", ".tar.zst", "tar_zst"),
-        src("DXVK-NVAPI", "dxvk_nvapi", "https://api.github.com/repos/jp7677/dxvk-nvapi/releases", ".tar.gz", "tar_gz"),
+        src(
+            "DXVK",
+            "dxvk",
+            "https://api.github.com/repos/doitsujin/dxvk/releases",
+            ".tar.gz",
+            "tar_gz",
+        ),
+        src(
+            "VKD3D-Proton",
+            "vkd3d",
+            "https://api.github.com/repos/HansKristian-Work/vkd3d-proton/releases",
+            ".tar.zst",
+            "tar_zst",
+        ),
+        src(
+            "DXVK-NVAPI",
+            "dxvk_nvapi",
+            "https://api.github.com/repos/jp7677/dxvk-nvapi/releases",
+            ".tar.gz",
+            "tar_gz",
+        ),
     ]
 }
 
@@ -138,7 +180,10 @@ pub fn add_source(category: &str, source: ArchiveSource) -> anyhow::Result<()> {
         if source.api_url.trim().is_empty() {
             anyhow::bail!("source url can't be empty");
         }
-        if list.iter().any(|s| s.name.eq_ignore_ascii_case(&source.name)) {
+        if list
+            .iter()
+            .any(|s| s.name.eq_ignore_ascii_case(&source.name))
+        {
             anyhow::bail!("a source named \"{}\" already exists", source.name);
         }
         list.push(source);
@@ -168,7 +213,9 @@ pub fn set_active_version(source_name: &str, tag: &str) -> anyhow::Result<()> {
         if tag.is_empty() {
             config.active.remove(source_name);
         } else {
-            config.active.insert(source_name.to_string(), tag.to_string());
+            config
+                .active
+                .insert(source_name.to_string(), tag.to_string());
         }
         Ok(())
     })

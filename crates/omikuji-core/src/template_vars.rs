@@ -5,9 +5,22 @@ use std::time::SystemTime;
 use crate::library::Game;
 
 const RESERVED: &[&str] = &[
-    "exe", "game_dir", "game_prefix", "game_id", "game_name", "home",
-    "data_path", "gachas_path", "components_path", "runners_path", "layers_path",
-    "prefixes_path", "cache_path", "logs_path", "runtime_path", "scripts_path",
+    "exe",
+    "game_dir",
+    "game_prefix",
+    "game_id",
+    "game_name",
+    "home",
+    "data_path",
+    "gachas_path",
+    "components_path",
+    "runners_path",
+    "layers_path",
+    "prefixes_path",
+    "cache_path",
+    "logs_path",
+    "runtime_path",
+    "scripts_path",
 ];
 
 fn root_paths() -> Vec<(String, String)> {
@@ -118,7 +131,10 @@ impl TemplateVars {
         out
     }
 
-    pub fn expand_env(&self, env: std::collections::HashMap<String, String>) -> std::collections::HashMap<String, String> {
+    pub fn expand_env(
+        &self,
+        env: std::collections::HashMap<String, String>,
+    ) -> std::collections::HashMap<String, String> {
         env.into_iter().map(|(k, v)| (k, self.expand(&v))).collect()
     }
 
@@ -126,4 +142,3 @@ impl TemplateVars {
         self.0.into_iter().collect()
     }
 }
-

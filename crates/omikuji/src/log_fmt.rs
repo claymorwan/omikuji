@@ -23,13 +23,16 @@ where
 
         let level = meta.level();
         let (color, reset) = if writer.has_ansi_escapes() {
-            (match *level {
-                tracing::Level::ERROR => "\x1b[31m",
-                tracing::Level::WARN  => "\x1b[33m",
-                tracing::Level::INFO  => "\x1b[32m",
-                tracing::Level::DEBUG => "\x1b[34m",
-                tracing::Level::TRACE => "\x1b[35m",
-            }, "\x1b[0m")
+            (
+                match *level {
+                    tracing::Level::ERROR => "\x1b[31m",
+                    tracing::Level::WARN => "\x1b[33m",
+                    tracing::Level::INFO => "\x1b[32m",
+                    tracing::Level::DEBUG => "\x1b[34m",
+                    tracing::Level::TRACE => "\x1b[35m",
+                },
+                "\x1b[0m",
+            )
         } else {
             ("", "")
         };

@@ -70,11 +70,15 @@ async fn main() {
         unsafe { omikuji_set_window_icon(path.as_ptr()) };
     }
 
-    unsafe { omikuji_capture_default_font(); }
-    if !ui.theme.follow_system_font && !ui.theme.font_family.is_empty()
-        && let Ok(family) = CString::new(ui.theme.font_family) {
-            unsafe { omikuji_set_app_font(family.as_ptr()) };
-        }
+    unsafe {
+        omikuji_capture_default_font();
+    }
+    if !ui.theme.follow_system_font
+        && !ui.theme.font_family.is_empty()
+        && let Ok(family) = CString::new(ui.theme.font_family)
+    {
+        unsafe { omikuji_set_app_font(family.as_ptr()) };
+    }
 
     let mut engine = QQmlApplicationEngine::new();
 
@@ -82,5 +86,7 @@ async fn main() {
         engine.load(&QUrl::from(qml_root));
     }
 
-    unsafe { omikuji_app_exec(); }
+    unsafe {
+        omikuji_app_exec();
+    }
 }

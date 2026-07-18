@@ -1,5 +1,4 @@
-
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use super::{HoyoEdition, VoiceLocale};
@@ -101,7 +100,9 @@ pub async fn fetch_packages(biz_id: &str, edition: HoyoEdition) -> Result<GamePa
         return Err(anyhow!("hoyo api error {}: {}", resp.retcode, resp.message));
     }
 
-    let data = resp.data.ok_or_else(|| anyhow!("hoyo api returned no data"))?;
+    let data = resp
+        .data
+        .ok_or_else(|| anyhow!("hoyo api returned no data"))?;
 
     let entry = data
         .game_packages
@@ -168,10 +169,16 @@ pub async fn fetch_config(biz_id: &str, edition: HoyoEdition) -> Result<GameConf
         .map_err(|e| anyhow!("failed to parse hoyo config response: {}", e))?;
 
     if resp.retcode != 0 {
-        return Err(anyhow!("hoyo config api error {}: {}", resp.retcode, resp.message));
+        return Err(anyhow!(
+            "hoyo config api error {}: {}",
+            resp.retcode,
+            resp.message
+        ));
     }
 
-    let data = resp.data.ok_or_else(|| anyhow!("hoyo config api returned no data"))?;
+    let data = resp
+        .data
+        .ok_or_else(|| anyhow!("hoyo config api returned no data"))?;
 
     let config = data
         .launch_configs
@@ -265,7 +272,8 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn fetch_genshin_global_size_live() {
-        let r = fetch_install_size(GENSHIN_GLOBAL, HoyoEdition::Global, &[VoiceLocale::English]).await;
+        let r =
+            fetch_install_size(GENSHIN_GLOBAL, HoyoEdition::Global, &[VoiceLocale::English]).await;
         match r {
             Ok(s) => {
                 println!("download={} install={}", s.download_bytes, s.install_bytes);
@@ -278,12 +286,17 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn inspect_hsr_packages() {
-        let info = fetch_packages(HSR_GLOBAL, HoyoEdition::Global).await.unwrap();
+        let info = fetch_packages(HSR_GLOBAL, HoyoEdition::Global)
+            .await
+            .unwrap();
         println!("version: {}", info.version);
         println!("game_packages ({}):", info.game_packages.len());
         for (i, p) in info.game_packages.iter().enumerate() {
             let fname = p.url.rsplit('/').next().unwrap_or(&p.url);
-            println!("  [{}] dl={:>12} inst={:>12}  {}", i, p.size, p.decompressed_size, fname);
+            println!(
+                "  [{}] dl={:>12} inst={:>12}  {}",
+                i, p.size, p.decompressed_size, fname
+            );
         }
         println!("audio_packages ({}):", info.audio_packages.len());
         for (i, a) in info.audio_packages.iter().enumerate() {
@@ -298,7 +311,9 @@ mod tests {
     #[tokio::test]
     #[ignore]
     async fn inspect_genshin_packages() {
-        let info = fetch_packages(GENSHIN_GLOBAL, HoyoEdition::Global).await.unwrap();
+        let info = fetch_packages(GENSHIN_GLOBAL, HoyoEdition::Global)
+            .await
+            .unwrap();
         println!("version: {}", info.version);
         println!("game_packages ({}):", info.game_packages.len());
         for (i, p) in info.game_packages.iter().enumerate() {

@@ -138,7 +138,8 @@ impl qobject::GamepadBridge {
 
             let initial_kind = detect_kind(&gilrs);
             let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GamepadBridge>| {
-                obj.as_mut().set_controller_kind(QString::from(initial_kind));
+                obj.as_mut()
+                    .set_controller_kind(QString::from(initial_kind));
             });
 
             let mut stick_held: Option<&'static str> = None;
@@ -162,31 +163,36 @@ impl qobject::GamepadBridge {
                         }
                         EventType::ButtonReleased(button, _) => {
                             if let Some(name) = button_name(button) {
-                                let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GamepadBridge>| {
-                                    obj.as_mut().button_released(&QString::from(name));
-                                });
+                                let _ = qt_thread.queue(
+                                    move |mut obj: Pin<&mut qobject::GamepadBridge>| {
+                                        obj.as_mut().button_released(&QString::from(name));
+                                    },
+                                );
                             }
                         }
                         EventType::AxisChanged(axis, _, _)
-                            if (axis == Axis::LeftStickX || axis == Axis::LeftStickY) => {
-                                let pad = gilrs.gamepad(event.id);
-                                let lx = pad.value(Axis::LeftStickX);
-                                let ly = pad.value(Axis::LeftStickY);
-                                let new_dir = stick_dir(lx, ly, stick_deadzone);
-                                if new_dir != stick_held {
-                                    stick_held = new_dir;
-                                    if let Some(dir) = new_dir {
-                                        emit_button_press(dir);
-                                        stick_last_emit = Instant::now();
-                                    }
+                            if (axis == Axis::LeftStickX || axis == Axis::LeftStickY) =>
+                        {
+                            let pad = gilrs.gamepad(event.id);
+                            let lx = pad.value(Axis::LeftStickX);
+                            let ly = pad.value(Axis::LeftStickY);
+                            let new_dir = stick_dir(lx, ly, stick_deadzone);
+                            if new_dir != stick_held {
+                                stick_held = new_dir;
+                                if let Some(dir) = new_dir {
+                                    emit_button_press(dir);
+                                    stick_last_emit = Instant::now();
                                 }
                             }
+                        }
                         EventType::Connected => {
                             let kind = classify(gilrs.gamepad(event.id).name());
-                            let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::GamepadBridge>| {
-                                obj.as_mut().set_controller_kind(QString::from(kind));
-                                obj.as_mut().gamepad_connected();
-                            });
+                            let _ = qt_thread.queue(
+                                move |mut obj: Pin<&mut qobject::GamepadBridge>| {
+                                    obj.as_mut().set_controller_kind(QString::from(kind));
+                                    obj.as_mut().gamepad_connected();
+                                },
+                            );
                         }
                         EventType::Disconnected => {
                             let _ = qt_thread.queue(|mut obj: Pin<&mut qobject::GamepadBridge>| {

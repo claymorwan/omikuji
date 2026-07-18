@@ -1,7 +1,7 @@
 pub mod eos_overlay;
 pub mod updates;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -83,9 +83,10 @@ impl EpicStore {
                 .await;
         }
         if let Some(path) = legendary_user_json()
-            && path.exists() {
-                let _ = std::fs::remove_file(&path);
-            }
+            && path.exists()
+        {
+            let _ = std::fs::remove_file(&path);
+        }
         // drop cache so next login starts with an empty library, not the previous user's
         let _ = std::fs::remove_file(cached_library_path());
         self.display_name.clear();
@@ -124,9 +125,10 @@ impl EpicStore {
                         .and_then(|p| p.as_str())
                         .map(|p| p == "assets" || p == "plugins")
                         .unwrap_or(false)
-                }) {
-                    continue;
-                }
+                })
+            {
+                continue;
+            }
 
             let app_name = entry
                 .get("app_name")
@@ -169,10 +171,7 @@ impl EpicStore {
             let icon = resolve_epic_image(&app_name, "icon", icon.as_deref());
 
             let legendary_path = installed.get(&app_name).cloned();
-            let really_installed = legendary_path
-                .as_ref()
-                .map(|p| p.exists())
-                .unwrap_or(false);
+            let really_installed = legendary_path.as_ref().map(|p| p.exists()).unwrap_or(false);
 
             games.push(EpicGame {
                 app_name: app_name.clone(),
@@ -181,7 +180,11 @@ impl EpicStore {
                 coverart,
                 icon,
                 is_installed: really_installed,
-                install_path: if really_installed { legendary_path } else { None },
+                install_path: if really_installed {
+                    legendary_path
+                } else {
+                    None
+                },
             });
         }
 
@@ -190,12 +193,14 @@ impl EpicStore {
         save_cached_library(&games);
         Ok(games)
     }
-
 }
 
 fn legendary_bin() -> Result<PathBuf> {
     crate::downloads::legendary::find_legendary().ok_or_else(|| {
-        anyhow!("legendary not found — install it or place the binary at {}", crate::runtime_dir().join("legendary").display())
+        anyhow!(
+            "legendary not found — install it or place the binary at {}",
+            crate::runtime_dir().join("legendary").display()
+        )
     })
 }
 
@@ -314,10 +319,18 @@ pub fn inspect_existing_install(app_name: &str, install_path: &Path) -> (u64, bo
         .arg(install_path)
         .output()
         .ok()
-        .and_then(|o| if o.status.success() { Some(o.stdout) } else { None })
+        .and_then(|o| {
+            if o.status.success() {
+                Some(o.stdout)
+            } else {
+                None
+            }
+        })
         .and_then(|stdout| {
             let s = String::from_utf8_lossy(&stdout);
-            s.split_whitespace().next().and_then(|n| n.parse::<u64>().ok())
+            s.split_whitespace()
+                .next()
+                .and_then(|n| n.parse::<u64>().ok())
         })
         .unwrap_or(0);
 
@@ -325,9 +338,7 @@ pub fn inspect_existing_install(app_name: &str, install_path: &Path) -> (u64, bo
 }
 
 pub fn find_installed_info(app_name: &str) -> Option<InstalledInfo> {
-    let installed_json = dirs::config_dir()?
-        .join("legendary")
-        .join("installed.json");
+    let installed_json = dirs::config_dir()?.join("legendary").join("installed.json");
     if !installed_json.exists() {
         return None;
     }
@@ -344,7 +355,10 @@ pub fn find_installed_info(app_name: &str) -> Option<InstalledInfo> {
     } else {
         install_path.join(exe_rel)
     };
-    let title = entry.get("title").and_then(|t| t.as_str()).map(String::from);
+    let title = entry
+        .get("title")
+        .and_then(|t| t.as_str())
+        .map(String::from);
     Some(InstalledInfo {
         install_path,
         executable,
@@ -353,9 +367,7 @@ pub fn find_installed_info(app_name: &str) -> Option<InstalledInfo> {
 }
 
 fn installed_save_path(app_name: &str) -> Option<String> {
-    let installed_json = dirs::config_dir()?
-        .join("legendary")
-        .join("installed.json");
+    let installed_json = dirs::config_dir()?.join("legendary").join("installed.json");
     let content = std::fs::read_to_string(installed_json).ok()?;
     let v: serde_json::Value = serde_json::from_str(&content).ok()?;
     v.get(app_name)?

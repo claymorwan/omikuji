@@ -1,18 +1,19 @@
-
-use anyhow::{anyhow, Result};
+use crate::downloads::legendary::find_legendary;
+use anyhow::{Result, anyhow};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use crate::downloads::legendary::find_legendary;
 
 pub fn eos_overlay_dir() -> PathBuf {
     crate::runtime_dir().join("eos_overlay")
 }
 
 pub fn is_installed() -> bool {
-    eos_overlay_dir().join("EOSOverlayRenderer-Win64-Shipping.exe").exists() ||
-    dirs::config_dir()
-        .map(|c| c.join("legendary").join("overlay_install.json").exists())
-        .unwrap_or(false)
+    eos_overlay_dir()
+        .join("EOSOverlayRenderer-Win64-Shipping.exe")
+        .exists()
+        || dirs::config_dir()
+            .map(|c| c.join("legendary").join("overlay_install.json").exists())
+            .unwrap_or(false)
 }
 
 pub fn install() -> Result<()> {
@@ -21,7 +22,7 @@ pub fn install() -> Result<()> {
     std::fs::create_dir_all(&path)?;
 
     tracing::info!("installing EOS overlay to {} ...", path.display());
-    
+
     let status = Command::new(&bin)
         .arg("eos-overlay")
         .arg("install")
@@ -43,7 +44,7 @@ pub fn enable(prefix: &Path) -> Result<()> {
     }
 
     let bin = find_legendary().ok_or_else(|| anyhow!("legendary not found"))?;
-    
+
     tracing::info!("enabling EOS overlay for prefix {} ...", prefix.display());
 
     let status = Command::new(&bin)
@@ -62,7 +63,7 @@ pub fn enable(prefix: &Path) -> Result<()> {
 
 pub fn disable(prefix: &Path) -> Result<()> {
     let bin = find_legendary().ok_or_else(|| anyhow!("legendary not found"))?;
-    
+
     tracing::info!("disabling EOS overlay for prefix {} ...", prefix.display());
 
     let status = Command::new(&bin)
@@ -90,10 +91,11 @@ pub fn is_enabled(prefix: &Path) -> bool {
         .arg("info")
         .arg("--prefix")
         .arg(prefix)
-        .output() {
-            Ok(o) => o,
-            Err(_) => return false,
-        };
+        .output()
+    {
+        Ok(o) => o,
+        Err(_) => return false,
+    };
 
     let stdout = String::from_utf8_lossy(&output.stdout);
     stdout.contains("Overlay enabled: Yes")

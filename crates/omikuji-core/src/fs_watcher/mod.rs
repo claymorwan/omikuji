@@ -102,31 +102,33 @@ impl DirWatcher {
         })?;
         watcher.watch(&dir, RecursiveMode::NonRecursive)?;
 
-        let handle = thread::spawn(move || loop {
-            match rx.recv() {
-                Ok(Ok(event)) => {
-                    if !interesting(&event.kind) {
-                        continue;
-                    }
-                    if !event.paths.iter().any(|p| filter(p)) {
-                        continue;
-                    }
-                    let deadline = Instant::now() + Duration::from_millis(DEBOUNCE_MS);
-                    loop {
-                        let remaining = deadline.saturating_duration_since(Instant::now());
-                        if remaining.is_zero() {
-                            break;
+        let handle = thread::spawn(move || {
+            loop {
+                match rx.recv() {
+                    Ok(Ok(event)) => {
+                        if !interesting(&event.kind) {
+                            continue;
                         }
-                        match rx.recv_timeout(remaining) {
-                            Ok(_) => {}
-                            Err(mpsc::RecvTimeoutError::Timeout) => break,
-                            Err(mpsc::RecvTimeoutError::Disconnected) => return,
+                        if !event.paths.iter().any(|p| filter(p)) {
+                            continue;
                         }
+                        let deadline = Instant::now() + Duration::from_millis(DEBOUNCE_MS);
+                        loop {
+                            let remaining = deadline.saturating_duration_since(Instant::now());
+                            if remaining.is_zero() {
+                                break;
+                            }
+                            match rx.recv_timeout(remaining) {
+                                Ok(_) => {}
+                                Err(mpsc::RecvTimeoutError::Timeout) => break,
+                                Err(mpsc::RecvTimeoutError::Disconnected) => return,
+                            }
+                        }
+                        on_change();
                     }
-                    on_change();
+                    Ok(Err(_)) => {}
+                    Err(_) => return,
                 }
-                Ok(Err(_)) => {}
-                Err(_) => return,
             }
         });
 

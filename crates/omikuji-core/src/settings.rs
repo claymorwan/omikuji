@@ -93,8 +93,7 @@ pub struct AssetsSettings {
 impl Default for AssetsSettings {
     fn default() -> Self {
         Self {
-            fetch_url: "https://raw.githubusercontent.com/reakjra/omikuji-assets/main"
-                .into(),
+            fetch_url: "https://raw.githubusercontent.com/reakjra/omikuji-assets/main".into(),
         }
     }
 }
@@ -144,7 +143,11 @@ fn load_or_default() -> Settings {
     if !path.exists() {
         let defaults = Settings::default();
         if let Err(e) = save(&defaults) {
-            tracing::warn!("couldn't write defaults to {}: {} - running in-memory only", path.display(), e);
+            tracing::warn!(
+                "couldn't write defaults to {}: {} - running in-memory only",
+                path.display(),
+                e
+            );
         }
         return defaults;
     }
@@ -169,8 +172,7 @@ pub fn save(settings: &Settings) -> std::io::Result<()> {
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
-    let body = toml::to_string_pretty(settings)
-        .map_err(std::io::Error::other)?;
+    let body = toml::to_string_pretty(settings).map_err(std::io::Error::other)?;
     let header = "# omikuji settings\n\
                   # edit and restart the launcher to apply.\n\
                   # paths accept `~` (expanded to $HOME on read).\n\n";

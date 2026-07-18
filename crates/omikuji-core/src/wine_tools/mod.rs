@@ -1,6 +1,6 @@
-use crate::launch::{build_env, resolve_wine_exe, EnvPurpose, WineVariant};
+use crate::launch::{EnvPurpose, WineVariant, build_env, resolve_wine_exe};
 use crate::library::Game;
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use std::path::{Path, PathBuf};
 use std::process::{Child, Command, Stdio};
 
@@ -47,7 +47,8 @@ impl WineTool {
 
 pub fn run(game: &Game, tool: WineTool) -> Result<Child> {
     let mut cmd = build_wine_command(game, &tool)?;
-    cmd.spawn().map_err(|e| anyhow!("failed to spawn wine tool: {}", e))
+    cmd.spawn()
+        .map_err(|e| anyhow!("failed to spawn wine tool: {}", e))
 }
 
 pub fn run_streamed<F: FnMut(&str)>(game: &Game, tool: WineTool, mut on_line: F) -> Result<()> {
@@ -55,7 +56,9 @@ pub fn run_streamed<F: FnMut(&str)>(game: &Game, tool: WineTool, mut on_line: F)
     cmd.stdin(Stdio::null());
     cmd.stdout(Stdio::piped());
     cmd.stderr(Stdio::piped());
-    let mut child = cmd.spawn().map_err(|e| anyhow!("failed to spawn wine tool: {}", e))?;
+    let mut child = cmd
+        .spawn()
+        .map_err(|e| anyhow!("failed to spawn wine tool: {}", e))?;
     let (tx, rx) = std::sync::mpsc::channel();
     if let Some(out) = child.stdout.take() {
         pipe_lines(out, tx.clone());
@@ -91,7 +94,10 @@ where
 fn pipe_lines<R: std::io::Read + Send + 'static>(reader: R, tx: std::sync::mpsc::Sender<String>) {
     std::thread::spawn(move || {
         use std::io::BufRead;
-        for line in std::io::BufReader::new(reader).lines().map_while(Result::ok) {
+        for line in std::io::BufReader::new(reader)
+            .lines()
+            .map_while(Result::ok)
+        {
             let _ = tx.send(line);
         }
     });
@@ -103,19 +109,22 @@ fn build_wine_command(game: &Game, tool: &WineTool) -> Result<Command> {
     // also rewrite wine.version from "steam:{app_id}" to "steam:{proton_dir_name}" using the version stamp in compatdata/version so PROTONPATH resolves correctly.
     let mut effective: Game;
     let g: &Game = if game.source.kind == "steam" && !game.source.app_id.is_empty() {
-        let pfx = crate::steam::local::find_steam_prefix(&game.source.app_id)
-            .ok_or_else(|| anyhow!(
+        let pfx = crate::steam::local::find_steam_prefix(&game.source.app_id).ok_or_else(|| {
+            anyhow!(
                 "no Steam prefix for this game yet — launch it through Steam \
                  at least once so Steam creates compatdata/{}/pfx",
                 game.source.app_id
-            ))?;
+            )
+        })?;
 
         let stamped = crate::steam::local::find_steam_proton_version(&game.source.app_id);
         let install = crate::steam::local::resolve_or_default_proton(stamped.as_deref())
-            .ok_or_else(|| anyhow!(
-                "no Proton install found — install one via Steam or drop \
+            .ok_or_else(|| {
+                anyhow!(
+                    "no Proton install found — install one via Steam or drop \
                  a GE-Proton build in ~/.local/share/Steam/compatibilitytools.d/"
-            ))?;
+                )
+            })?;
         let dir_name = install
             .file_name()
             .map(|s| s.to_string_lossy().into_owned())
@@ -159,12 +168,7 @@ fn build_wine_command(game: &Game, tool: &WineTool) -> Result<Command> {
         cmd.env("PROTON_VERB", "waitforexitandrun");
     }
 
-    tracing::debug!(
-        "{:?} :: {} {}",
-        tool,
-        program.display(),
-        args.join(" ")
-    );
+    tracing::debug!("{:?} :: {} {}", tool, program.display(), args.join(" "));
     Ok(cmd)
 }
 
@@ -218,14 +222,15 @@ fn build_command(
         WineTool::KillWineserver => {
             if variant == WineVariant::Proton {
                 // wineboot -k tears down the session cleanly; invoking wineserver directly races with umu's lifecycle
-                Ok((
-                    wine_exe.to_path_buf(),
-                    vec!["wineboot".into(), "-k".into()],
-                ))
+                Ok((wine_exe.to_path_buf(), vec!["wineboot".into(), "-k".into()]))
             } else {
                 let parent = wine_exe.parent().unwrap_or(Path::new("."));
                 let ws = parent.join("wineserver");
-                let bin = if ws.exists() { ws } else { PathBuf::from("wineserver") };
+                let bin = if ws.exists() {
+                    ws
+                } else {
+                    PathBuf::from("wineserver")
+                };
                 Ok((bin, vec!["-k".into()]))
             }
         }
@@ -251,7 +256,9 @@ fn staged_ca_bundle() -> Option<PathBuf> {
     let src = ca_bundle()?;
     let cache = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".cache"));
+        .unwrap_or_else(|| {
+            PathBuf::from(std::env::var_os("HOME").unwrap_or_default()).join(".cache")
+        });
     let dir = cache.join("omikuji");
     if std::fs::create_dir_all(&dir).is_err() {
         return Some(src);
@@ -265,12 +272,13 @@ fn staged_ca_bundle() -> Option<PathBuf> {
 
 fn find_winetricks() -> Result<PathBuf> {
     if let Ok(output) = Command::new("which").arg("winetricks").output()
-        && output.status.success() {
-            let p = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !p.is_empty() {
-                return Ok(PathBuf::from(p));
-            }
+        && output.status.success()
+    {
+        let p = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        if !p.is_empty() {
+            return Ok(PathBuf::from(p));
         }
+    }
     let bundled = crate::runtime_dir().join("winetricks");
     if bundled.exists() {
         return Ok(bundled);

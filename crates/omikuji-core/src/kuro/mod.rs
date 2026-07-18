@@ -4,8 +4,8 @@ mod patcher;
 pub mod source;
 pub mod update;
 
-use anyhow::{anyhow, Result};
 use crate::gachas::manifest::GachaManifest;
+use anyhow::{Result, anyhow};
 
 pub fn index_url_from_manifest(manifest: &GachaManifest, edition_id: &str) -> Result<String> {
     manifest
@@ -15,7 +15,13 @@ pub fn index_url_from_manifest(manifest: &GachaManifest, edition_id: &str) -> Re
         .and_then(|e| e.strategy_config.get("index_url"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .ok_or_else(|| anyhow!("no strategy_config.index_url in manifest {} for edition {}", manifest.id, edition_id))
+        .ok_or_else(|| {
+            anyhow!(
+                "no strategy_config.index_url in manifest {} for edition {}",
+                manifest.id,
+                edition_id
+            )
+        })
 }
 
 pub fn parse_app_id(app_id: &str) -> Result<(String, String)> {
@@ -72,9 +78,15 @@ fn read_wuwa_resources_version(install_path: &std::path::Path) -> Option<String>
         if parts.len() != 3 {
             continue;
         }
-        let Ok(a) = parts[0].parse::<u32>() else { continue };
-        let Ok(b) = parts[1].parse::<u32>() else { continue };
-        let Ok(c) = parts[2].parse::<u32>() else { continue };
+        let Ok(a) = parts[0].parse::<u32>() else {
+            continue;
+        };
+        let Ok(b) = parts[1].parse::<u32>() else {
+            continue;
+        };
+        let Ok(c) = parts[2].parse::<u32>() else {
+            continue;
+        };
         let v = (a, b, c);
         if best.is_none_or(|bv| v > bv) {
             best = Some(v);
@@ -97,6 +109,10 @@ fn read_package_version_json(install_path: &std::path::Path) -> Option<String> {
     }
 }
 
-
 // no-op today: kuro writes directly into install_dir so theres no scratch to clean , kept for shape-consistency with hoyo/endfield
-pub fn cleanup_kuro_state(_app_id: &str, _install_path: &std::path::Path, _temp_dir: Option<&std::path::Path>) {}
+pub fn cleanup_kuro_state(
+    _app_id: &str,
+    _install_path: &std::path::Path,
+    _temp_dir: Option<&std::path::Path>,
+) {
+}

@@ -7,7 +7,10 @@ impl super::qobject::GameModel {
         };
 
         let Some(dir) = omikuji_core::desktop::get_game_browse_dir(game) else {
-            tracing::warn!("browse_files: no directory for game '{}'", game.metadata.name);
+            tracing::warn!(
+                "browse_files: no directory for game '{}'",
+                game.metadata.name
+            );
             return false;
         };
 

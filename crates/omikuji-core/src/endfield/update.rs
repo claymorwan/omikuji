@@ -1,4 +1,3 @@
-
 use anyhow::Result;
 
 use super::installed_version;
@@ -14,7 +13,10 @@ pub struct UpdateInfo {
     pub delta_supported: bool,
 }
 
-pub async fn check_for_update(manifest: &GachaManifest, edition_id: &str) -> Result<Option<UpdateInfo>> {
+pub async fn check_for_update(
+    manifest: &GachaManifest,
+    edition_id: &str,
+) -> Result<Option<UpdateInfo>> {
     let Some(from_version) = installed_version(&manifest.game_slug, edition_id) else {
         return Ok(None);
     };

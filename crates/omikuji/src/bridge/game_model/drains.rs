@@ -55,10 +55,8 @@ impl super::qobject::GameModel {
 
     pub fn drain_file_dialog_results(mut self: Pin<&mut Self>) {
         for r in omikuji_core::install_sizes::take_file_dialog_pending() {
-            self.as_mut().file_dialog_result(
-                &QString::from(&r.request_id),
-                &QString::from(&r.path),
-            );
+            self.as_mut()
+                .file_dialog_result(&QString::from(&r.request_id), &QString::from(&r.path));
         }
     }
 
@@ -70,19 +68,15 @@ impl super::qobject::GameModel {
                 "error": r.error,
             })
             .to_string();
-            self.as_mut().install_size_result(
-                &QString::from(&r.request_id),
-                &QString::from(&payload),
-            );
+            self.as_mut()
+                .install_size_result(&QString::from(&r.request_id), &QString::from(&payload));
         }
     }
 
     pub fn drain_game_details(mut self: Pin<&mut Self>) {
         for r in omikuji_core::install_sizes::take_details_pending() {
-            self.as_mut().game_details_result(
-                &QString::from(&r.request_id),
-                &QString::from(&r.payload),
-            );
+            self.as_mut()
+                .game_details_result(&QString::from(&r.request_id), &QString::from(&r.payload));
         }
     }
 }

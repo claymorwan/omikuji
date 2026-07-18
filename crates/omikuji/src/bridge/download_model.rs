@@ -134,9 +134,17 @@ impl qobject::DownloadModel {
             source: "epic".to_string(),
             app_id: app_id.to_string(),
             display_name: display_name.to_string(),
-            banner_url: if banner.is_empty() { None } else { Some(banner) },
+            banner_url: if banner.is_empty() {
+                None
+            } else {
+                Some(banner)
+            },
             install_path: PathBuf::from(install_path.to_string()),
-            prefix_path: if prefix.is_empty() { None } else { Some(PathBuf::from(prefix)) },
+            prefix_path: if prefix.is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(prefix))
+            },
             runner_version: runner_version.to_string(),
             temp_dir: None,
             kind: omikuji_core::downloads::DownloadKind::Install,
@@ -181,9 +189,17 @@ impl qobject::DownloadModel {
             &voices,
             display_name.to_string(),
             PathBuf::from(install_path.to_string()),
-            if prefix.is_empty() { None } else { Some(PathBuf::from(prefix)) },
+            if prefix.is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(prefix))
+            },
             runner_version.to_string(),
-            if temp.trim().is_empty() { None } else { Some(PathBuf::from(temp)) },
+            if temp.trim().is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(temp))
+            },
         ) {
             Ok(r) => r,
             Err(e) => {

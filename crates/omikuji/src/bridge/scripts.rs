@@ -54,7 +54,12 @@ pub mod qobject {
 
         #[qsignal]
         #[cxx_name = "remoteInstalled"]
-        fn remote_installed(self: Pin<&mut ScriptsBridge>, ok: bool, toml_path: QString, error: QString);
+        fn remote_installed(
+            self: Pin<&mut ScriptsBridge>,
+            ok: bool,
+            toml_path: QString,
+            error: QString,
+        );
 
         #[qinvokable]
         #[cxx_name = "refreshRemote"]
@@ -231,7 +236,11 @@ impl qobject::ScriptsBridge {
                             })
                         })
                         .collect();
-                    (true, serde_json::Value::Array(arr).to_string(), String::new())
+                    (
+                        true,
+                        serde_json::Value::Array(arr).to_string(),
+                        String::new(),
+                    )
                 }
                 Err(e) => (false, "[]".to_string(), format!("{e:#}")),
             };
@@ -243,7 +252,8 @@ impl qobject::ScriptsBridge {
     }
 
     fn install_remote(mut self: Pin<&mut Self>, entry_json: &QString) {
-        let entry: core_scripts::RemoteScript = match serde_json::from_str(&entry_json.to_string()) {
+        let entry: core_scripts::RemoteScript = match serde_json::from_str(&entry_json.to_string())
+        {
             Ok(e) => e,
             Err(e) => {
                 tracing::error!("install_remote: invalid entry json: {e}");

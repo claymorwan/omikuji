@@ -177,8 +177,8 @@ impl VdfValue {
 
 fn read_library_folders(steam_dir: &Path) -> Result<HashMap<String, HashMap<String, String>>> {
     let path = steam_dir.join("config/libraryfolders.vdf");
-    let content = fs::read_to_string(&path)
-        .with_context(|| format!("reading {}", path.display()))?;
+    let content =
+        fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
 
     let vdf = parse_vdf(&content);
     let mut result = HashMap::new();
@@ -217,17 +217,20 @@ pub fn get_steam_users() -> Vec<SteamUser> {
     if let Some(VdfValue::Object(users_obj)) = vdf.get("users") {
         for (steamid64, user_data) in users_obj {
             if let VdfValue::Object(user) = user_data {
-                let account_name = user.get("AccountName")
+                let account_name = user
+                    .get("AccountName")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
 
-                let persona_name = user.get("PersonaName")
+                let persona_name = user
+                    .get("PersonaName")
                     .and_then(|v| v.as_str())
                     .unwrap_or("")
                     .to_string();
 
-                let most_recent = user.get("mostrecent")
+                let most_recent = user
+                    .get("mostrecent")
                     .and_then(|v| v.as_str())
                     .map(|s| s == "1")
                     .unwrap_or(false);
@@ -278,31 +281,36 @@ pub struct AppManifest {
 
 impl AppManifest {
     pub fn from_file(path: &Path) -> Result<Self> {
-        let content = fs::read_to_string(path)
-            .with_context(|| format!("reading {}", path.display()))?;
+        let content =
+            fs::read_to_string(path).with_context(|| format!("reading {}", path.display()))?;
 
         let vdf = parse_vdf(&content);
 
-        let app_state = vdf.get("AppState")
+        let app_state = vdf
+            .get("AppState")
             .and_then(|v| v.as_object())
             .ok_or_else(|| anyhow::anyhow!("no AppState in manifest"))?;
 
-        let appid = app_state.get("appid")
+        let appid = app_state
+            .get("appid")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
 
-        let name = app_state.get("name")
+        let name = app_state
+            .get("name")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
 
-        let installdir = app_state.get("installdir")
+        let installdir = app_state
+            .get("installdir")
             .and_then(|v| v.as_str())
             .unwrap_or("")
             .to_string();
 
-        let state_flags = app_state.get("StateFlags")
+        let state_flags = app_state
+            .get("StateFlags")
             .and_then(|v| v.as_str())
             .and_then(|s| s.parse().ok())
             .unwrap_or(0);
@@ -346,19 +354,23 @@ pub fn get_installed_games() -> Vec<AppManifest> {
     let mut games = vec![];
 
     for steamapps_dir in get_steamapps_dirs() {
-        let Ok(entries) = fs::read_dir(&steamapps_dir) else { continue };
+        let Ok(entries) = fs::read_dir(&steamapps_dir) else {
+            continue;
+        };
 
         for entry in entries.flatten() {
             let name = entry.file_name();
             let name_str = name.to_string_lossy();
 
-            if name_str.starts_with("appmanifest_") && name_str.ends_with(".acf")
+            if name_str.starts_with("appmanifest_")
+                && name_str.ends_with(".acf")
                 && let Ok(manifest) = AppManifest::from_file(&entry.path())
-                    && manifest.is_installed()
-                        && !manifest.appid.is_empty()
-                        && !is_non_game(&manifest.name) {
-                        games.push(manifest);
-                    }
+                && manifest.is_installed()
+                && !manifest.appid.is_empty()
+                && !is_non_game(&manifest.name)
+            {
+                games.push(manifest);
+            }
         }
     }
 
@@ -395,13 +407,15 @@ pub fn get_game_install_dir(appid: &str) -> Option<PathBuf> {
     for steamapps_dir in get_steamapps_dirs() {
         let manifest_path = steamapps_dir.join(format!("appmanifest_{}.acf", appid));
         if let Ok(manifest) = AppManifest::from_file(&manifest_path)
-            && manifest.is_installed() && !manifest.installdir.is_empty() {
-                // installdir is relative to steamapps/common
-                let install_path = steamapps_dir.join("common").join(&manifest.installdir);
-                if install_path.exists() {
-                    return Some(install_path);
-                }
+            && manifest.is_installed()
+            && !manifest.installdir.is_empty()
+        {
+            // installdir is relative to steamapps/common
+            let install_path = steamapps_dir.join("common").join(&manifest.installdir);
+            if install_path.exists() {
+                return Some(install_path);
             }
+        }
     }
     None
 }
@@ -410,10 +424,7 @@ pub fn get_game_install_dir(appid: &str) -> Option<PathBuf> {
 // been run yet (or isnt a steam game at all).
 pub fn find_steam_prefix(appid: &str) -> Option<PathBuf> {
     for steamapps_dir in get_steamapps_dirs() {
-        let pfx = steamapps_dir
-            .join("compatdata")
-            .join(appid)
-            .join("pfx");
+        let pfx = steamapps_dir.join("compatdata").join(appid).join("pfx");
         if pfx.exists() {
             return Some(pfx);
         }
@@ -451,11 +462,14 @@ pub fn iter_steam_protons() -> Vec<(String, PathBuf)> {
 }
 
 fn push_protons_from(parent: &Path, out: &mut Vec<(String, PathBuf)>) {
-    let Ok(entries) = std::fs::read_dir(parent) else { return };
+    let Ok(entries) = std::fs::read_dir(parent) else {
+        return;
+    };
     for e in entries.flatten() {
         let p = e.path();
         if is_proton_install(&p)
-            && let Some(name) = p.file_name().and_then(|n| n.to_str()) {
+            && let Some(name) = p.file_name().and_then(|n| n.to_str())
+        {
             out.push((name.to_string(), p));
         }
     }
@@ -517,9 +531,10 @@ pub fn default_proton_install() -> Option<PathBuf> {
 
 pub fn resolve_or_default_proton(name: Option<&str>) -> Option<PathBuf> {
     if let Some(n) = name
-        && let Some(p) = find_proton_install(n) {
-            return Some(p);
-        }
+        && let Some(p) = find_proton_install(n)
+    {
+        return Some(p);
+    }
     default_proton_install()
 }
 
@@ -558,7 +573,10 @@ mod tests {
 
     #[test]
     fn test_steamid_conversion() {
-        assert_eq!(steamid64_to_steamid32("76561197960287930").as_deref(), Some("22202"));
+        assert_eq!(
+            steamid64_to_steamid32("76561197960287930").as_deref(),
+            Some("22202")
+        );
         assert_eq!(steamid64_to_steamid32("not a number"), None);
     }
 }

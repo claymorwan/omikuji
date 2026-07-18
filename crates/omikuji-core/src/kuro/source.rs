@@ -1,15 +1,14 @@
-
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::Instant;
 
 use super::api;
 use crate::downloads::{
-    check_control, report_progress, ControlSignal, DownloadEntry, DownloadKind, DownloadSource,
+    ControlSignal, DownloadEntry, DownloadKind, DownloadSource, check_control, report_progress,
 };
 
 pub(super) const PARALLEL_FILES: usize = 8;
@@ -28,7 +27,10 @@ impl DownloadSource for KuroSource {
 }
 
 async fn run_install_or_update(entry: &DownloadEntry) -> Result<()> {
-    if !matches!(entry.kind, DownloadKind::Install | DownloadKind::Update { .. }) {
+    if !matches!(
+        entry.kind,
+        DownloadKind::Install | DownloadKind::Update { .. }
+    ) {
         return Err(anyhow!("KuroSource: unexpected DownloadKind"));
     }
 
@@ -68,23 +70,29 @@ async fn run_install_or_update(entry: &DownloadEntry) -> Result<()> {
     let resources = index.resource.clone();
     let install_root_for_workers = install_root.clone();
 
-    let stream = futures_util::stream::iter(resources.into_iter().map(
-        move |file| {
-            let id = id.clone();
-            let downloaded = downloaded.clone();
-            let install_root = install_root_for_workers.clone();
-            let base_url = base_url.clone();
-            let start = start;
-            let total = total_bytes;
-            async move {
-                if check_control(&id) != ControlSignal::None {
-                    return Ok::<_, anyhow::Error>(());
-                }
-                download_one(&id, &file, &base_url, &install_root, &downloaded, total, start)
-                    .await
+    let stream = futures_util::stream::iter(resources.into_iter().map(move |file| {
+        let id = id.clone();
+        let downloaded = downloaded.clone();
+        let install_root = install_root_for_workers.clone();
+        let base_url = base_url.clone();
+        let start = start;
+        let total = total_bytes;
+        async move {
+            if check_control(&id) != ControlSignal::None {
+                return Ok::<_, anyhow::Error>(());
             }
-        },
-    ))
+            download_one(
+                &id,
+                &file,
+                &base_url,
+                &install_root,
+                &downloaded,
+                total,
+                start,
+            )
+            .await
+        }
+    }))
     .buffer_unordered(PARALLEL_FILES);
 
     tokio::pin!(stream);
@@ -153,13 +161,12 @@ pub(super) async fn download_one(
     // only treat as resumed if the server actually returned 206; full body means overwrite
     let append = resp.status().as_u16() == 206 && resume;
     let mut writer: Box<dyn std::io::Write + Send> = if append {
-        Box::new(
-            std::fs::OpenOptions::new()
-                .append(true)
-                .open(&dest_path)?,
-        )
+        Box::new(std::fs::OpenOptions::new().append(true).open(&dest_path)?)
     } else {
-        downloaded.fetch_sub(existing.min(downloaded.load(Ordering::Relaxed)), Ordering::Relaxed);
+        downloaded.fetch_sub(
+            existing.min(downloaded.load(Ordering::Relaxed)),
+            Ordering::Relaxed,
+        );
         Box::new(std::fs::File::create(&dest_path)?)
     };
     if append {
@@ -173,7 +180,9 @@ pub(super) async fn download_one(
         }
         let bytes = chunk.map_err(|e| anyhow!("network: {}", e))?;
         use std::io::Write;
-        writer.write_all(&bytes).map_err(|e| anyhow!("write: {}", e))?;
+        writer
+            .write_all(&bytes)
+            .map_err(|e| anyhow!("write: {}", e))?;
         downloaded.fetch_add(bytes.len() as u64, Ordering::Relaxed);
         tick_progress(id, downloaded, total, start);
     }

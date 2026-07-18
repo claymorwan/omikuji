@@ -2,13 +2,13 @@
 // and dll packs (dxvk, vkd3d-proton, dxvk-nvapi, d3d-extras). callers pass a dest_root; thats the only real difference between a runner and a dll pack install.
 // adding a new source is a 5-line paste in settings.rs, no code change here. yayyyy =m=
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
+use std::collections::VecDeque;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, OnceLock};
-use std::collections::VecDeque;
 
 use crate::components_config::ArchiveSource;
 
@@ -24,10 +24,30 @@ pub struct ReleaseInfo {
 #[derive(Debug, Clone)]
 pub enum ArchiveEvent {
     // category: "runners" | "dll_packs", routes to the right QML listener
-    Started   { category: String, source: String, tag: String },
-    Progress  { category: String, source: String, tag: String, phase: String, percent: f64 },
-    Completed { category: String, source: String, tag: String, install_dir: String },
-    Failed    { category: String, source: String, tag: String, error: String },
+    Started {
+        category: String,
+        source: String,
+        tag: String,
+    },
+    Progress {
+        category: String,
+        source: String,
+        tag: String,
+        phase: String,
+        percent: f64,
+    },
+    Completed {
+        category: String,
+        source: String,
+        tag: String,
+        install_dir: String,
+    },
+    Failed {
+        category: String,
+        source: String,
+        tag: String,
+        error: String,
+    },
 }
 
 static EVENTS: OnceLock<Mutex<VecDeque<ArchiveEvent>>> = OnceLock::new();
@@ -295,9 +315,11 @@ pub fn list_installed(source: &ArchiveSource, dest_root: &Path) -> Vec<String> {
             continue;
         }
         if let Some(sc) = read_sidecar(&path)
-            && sc.source == source.name && !sc.tag.is_empty() {
-                out.push(sc.tag);
-            }
+            && sc.source == source.name
+            && !sc.tag.is_empty()
+        {
+            out.push(sc.tag);
+        }
     }
     out.sort();
     out

@@ -104,8 +104,13 @@ where
                 String::new()
             }
         };
-        let Ok(mut q) = DETAILS_QUEUE.lock() else { return };
-        q.push_back(GameDetailsResult { request_id, payload });
+        let Ok(mut q) = DETAILS_QUEUE.lock() else {
+            return;
+        };
+        q.push_back(GameDetailsResult {
+            request_id,
+            payload,
+        });
         while q.len() > 20 {
             q.pop_front();
         }
@@ -123,7 +128,9 @@ lazy_static::lazy_static! {
 }
 
 pub fn push_file_dialog(result: FileDialogResult) {
-    let Ok(mut q) = FILE_DIALOG_QUEUE.lock() else { return };
+    let Ok(mut q) = FILE_DIALOG_QUEUE.lock() else {
+        return;
+    };
     q.push_back(result);
     while q.len() > 20 {
         q.pop_front();

@@ -10,13 +10,16 @@ use omikuji_core::media;
 impl super::qobject::GameModel {
     pub fn steam_get_installed_games(&self) -> QString {
         let games = omikuji_core::steam::get_installed_games();
-        let json_games: Vec<serde_json::Value> = games.iter().map(|g| {
-            serde_json::json!({
-                "appid": g.appid,
-                "name": g.name,
-                "is_installed": g.is_installed()
+        let json_games: Vec<serde_json::Value> = games
+            .iter()
+            .map(|g| {
+                serde_json::json!({
+                    "appid": g.appid,
+                    "name": g.name,
+                    "is_installed": g.is_installed()
+                })
             })
-        }).collect();
+            .collect();
 
         match serde_json::to_string(&json_games) {
             Ok(json) => QString::from(&json),
@@ -38,16 +41,17 @@ impl super::qobject::GameModel {
 
         tracing::info!("importing {} - {}", appid_str, name_str);
 
-        let already_imported = self.library.game.iter().any(|g| {
-            g.metadata.id == appid_str
-        });
+        let already_imported = self.library.game.iter().any(|g| g.metadata.id == appid_str);
 
         if already_imported {
             tracing::info!("already imported: {}", appid_str);
             return true;
         }
 
-        use omikuji_core::library::{Metadata, RunnerConfig, SourceConfig, WineConfig, LaunchConfig, GraphicsConfig, SystemConfig};
+        use omikuji_core::library::{
+            GraphicsConfig, LaunchConfig, Metadata, RunnerConfig, SourceConfig, SystemConfig,
+            WineConfig,
+        };
 
         let mut game = Game {
             metadata: Metadata::new(appid_str.clone(), name_str.clone(), PathBuf::new()),
@@ -113,7 +117,8 @@ impl super::qobject::GameModel {
                 };
 
                 let library = &mut obj.as_mut().rust_mut().get_mut().library;
-                let (updated, total) = omikuji_core::steam::apply_playtime_data(library, &steam_data);
+                let (updated, total) =
+                    omikuji_core::steam::apply_playtime_data(library, &steam_data);
                 tracing::info!("updated {}/{} steam games", updated, total);
 
                 let mut saved = 0;

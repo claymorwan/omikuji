@@ -1,7 +1,7 @@
 // little note: FUCK YOU GOG. we love you really but what the fuck
 pub mod updates;
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
@@ -137,12 +137,14 @@ impl GogStore {
         if !userdata_id.is_empty() && userdata_id != self.user_id {
             tracing::warn!(
                 "userData.json userId={} differs from token user_id={} - using token id for galaxy-library",
-                userdata_id, self.user_id
+                userdata_id,
+                self.user_id
             );
         }
         tracing::info!(
             "refresh_user_data ok - username='{}' token_user_id='{}'",
-            self.display_name, self.user_id
+            self.display_name,
+            self.user_id
         );
         save_user_data(&self.display_name, &self.user_id);
         Ok(())
@@ -255,7 +257,11 @@ impl GogStore {
             if let Some(p) = installed.get(&g.app_name) {
                 let really_installed = p.exists() && has_install_marker(p);
                 g.is_installed = really_installed;
-                g.install_path = if really_installed { Some(p.clone()) } else { None };
+                g.install_path = if really_installed {
+                    Some(p.clone())
+                } else {
+                    None
+                };
             }
         }
 
@@ -305,10 +311,9 @@ fn has_install_marker(dir: &Path) -> bool {
     }
     if let Ok(entries) = std::fs::read_dir(dir) {
         for e in entries.flatten() {
-            if e.file_type().ok().map(|t| t.is_dir()).unwrap_or(false)
-                && scan(&e.path()) {
-                    return true;
-                }
+            if e.file_type().ok().map(|t| t.is_dir()).unwrap_or(false) && scan(&e.path()) {
+                return true;
+            }
         }
     }
     false
@@ -361,7 +366,10 @@ pub fn find_installed_info(app_name: &str) -> Option<InstalledInfo> {
         Some(p) if !p.is_empty() => install_path.join(&p),
         _ => PathBuf::new(),
     };
-    let title = entry.get("title").and_then(|t| t.as_str()).map(String::from);
+    let title = entry
+        .get("title")
+        .and_then(|t| t.as_str())
+        .map(String::from);
     Some(InstalledInfo {
         install_path,
         executable,
@@ -381,7 +389,9 @@ pub fn record_install(
     } else {
         serde_json::json!({})
     };
-    let obj = v.as_object_mut().ok_or_else(|| anyhow!("registry corrupt"))?;
+    let obj = v
+        .as_object_mut()
+        .ok_or_else(|| anyhow!("registry corrupt"))?;
     obj.insert(
         app_name.to_string(),
         serde_json::json!({
@@ -455,7 +465,10 @@ pub async fn fetch_install_size(app_name: &str) -> Result<InstallSize> {
             .and_then(|x| x.as_str())
             .map(|s| s.to_string());
         if let Some(build_id) = latest_build {
-            tracing::debug!("no manifest in default response - retrying with --build {}", build_id);
+            tracing::debug!(
+                "no manifest in default response - retrying with --build {}",
+                build_id
+            );
             match fetch_install_size_pinned(app_name, &build_id).await {
                 Ok(s) => return Ok(s),
                 Err(e) => {
@@ -467,7 +480,8 @@ pub async fn fetch_install_size(app_name: &str) -> Result<InstallSize> {
         let dump = serde_json::to_string_pretty(&v).unwrap_or_default();
         tracing::warn!(
             "no manifest sizes for {} - full gogdl info response:\n{}",
-            app_name, dump
+            app_name,
+            dump
         );
     }
     Ok(InstallSize {
@@ -529,15 +543,17 @@ fn extract_sizes(v: &serde_json::Value) -> (u64, u64) {
         let pick = size
             .get("en-US")
             .or_else(|| size.get("en-us"))
-            .or_else(|| {
-                size.iter()
-                    .find(|(k, _)| k.as_str() != "*")
-                    .map(|(_, v)| v)
-            });
+            .or_else(|| size.iter().find(|(k, _)| k.as_str() != "*").map(|(_, v)| v));
 
         if let Some(locale) = pick {
-            let install = locale.get("disk_size").and_then(|x| x.as_u64()).unwrap_or(0);
-            let download = locale.get("download_size").and_then(|x| x.as_u64()).unwrap_or(0);
+            let install = locale
+                .get("disk_size")
+                .and_then(|x| x.as_u64())
+                .unwrap_or(0);
+            let download = locale
+                .get("download_size")
+                .and_then(|x| x.as_u64())
+                .unwrap_or(0);
             if install > 0 || download > 0 {
                 return (install + common_install, download + common_download);
             }
@@ -623,17 +639,25 @@ pub fn inspect_existing_install(_app_name: &str, install_path: &Path) -> (u64, b
     if !install_path.exists() {
         return (0, false);
     }
-    let has_resume = install_path.join(".gogdl-resume").exists()
-        || install_path.join(".gogdl-temp").exists();
+    let has_resume =
+        install_path.join(".gogdl-resume").exists() || install_path.join(".gogdl-temp").exists();
     let bytes = std::process::Command::new("du")
         .args(["-sb"])
         .arg(install_path)
         .output()
         .ok()
-        .and_then(|o| if o.status.success() { Some(o.stdout) } else { None })
+        .and_then(|o| {
+            if o.status.success() {
+                Some(o.stdout)
+            } else {
+                None
+            }
+        })
         .and_then(|stdout| {
             let s = String::from_utf8_lossy(&stdout);
-            s.split_whitespace().next().and_then(|n| n.parse::<u64>().ok())
+            s.split_whitespace()
+                .next()
+                .and_then(|n| n.parse::<u64>().ok())
         })
         .unwrap_or(0);
     (bytes, has_resume)
@@ -648,7 +672,10 @@ pub struct GogCredentials {
 }
 
 fn parse_credentials(value: &serde_json::Value) -> Option<GogCredentials> {
-    let access_token = value.get("access_token").and_then(|s| s.as_str())?.to_string();
+    let access_token = value
+        .get("access_token")
+        .and_then(|s| s.as_str())?
+        .to_string();
     if access_token.is_empty() {
         return None;
     }
@@ -689,9 +716,10 @@ pub async fn read_credentials() -> Result<GogCredentials> {
 
     if !trimmed.is_empty() {
         if let Ok(v) = serde_json::from_str::<serde_json::Value>(trimmed)
-            && let Some(creds) = parse_credentials(&v) {
-                return Ok(creds);
-            }
+            && let Some(creds) = parse_credentials(&v)
+        {
+            return Ok(creds);
+        }
         if let Some(creds) = find_json_blob(trimmed) {
             return Ok(creds);
         }
@@ -724,7 +752,10 @@ pub async fn read_credentials() -> Result<GogCredentials> {
         "gogdl auth stdout (first 500 chars): {}",
         trimmed.chars().take(500).collect::<String>()
     );
-    anyhow::bail!("couldn't read gogdl credentials from stdout or {}", auth.display())
+    anyhow::bail!(
+        "couldn't read gogdl credentials from stdout or {}",
+        auth.display()
+    )
 }
 
 fn find_json_blob(s: &str) -> Option<GogCredentials> {
@@ -745,9 +776,10 @@ fn find_json_blob(s: &str) -> Option<GogCredentials> {
                     if let Some(s_idx) = start {
                         let chunk = &s[s_idx..=i];
                         if let Ok(v) = serde_json::from_str::<serde_json::Value>(chunk)
-                            && let Some(creds) = parse_credentials(&v) {
-                                return Some(creds);
-                            }
+                            && let Some(creds) = parse_credentials(&v)
+                        {
+                            return Some(creds);
+                        }
                     }
                     start = None;
                 }
@@ -876,10 +908,7 @@ async fn fetch_game_metadata(
     client: &reqwest::Client,
     external_id: &str,
 ) -> Result<(String, Option<String>, Option<String>, Option<String>)> {
-    let url = format!(
-        "https://api.gog.com/v2/games/{}?locale=en-US",
-        external_id
-    );
+    let url = format!("https://api.gog.com/v2/games/{}?locale=en-US", external_id);
     let resp = client.get(url).send().await?;
     if !resp.status().is_success() {
         anyhow::bail!("api.gog.com v2 returned {}", resp.status());
@@ -1000,7 +1029,9 @@ pub async fn fetch_game_details(app_name: &str) -> Result<String> {
 
     let mut reqs = Vec::new();
     if let Ok(resp) = client
-        .get(format!("https://api.gog.com/v2/games/{app_name}?locale=en-US"))
+        .get(format!(
+            "https://api.gog.com/v2/games/{app_name}?locale=en-US"
+        ))
         .send()
         .await
         && let Ok(v) = resp.json::<serde_json::Value>().await

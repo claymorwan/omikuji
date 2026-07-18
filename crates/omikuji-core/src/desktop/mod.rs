@@ -1,5 +1,5 @@
 use crate::library::{Game, Library};
-use crate::media::{media_path, MediaType};
+use crate::media::{MediaType, media_path};
 use anyhow::{Context, Result};
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
@@ -18,15 +18,14 @@ pub fn desktop_dir() -> Option<PathBuf> {
         .unwrap_or_else(|| PathBuf::from("~/.config"))
         .join("user-dirs.dirs");
 
-
     if let Ok(content) = std::fs::read_to_string(&user_dirs) {
         for line in content.lines() {
             if line.starts_with("XDG_DESKTOP_DIR=") {
-                let path_str = line.trim_start_matches("XDG_DESKTOP_DIR=")
+                let path_str = line
+                    .trim_start_matches("XDG_DESKTOP_DIR=")
                     .trim()
                     .trim_matches('"')
                     .trim_matches('\'');
-
 
                 let expanded = if path_str.starts_with("$HOME/") {
                     dirs::home_dir()
@@ -39,7 +38,6 @@ pub fn desktop_dir() -> Option<PathBuf> {
                 } else {
                     PathBuf::from(path_str)
                 };
-
 
                 if expanded.exists() {
                     return Some(expanded);
@@ -93,8 +91,7 @@ pub fn ensure_steam_icon(game: &Game) -> Result<()> {
     }
 
     let dir = icons_dir();
-    fs::create_dir_all(&dir)
-        .with_context(|| format!("creating icon dir {}", dir.display()))?;
+    fs::create_dir_all(&dir).with_context(|| format!("creating icon dir {}", dir.display()))?;
 
     let appid = crate::steam::synthetic_appid(&game.metadata.id);
     let link = dir.join(format!("steam_icon_{}.png", appid));
@@ -300,7 +297,12 @@ pub fn disk_free_space(path: &str) -> u64 {
     }
 }
 
-pub fn show_file_dialog(select_folder: bool, title: &str, default_path: &str, filter: &str) -> String {
+pub fn show_file_dialog(
+    select_folder: bool,
+    title: &str,
+    default_path: &str,
+    filter: &str,
+) -> String {
     let filter = if select_folder { "" } else { filter };
     if which::which("zenity").is_ok() {
         let mut cmd = Command::new("zenity");
@@ -337,7 +339,11 @@ pub fn show_file_dialog(select_folder: bool, title: &str, default_path: &str, fi
         } else {
             cmd.arg("--getopenfilename");
             if !default_path.is_empty() || !filter.is_empty() {
-                cmd.arg(if default_path.is_empty() { "." } else { default_path });
+                cmd.arg(if default_path.is_empty() {
+                    "."
+                } else {
+                    default_path
+                });
             }
             if !filter.is_empty() {
                 cmd.arg(filter);
@@ -372,7 +378,10 @@ mod tests {
 
     #[test]
     fn test_desktop_filename() {
-        assert_eq!(desktop_filename("elden-ring", "abc123"), "omikuji.elden-ring-abc123.desktop");
+        assert_eq!(
+            desktop_filename("elden-ring", "abc123"),
+            "omikuji.elden-ring-abc123.desktop"
+        );
     }
 
     #[test]

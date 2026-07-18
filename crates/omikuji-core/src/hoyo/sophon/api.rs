@@ -1,5 +1,4 @@
-
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -62,7 +61,9 @@ pub struct SophonDiffs {
 
 impl SophonDiffs {
     pub fn get_for(&self, matching_field: &str) -> Option<&SophonDiff> {
-        self.manifests.iter().find(|m| m.matching_field == matching_field)
+        self.manifests
+            .iter()
+            .find(|m| m.matching_field == matching_field)
     }
 }
 
@@ -77,7 +78,9 @@ pub struct SophonBuild {
 
 impl SophonBuild {
     pub fn get_for(&self, matching_field: &str) -> Option<&SophonManifestEntry> {
-        self.manifests.iter().find(|m| m.matching_field == matching_field)
+        self.manifests
+            .iter()
+            .find(|m| m.matching_field == matching_field)
     }
 }
 
@@ -163,9 +166,14 @@ async fn get_json<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
         .await
         .map_err(|e| anyhow!("sophon GET {} bad json: {}", url, e))?;
     if resp.retcode != 0 {
-        return Err(anyhow!("sophon api error {}: {}", resp.retcode, resp.message));
+        return Err(anyhow!(
+            "sophon api error {}: {}",
+            resp.retcode,
+            resp.message
+        ));
     }
-    resp.data.ok_or_else(|| anyhow!("sophon api returned no data"))
+    resp.data
+        .ok_or_else(|| anyhow!("sophon api returned no data"))
 }
 
 async fn post_json<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
@@ -179,9 +187,14 @@ async fn post_json<T: serde::de::DeserializeOwned>(url: &str) -> Result<T> {
         .await
         .map_err(|e| anyhow!("sophon POST {} bad json: {}", url, e))?;
     if resp.retcode != 0 {
-        return Err(anyhow!("sophon api error {}: {}", resp.retcode, resp.message));
+        return Err(anyhow!(
+            "sophon api error {}: {}",
+            resp.retcode,
+            resp.message
+        ));
     }
-    resp.data.ok_or_else(|| anyhow!("sophon api returned no data"))
+    resp.data
+        .ok_or_else(|| anyhow!("sophon api returned no data"))
 }
 
 pub async fn fetch_game_branches(edition: HoyoEdition) -> Result<GameBranches> {

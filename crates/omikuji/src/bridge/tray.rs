@@ -15,41 +15,51 @@ static TRAY_THREAD: OnceLock<cxx_qt::CxxQtThread<qobject::TrayBridge>> = OnceLoc
 #[unsafe(no_mangle)]
 pub extern "C" fn omikuji_tray_event_show() {
     if let Some(thread) = TRAY_THREAD.get() {
-        thread.queue(|mut qobject| {
-            qobject.as_mut().show_window_requested();
-        }).ok();
+        thread
+            .queue(|mut qobject| {
+                qobject.as_mut().show_window_requested();
+            })
+            .ok();
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn omikuji_tray_event_quit() {
     if let Some(thread) = TRAY_THREAD.get() {
-        thread.queue(|mut qobject| {
-            qobject.as_mut().quit_requested();
-        }).ok();
+        thread
+            .queue(|mut qobject| {
+                qobject.as_mut().quit_requested();
+            })
+            .ok();
     }
 }
 
 #[unsafe(no_mangle)]
 pub extern "C" fn omikuji_tray_event_toggle() {
     if let Some(thread) = TRAY_THREAD.get() {
-        thread.queue(|mut qobject| {
-            qobject.as_mut().toggle_window_requested();
-        }).ok();
+        thread
+            .queue(|mut qobject| {
+                qobject.as_mut().toggle_window_requested();
+            })
+            .ok();
     }
 }
 
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn omikuji_tray_event_game(id: *const std::os::raw::c_char, len: usize) {
-    if id.is_null() || len == 0 { return; }
+    if id.is_null() || len == 0 {
+        return;
+    }
     let bytes = unsafe { std::slice::from_raw_parts(id as *const u8, len) };
     if let Ok(s) = std::str::from_utf8(bytes) {
         let s = s.to_string();
         if let Some(thread) = TRAY_THREAD.get() {
-            thread.queue(move |mut qobject| {
-                let qid = cxx_qt_lib::QString::from(&s);
-                qobject.as_mut().launch_game_requested(&qid);
-            }).ok();
+            thread
+                .queue(move |mut qobject| {
+                    let qid = cxx_qt_lib::QString::from(&s);
+                    qobject.as_mut().launch_game_requested(&qid);
+                })
+                .ok();
         }
     }
 }
@@ -124,17 +134,23 @@ impl qobject::TrayBridge {
     fn set_recent_games(self: Pin<&mut Self>, json: &cxx_qt_lib::QString) {
         let s = json.to_string();
         let bytes = s.as_bytes();
-        unsafe { omikuji_tray_set_recent(bytes.as_ptr(), bytes.len()); }
+        unsafe {
+            omikuji_tray_set_recent(bytes.as_ptr(), bytes.len());
+        }
     }
 
     fn set_icon(self: Pin<&mut Self>, path: &cxx_qt_lib::QString) {
         let s = path.to_string();
         if let Ok(c) = CString::new(s) {
-            unsafe { omikuji_tray_set_icon(c.as_ptr()); }
+            unsafe {
+                omikuji_tray_set_icon(c.as_ptr());
+            }
         }
     }
 
     fn quit_app(&self) {
-        unsafe { omikuji_app_quit(); }
+        unsafe {
+            omikuji_app_quit();
+        }
     }
 }

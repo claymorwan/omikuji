@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -6,7 +6,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 
 use super::proc_tree::shutdown;
-use super::{check_control, report_progress, ControlSignal, DownloadEntry, DownloadSource};
+use super::{ControlSignal, DownloadEntry, DownloadSource, check_control, report_progress};
 
 pub struct GogdlSource;
 
@@ -58,7 +58,11 @@ impl DownloadSource for GogdlSource {
         let final_root = resolve_install_root(&entry.install_path, &entry.app_id)
             .unwrap_or_else(|| entry.install_path.clone());
         let bytes = dir_size_bytes(&final_root);
-        tracing::info!("install recorded at {} ({} MB on disk)", final_root.display(), bytes / (1024 * 1024));
+        tracing::info!(
+            "install recorded at {} ({} MB on disk)",
+            final_root.display(),
+            bytes / (1024 * 1024)
+        );
         if !dir_has_info_marker(&final_root, &entry.app_id) {
             log_dir_listing(&entry.install_path);
         }
@@ -74,12 +78,7 @@ impl DownloadSource for GogdlSource {
         } else {
             tracing::info!("resolved exe for {}: {}", entry.app_id, exe);
         }
-        if let Err(e) = crate::gog::record_install(
-            &entry.app_id,
-            &final_root,
-            &exe,
-            &title,
-        ) {
+        if let Err(e) = crate::gog::record_install(&entry.app_id, &final_root, &exe, &title) {
             tracing::error!("failed to record install: {}", e);
         }
 
@@ -96,9 +95,7 @@ impl DownloadSource for GogdlSource {
 }
 
 fn spawn_download(gogdl: &std::path::Path, entry: &DownloadEntry) -> Result<Child> {
-    let support_dir = crate::gog::gog_dir()
-        .join("support")
-        .join(&entry.app_id);
+    let support_dir = crate::gog::gog_dir().join("support").join(&entry.app_id);
     let _ = std::fs::create_dir_all(&support_dir);
 
     let auth = crate::gog::gog_auth_path();
@@ -193,7 +190,10 @@ async fn run_with_progress(mut child: Child, entry: &DownloadEntry) -> Result<()
 
 // called post-install when we couldnt find a goggame-*.info marker, to see where gogdl actually dropped teh game. only logs top leevel + immediate subdirs.
 fn log_dir_listing(dir: &std::path::Path) {
-    tracing::debug!("listing {} (diagnostic - no info marker found):", dir.display());
+    tracing::debug!(
+        "listing {} (diagnostic - no info marker found):",
+        dir.display()
+    );
     let Ok(entries) = std::fs::read_dir(dir) else {
         tracing::debug!("  <unreadable>");
         return;
@@ -205,12 +205,11 @@ fn log_dir_listing(dir: &std::path::Path) {
             e.file_name().to_string_lossy(),
             if is_dir { "/" } else { "" }
         );
-        if is_dir
-            && let Ok(sub) = std::fs::read_dir(e.path()) {
-                for se in sub.flatten().take(8) {
-                    tracing::debug!("    {}", se.file_name().to_string_lossy());
-                }
+        if is_dir && let Ok(sub) = std::fs::read_dir(e.path()) {
+            for se in sub.flatten().take(8) {
+                tracing::debug!("    {}", se.file_name().to_string_lossy());
             }
+        }
     }
 }
 
@@ -287,9 +286,10 @@ pub fn find_game_exe_pub(install_path: &std::path::Path, app_id: &str) -> Option
 fn find_game_exe(install_path: &std::path::Path, app_id: &str) -> Option<String> {
     let preferred = install_path.join(format!("goggame-{}.info", app_id));
     if preferred.exists()
-        && let Some(exe) = parse_info_for_exe(&preferred) {
-            return Some(exe);
-        }
+        && let Some(exe) = parse_info_for_exe(&preferred)
+    {
+        return Some(exe);
+    }
 
     if let Some(exe) = scan_dir_for_info(install_path) {
         return Some(exe);
@@ -297,10 +297,11 @@ fn find_game_exe(install_path: &std::path::Path, app_id: &str) -> Option<String>
     if let Ok(entries) = std::fs::read_dir(install_path) {
         for e in entries.flatten() {
             if e.file_type().ok().map(|t| t.is_dir()).unwrap_or(false)
-                && let Some(exe) = scan_dir_for_info(&e.path()) {
-                    let sub = e.file_name().to_string_lossy().to_string();
-                    return Some(format!("{}/{}", sub, exe));
-                }
+                && let Some(exe) = scan_dir_for_info(&e.path())
+            {
+                let sub = e.file_name().to_string_lossy().to_string();
+                return Some(format!("{}/{}", sub, exe));
+            }
         }
     }
 
@@ -309,10 +310,11 @@ fn find_game_exe(install_path: &std::path::Path, app_id: &str) -> Option<String>
         std::fs::read_dir(install_path).ok().and_then(|entries| {
             for e in entries.flatten() {
                 if e.file_type().ok().map(|t| t.is_dir()).unwrap_or(false)
-                    && let Some(exe) = scan_dir_for_exe(&e.path()) {
-                        let sub = e.file_name().to_string_lossy().to_string();
-                        return Some(format!("{}/{}", sub, exe));
-                    }
+                    && let Some(exe) = scan_dir_for_exe(&e.path())
+                {
+                    let sub = e.file_name().to_string_lossy().to_string();
+                    return Some(format!("{}/{}", sub, exe));
+                }
             }
             None
         })
@@ -323,10 +325,12 @@ fn scan_dir_for_info(dir: &std::path::Path) -> Option<String> {
     let entries = std::fs::read_dir(dir).ok()?;
     for e in entries.flatten() {
         let name = e.file_name().to_string_lossy().to_string();
-        if name.starts_with("goggame-") && name.ends_with(".info")
-            && let Some(exe) = parse_info_for_exe(&e.path()) {
-                return Some(exe);
-            }
+        if name.starts_with("goggame-")
+            && name.ends_with(".info")
+            && let Some(exe) = parse_info_for_exe(&e.path())
+        {
+            return Some(exe);
+        }
     }
     None
 }
@@ -340,7 +344,11 @@ fn parse_info_for_exe(info_path: &std::path::Path) -> Option<String> {
     let primary = tasks
         .iter()
         .find(|t| t.get("isPrimary").and_then(|b| b.as_bool()) == Some(true))
-        .or_else(|| tasks.iter().find(|t| t.get("type").and_then(|x| x.as_str()) == Some("FileTask")))
+        .or_else(|| {
+            tasks
+                .iter()
+                .find(|t| t.get("type").and_then(|x| x.as_str()) == Some("FileTask"))
+        })
         .or_else(|| tasks.first())?;
 
     if primary.get("type").and_then(|t| t.as_str()) == Some("URLTask") {
@@ -414,10 +422,11 @@ fn parse_into(
         changed = true;
     }
     if let Some(t) = parse_total(line)
-        && *total_bytes == 0 {
-            *total_bytes = t;
-            changed = true;
-        }
+        && *total_bytes == 0
+    {
+        *total_bytes = t;
+        changed = true;
+    }
 
     changed
 }
@@ -429,7 +438,10 @@ fn parse_progress_line(line: &str) -> Option<(f64, u64, u64)> {
         .find(|c: char| !c.is_ascii_digit() && c != '.')
         .unwrap_or(rest.len());
     let pct: f64 = rest[..first_end].parse().ok()?;
-    let after = rest[first_end..].trim_start().trim_start_matches('%').trim_start();
+    let after = rest[first_end..]
+        .trim_start()
+        .trim_start_matches('%')
+        .trim_start();
     if let Some(slash_idx) = after.find('/') {
         let dl_str: String = after[..slash_idx]
             .chars()
@@ -541,6 +553,9 @@ mod tests {
     #[test]
     fn parse_downloaded_mib() {
         let line = "Downloaded: 512.5 MiB";
-        assert_eq!(parse_downloaded(line), Some((512.5 * 1024.0 * 1024.0) as u64));
+        assert_eq!(
+            parse_downloaded(line),
+            Some((512.5 * 1024.0 * 1024.0) as u64)
+        );
     }
 }

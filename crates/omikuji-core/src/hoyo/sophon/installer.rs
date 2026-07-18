@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use futures_util::stream::{self, StreamExt};
 use md5::{Digest, Md5};
 use std::collections::HashSet;
@@ -6,8 +6,8 @@ use std::fs::OpenOptions;
 use std::io::Write;
 use std::os::unix::fs::FileExt;
 use std::path::{Path, PathBuf};
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
 
 use super::api::{DownloadInfo, SophonManifestEntry};
 use super::manifest::fetch_build_manifest;
@@ -52,7 +52,11 @@ pub async fn apply_install(
     let session_bytes = Arc::new(AtomicU64::new(0));
     let on_progress = Arc::new(on_progress);
     let is_cancelled = Arc::new(is_cancelled);
-    let client = Arc::new(reqwest::Client::builder().build().map_err(|e| anyhow!("reqwest client: {}", e))?);
+    let client = Arc::new(
+        reqwest::Client::builder()
+            .build()
+            .map_err(|e| anyhow!("reqwest client: {}", e))?,
+    );
 
     on_progress(ProgressReport {
         stage: Stage::Downloading,
@@ -134,7 +138,14 @@ async fn install_one_file(
     {
         let new_done = done_bytes.fetch_add(file.size, Ordering::Relaxed) + file.size;
         let sess = session_bytes.load(Ordering::Relaxed);
-        report(on_progress, file_index, file_total, new_done, total_bytes, sess);
+        report(
+            on_progress,
+            file_index,
+            file_total,
+            new_done,
+            total_bytes,
+            sess,
+        );
         return Ok(());
     }
 
@@ -162,7 +173,14 @@ async fn install_one_file(
         if already_done > 0 {
             let new_done = done_bytes.fetch_add(already_done, Ordering::Relaxed) + already_done;
             let sess = session_bytes.load(Ordering::Relaxed);
-            report(on_progress, file_index, file_total, new_done, total_bytes, sess);
+            report(
+                on_progress,
+                file_index,
+                file_total,
+                new_done,
+                total_bytes,
+                sess,
+            );
         }
     }
 
@@ -230,7 +248,14 @@ async fn install_one_file(
                 let new_session = session_bytes
                     .fetch_add(chunk.chunk_decompressed_size, Ordering::Relaxed)
                     + chunk.chunk_decompressed_size;
-                report(&on_progress, file_index, file_total, new_done, total_bytes, new_session);
+                report(
+                    &on_progress,
+                    file_index,
+                    file_total,
+                    new_done,
+                    total_bytes,
+                    new_session,
+                );
                 Ok(())
             }
         }))
@@ -309,10 +334,7 @@ fn sanitize_rel(name: &str) -> PathBuf {
 
 fn parts_path(dest: &Path) -> PathBuf {
     let mut p = dest.to_path_buf();
-    let mut name = p
-        .file_name()
-        .map(|n| n.to_os_string())
-        .unwrap_or_default();
+    let mut name = p.file_name().map(|n| n.to_os_string()).unwrap_or_default();
     name.push(".omikuji-parts");
     p.set_file_name(name);
     p

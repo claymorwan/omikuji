@@ -4,7 +4,12 @@ use tokio::process::Child;
 
 pub(super) fn start_time(pid: u32) -> Option<u64> {
     let stat = std::fs::read_to_string(format!("/proc/{}/stat", pid)).ok()?;
-    stat.rsplit(')').next()?.split_whitespace().nth(19)?.parse().ok()
+    stat.rsplit(')')
+        .next()?
+        .split_whitespace()
+        .nth(19)?
+        .parse()
+        .ok()
 }
 
 pub(super) fn descendants(root: u32, out: &mut HashSet<u32>) {
@@ -20,7 +25,10 @@ pub(super) fn descendants(root: u32, out: &mut HashSet<u32>) {
             let Ok(kids) = std::fs::read_to_string(task.path().join("children")) else {
                 continue;
             };
-            queue.extend(kids.split_whitespace().filter_map(|s| s.parse::<u32>().ok()));
+            queue.extend(
+                kids.split_whitespace()
+                    .filter_map(|s| s.parse::<u32>().ok()),
+            );
         }
     }
 }
@@ -32,7 +40,9 @@ fn shm_mapped_paths(pids: &HashSet<u32>) -> HashSet<PathBuf> {
             continue;
         };
         for line in maps.lines() {
-            let Some(idx) = line.find("/dev/shm/") else { continue };
+            let Some(idx) = line.find("/dev/shm/") else {
+                continue;
+            };
             let path = &line[idx..];
             if path.ends_with(" (deleted)") {
                 continue;
@@ -52,7 +62,7 @@ fn shm_mapped_paths(pids: &HashSet<u32>) -> HashSet<PathBuf> {
 // killpg also takes out python's resource_tracker, so the 2GiB shm segment would leak on every cancel; snapshot the mappings while /proc is alive, unlink leftovers after.
 // ALso i got this because after testing the new download page look i cancelled so many downloads my whole session crashed, and everytime i tried to come back in it'd crash again until reboot. You gotta love some stuff man.
 pub(super) async fn shutdown(child: &mut Child) {
-    use nix::sys::signal::{kill, killpg, Signal};
+    use nix::sys::signal::{Signal, kill, killpg};
     use nix::unistd::Pid;
 
     let pid = child.id();

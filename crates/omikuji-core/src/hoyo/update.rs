@@ -1,9 +1,8 @@
-
 use anyhow::Result;
 
 use super::sophon;
-use super::{installed_version, HoyoEdition};
-use crate::gachas::manifest::{load_all, GachaManifest};
+use super::{HoyoEdition, installed_version};
+use crate::gachas::manifest::{GachaManifest, load_all};
 use crate::gachas::strategies::HOYO_SOPHON;
 
 #[derive(Debug, Clone)]
@@ -76,14 +75,22 @@ pub async fn check_all_installed() -> Vec<UpdateInfo> {
     let mut out = Vec::new();
     for manifest in hoyo_manifests() {
         for edition in manifest.editions {
-            let Some(edition_enum) = parse_edition(&edition.id) else { continue };
+            let Some(edition_enum) = parse_edition(&edition.id) else {
+                continue;
+            };
             if installed_version(&manifest.game_slug, edition_enum).is_none() {
                 continue;
             }
-            let Some(biz_id) = edition.strategy_config.get("biz_id").and_then(|v| v.as_str()) else {
+            let Some(biz_id) = edition
+                .strategy_config
+                .get("biz_id")
+                .and_then(|v| v.as_str())
+            else {
                 continue;
             };
-            if let Ok(Some(info)) = check_for_update(biz_id, &manifest.game_slug, edition_enum).await {
+            if let Ok(Some(info)) =
+                check_for_update(biz_id, &manifest.game_slug, edition_enum).await
+            {
                 out.push(info);
             }
         }
@@ -111,10 +118,14 @@ pub async fn check_by_app_id(app_id: &str) -> Option<UpdateInfo> {
 }
 
 pub fn update_app_id(info: &UpdateInfo) -> String {
-    format!("{}:{}", info.game_slug, match info.edition {
-        HoyoEdition::Global => "global",
-        HoyoEdition::China => "china",
-    })
+    format!(
+        "{}:{}",
+        info.game_slug,
+        match info.edition {
+            HoyoEdition::Global => "global",
+            HoyoEdition::China => "china",
+        }
+    )
 }
 
 pub fn current_version(app_id: &str) -> Option<String> {

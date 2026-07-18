@@ -15,7 +15,10 @@ fn collect_icons() -> (Vec<String>, Vec<String>) {
             continue;
         }
         let filename = p.file_name().unwrap().to_string_lossy().into_owned();
-        let stem = filename.strip_suffix(&format!(".{ext}")).unwrap().to_string();
+        let stem = filename
+            .strip_suffix(&format!(".{ext}"))
+            .unwrap()
+            .to_string();
         paths.push(format!("qml/icons/{filename}"));
         if ext == "svg" && stem != "app" && !stem.ends_with("_fill") {
             names.push(stem);
@@ -99,17 +102,19 @@ fn compile_shaders() -> Vec<String> {
             }
         }
 
-        out_paths.push(format!(
-            "qml/components/consolemode/shaders/{qsb_filename}"
-        ));
+        out_paths.push(format!("qml/components/consolemode/shaders/{qsb_filename}"));
     }
     out_paths.sort();
     out_paths
 }
 
 fn needs_recompile(source: &Path, qsb: &Path) -> bool {
-    let Ok(qsb_meta) = fs::metadata(qsb) else { return true };
-    let Ok(src_meta) = fs::metadata(source) else { return true };
+    let Ok(qsb_meta) = fs::metadata(qsb) else {
+        return true;
+    };
+    let Ok(src_meta) = fs::metadata(source) else {
+        return true;
+    };
     match (qsb_meta.modified(), src_meta.modified()) {
         (Ok(q), Ok(s)) => s > q,
         _ => true,
@@ -281,144 +286,138 @@ fn main() {
     );
 
     // holy fucking shit this is wild actually
-    let builder = CxxQtBuilder::new_qml_module(
-        QmlModule::new("omikuji")
-            .qml_files([
-                "qml/Main.qml",
-                "qml/ConsoleMode.qml",
-                "qml/RunExe.qml",
-                // root
-                "qml/components/Theme.qml",
-
-                "qml/components/consolemode/ConsoleCard.qml",
-                "qml/components/consolemode/ConsoleCardRow.qml",
-                "qml/components/consolemode/ConsoleHintBar.qml",
-                "qml/components/consolemode/ConsoleOsk.qml",
-                "qml/components/consolemode/ConsolePlayButton.qml",
-                "qml/components/consolemode/ConsoleSettingsDialog.qml",
-                "qml/components/consolemode/ConsoleTopBar.qml",
-
-                "qml/components/categories/CategoriesController.qml",
-                // dialogs
-                "qml/components/dialogs/ArchiveManageDialog.qml",
-                "qml/components/dialogs/ArchiveSourceDialog.qml",
-                "qml/components/dialogs/CategoryEditDialog.qml",
-                "qml/components/dialogs/ConfirmDialog.qml",
-                "qml/components/popups/ContextMenu.qml",
-                "qml/components/dialogs/DialogCard.qml",
-                "qml/components/dialogs/DefaultsApplyDialog.qml",
-                "qml/components/store/EpicInstallDialog.qml",
-                "qml/components/store/GachaInstallDialog.qml",
-                "qml/components/dialogs/GameCategoriesDialog.qml",
-                "qml/components/store/GogInstallDialog.qml",
-                "qml/components/dialogs/ErrorDialog.qml",
-                "qml/components/dialogs/PrefixCreateDialog.qml",
-                "qml/components/dialogs/PrefixDetailDialog.qml",
-                "qml/components/dialogs/PrefixPrepDialog.qml",
-                "qml/components/dialogs/RunCommandDialog.qml",
-                "qml/components/dialogs/TemplateVarsDialog.qml",
-                "qml/components/dialogs/FontSizesDialog.qml",
-                "qml/components/controls/ExpansionHint.qml",
-                "qml/components/dialogs/LogRulesDialog.qml",
-                "qml/components/dialogs/GameLogsWindow.qml",
-                "qml/components/dialogs/MigrationDialog.qml",
-                "qml/components/dialogs/SetsDialog.qml",
-                "qml/components/dialogs/ScriptBrowserDialog.qml",
-                "qml/components/dialogs/ScriptRunDialog.qml",
-                "qml/components/dialogs/UpdateAvailableDialog.qml",
-                // downloads
-                "qml/components/downloads/BannerThumb.qml",
-                "qml/components/downloads/CapsLabel.qml",
-                "qml/components/downloads/ComponentRow.qml",
-                "qml/components/downloads/DownloadsPage.qml",
-                "qml/components/downloads/HeroCard.qml",
-                "qml/components/downloads/KindChip.qml",
-                "qml/components/downloads/MiniRow.qml",
-                // library
-                "qml/components/library/FloatingBar.qml",
-                "qml/components/library/GameCard.qml",
-                "qml/components/library/GameContextMenu.qml",
-                "qml/components/library/GameGrid.qml",
-                "qml/components/library/GameIcon.qml",
-                // navigation
-                "qml/components/navigation/NavTabs.qml",
-                "qml/components/navigation/Sidebar.qml",
-                "qml/components/navigation/SubNavRail.qml",
-                "qml/components/navigation/TopBar.qml",
-                // pages
-                "qml/components/modals/AddGamePage.qml",
-                "qml/components/modals/GameSettingsPage.qml",
-                "qml/components/modals/GlobalSettingsPage.qml",
-                "qml/components/modals/SettingsModal.qml",
-                // settings
-                "qml/components/settings/ArchiveSourceRow.qml",
-                "qml/components/settings/SettingsRow.qml",
-                "qml/components/settings/SettingsSection.qml",
-                "qml/components/settings/TabEpic.qml",
-                "qml/components/settings/TabGameInfo.qml",
-                "qml/components/settings/TabGlobalAbout.qml",
-                "qml/components/settings/TabGlobalComponents.qml",
-                "qml/components/settings/TabGlobalDefaults.qml",
-                "qml/components/settings/TabGlobalOfuda.qml",
-                "qml/components/settings/TabGlobalPresets.qml",
-                "qml/components/settings/TabGlobalTheme.qml",
-                "qml/components/settings/TabGlobalUi.qml",
-                "qml/components/settings/TabRunnerOptions.qml",
-                "qml/components/settings/TabSystem.qml",
-                // store
-                "qml/components/store/EpicLibrary.qml",
-                "qml/components/store/StoreGameDetails.qml",
-                "qml/components/store/GachaLibrary.qml",
-                "qml/components/store/GogLibrary.qml",
-                "qml/components/store/EpicController.qml",
-                "qml/components/store/GachaController.qml",
-                "qml/components/store/GogController.qml",
-                "qml/components/store/StorePanel.qml",
-                "qml/components/store/SteamLibrary.qml",
-                "qml/components/store/StoreLoginOverlay.qml",
-                // widgets
-                "qml/components/cards/BaseCard.qml",
-                "qml/components/cards/CardGrid.qml",
-                "qml/components/popups/DisplayOptionsPopup.qml",
-                "qml/components/controls/FieldSurface.qml",
-                "qml/components/controls/IconButton.qml",
-                "qml/components/popups/IconPickerPopup.qml",
-                "qml/components/controls/KeyValueTable.qml",
-                "qml/components/controls/LabeledSwitch.qml",
-                "qml/components/primitives/LoadingDots.qml",
-                "qml/components/controls/M3Button.qml",
-                "qml/components/controls/M3Dropdown.qml",
-                "qml/components/controls/M3FileField.qml",
-                "qml/components/controls/M3Slider.qml",
-                "qml/components/controls/M3SpinBox.qml",
-                "qml/components/controls/M3Switch.qml",
-                "qml/components/controls/M3TextField.qml",
-                "qml/components/controls/OutputLog.qml",
-                "qml/components/controls/PlayButton.qml",
-                "qml/components/controls/ResizeGrips.qml",
-                "qml/components/controls/ThemedLogHighlighter.qml",
-                "qml/components/popups/PopupSurface.qml",
-                "qml/components/popups/PopupZoom.qml",
-                "qml/components/cards/StatusBadge.qml",
-                "qml/components/cards/StoreCardAction.qml",
-                "qml/components/primitives/Sparkline.qml",
-                "qml/components/primitives/Squircle.qml",
-                "qml/components/primitives/SvgIcon.qml",
-                "qml/components/primitives/ThinScrollBar.qml",
-                "qml/components/popups/ToastManager.qml",
-                "qml/components/popups/Tooltip.qml",
-                "qml/components/primitives/WavyProgressBar.qml",
-            ])
-    )
+    let builder = CxxQtBuilder::new_qml_module(QmlModule::new("omikuji").qml_files([
+        "qml/Main.qml",
+        "qml/ConsoleMode.qml",
+        "qml/RunExe.qml",
+        // root
+        "qml/components/Theme.qml",
+        "qml/components/consolemode/ConsoleCard.qml",
+        "qml/components/consolemode/ConsoleCardRow.qml",
+        "qml/components/consolemode/ConsoleHintBar.qml",
+        "qml/components/consolemode/ConsoleOsk.qml",
+        "qml/components/consolemode/ConsolePlayButton.qml",
+        "qml/components/consolemode/ConsoleSettingsDialog.qml",
+        "qml/components/consolemode/ConsoleTopBar.qml",
+        "qml/components/categories/CategoriesController.qml",
+        // dialogs
+        "qml/components/dialogs/ArchiveManageDialog.qml",
+        "qml/components/dialogs/ArchiveSourceDialog.qml",
+        "qml/components/dialogs/CategoryEditDialog.qml",
+        "qml/components/dialogs/ConfirmDialog.qml",
+        "qml/components/popups/ContextMenu.qml",
+        "qml/components/dialogs/DialogCard.qml",
+        "qml/components/dialogs/DefaultsApplyDialog.qml",
+        "qml/components/store/EpicInstallDialog.qml",
+        "qml/components/store/GachaInstallDialog.qml",
+        "qml/components/dialogs/GameCategoriesDialog.qml",
+        "qml/components/store/GogInstallDialog.qml",
+        "qml/components/dialogs/ErrorDialog.qml",
+        "qml/components/dialogs/PrefixCreateDialog.qml",
+        "qml/components/dialogs/PrefixDetailDialog.qml",
+        "qml/components/dialogs/PrefixPrepDialog.qml",
+        "qml/components/dialogs/RunCommandDialog.qml",
+        "qml/components/dialogs/TemplateVarsDialog.qml",
+        "qml/components/dialogs/FontSizesDialog.qml",
+        "qml/components/controls/ExpansionHint.qml",
+        "qml/components/dialogs/LogRulesDialog.qml",
+        "qml/components/dialogs/GameLogsWindow.qml",
+        "qml/components/dialogs/MigrationDialog.qml",
+        "qml/components/dialogs/SetsDialog.qml",
+        "qml/components/dialogs/ScriptBrowserDialog.qml",
+        "qml/components/dialogs/ScriptRunDialog.qml",
+        "qml/components/dialogs/UpdateAvailableDialog.qml",
+        // downloads
+        "qml/components/downloads/BannerThumb.qml",
+        "qml/components/downloads/CapsLabel.qml",
+        "qml/components/downloads/ComponentRow.qml",
+        "qml/components/downloads/DownloadsPage.qml",
+        "qml/components/downloads/HeroCard.qml",
+        "qml/components/downloads/KindChip.qml",
+        "qml/components/downloads/MiniRow.qml",
+        // library
+        "qml/components/library/FloatingBar.qml",
+        "qml/components/library/GameCard.qml",
+        "qml/components/library/GameContextMenu.qml",
+        "qml/components/library/GameGrid.qml",
+        "qml/components/library/GameIcon.qml",
+        // navigation
+        "qml/components/navigation/NavTabs.qml",
+        "qml/components/navigation/Sidebar.qml",
+        "qml/components/navigation/SubNavRail.qml",
+        "qml/components/navigation/TopBar.qml",
+        // pages
+        "qml/components/modals/AddGamePage.qml",
+        "qml/components/modals/GameSettingsPage.qml",
+        "qml/components/modals/GlobalSettingsPage.qml",
+        "qml/components/modals/SettingsModal.qml",
+        // settings
+        "qml/components/settings/ArchiveSourceRow.qml",
+        "qml/components/settings/SettingsRow.qml",
+        "qml/components/settings/SettingsSection.qml",
+        "qml/components/settings/TabEpic.qml",
+        "qml/components/settings/TabGameInfo.qml",
+        "qml/components/settings/TabGlobalAbout.qml",
+        "qml/components/settings/TabGlobalComponents.qml",
+        "qml/components/settings/TabGlobalDefaults.qml",
+        "qml/components/settings/TabGlobalOfuda.qml",
+        "qml/components/settings/TabGlobalPresets.qml",
+        "qml/components/settings/TabGlobalTheme.qml",
+        "qml/components/settings/TabGlobalUi.qml",
+        "qml/components/settings/TabRunnerOptions.qml",
+        "qml/components/settings/TabSystem.qml",
+        // store
+        "qml/components/store/EpicLibrary.qml",
+        "qml/components/store/StoreGameDetails.qml",
+        "qml/components/store/GachaLibrary.qml",
+        "qml/components/store/GogLibrary.qml",
+        "qml/components/store/EpicController.qml",
+        "qml/components/store/GachaController.qml",
+        "qml/components/store/GogController.qml",
+        "qml/components/store/StorePanel.qml",
+        "qml/components/store/SteamLibrary.qml",
+        "qml/components/store/StoreLoginOverlay.qml",
+        // widgets
+        "qml/components/cards/BaseCard.qml",
+        "qml/components/cards/CardGrid.qml",
+        "qml/components/popups/DisplayOptionsPopup.qml",
+        "qml/components/controls/FieldSurface.qml",
+        "qml/components/controls/IconButton.qml",
+        "qml/components/popups/IconPickerPopup.qml",
+        "qml/components/controls/KeyValueTable.qml",
+        "qml/components/controls/LabeledSwitch.qml",
+        "qml/components/primitives/LoadingDots.qml",
+        "qml/components/controls/M3Button.qml",
+        "qml/components/controls/M3Dropdown.qml",
+        "qml/components/controls/M3FileField.qml",
+        "qml/components/controls/M3Slider.qml",
+        "qml/components/controls/M3SpinBox.qml",
+        "qml/components/controls/M3Switch.qml",
+        "qml/components/controls/M3TextField.qml",
+        "qml/components/controls/OutputLog.qml",
+        "qml/components/controls/PlayButton.qml",
+        "qml/components/controls/ResizeGrips.qml",
+        "qml/components/controls/ThemedLogHighlighter.qml",
+        "qml/components/popups/PopupSurface.qml",
+        "qml/components/popups/PopupZoom.qml",
+        "qml/components/cards/StatusBadge.qml",
+        "qml/components/cards/StoreCardAction.qml",
+        "qml/components/primitives/Sparkline.qml",
+        "qml/components/primitives/Squircle.qml",
+        "qml/components/primitives/SvgIcon.qml",
+        "qml/components/primitives/ThinScrollBar.qml",
+        "qml/components/popups/ToastManager.qml",
+        "qml/components/popups/Tooltip.qml",
+        "qml/components/primitives/WavyProgressBar.qml",
+    ]))
     .qrc_resources(&qrc_paths)
     .files(staged_bridges)
     .file(ui_settings_bridge)
-    .file(download_model_bridge)
-    ;
+    .file(download_model_bridge);
 
     // link QtSvg, QIcon uses the image plugin system to load SVGs.
     // cxx-qt-build's qt_module("Svg") sets include paths but doesn't always add the shared lib to the runtime link
-    // force it withan explicit rustc directive so libQt6Svg.so ends up in the dependency graph. 
+    // force it withan explicit rustc directive so libQt6Svg.so ends up in the dependency graph.
     // without this, QIcon(path) silently returns an empty icon for .svg files and renders blank
     let builder = builder.qt_module("Svg");
     println!("cargo:rustc-link-lib=Qt6Svg");

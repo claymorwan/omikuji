@@ -35,7 +35,10 @@ pub fn resolve_art(manifest: &GachaManifest, kind: &str) -> String {
         return url;
     }
 
-    let key = format!("{}:{}:{}", manifest.publisher_slug, manifest.game_slug, kind);
+    let key = format!(
+        "{}:{}:{}",
+        manifest.publisher_slug, manifest.game_slug, kind
+    );
     {
         let mut set = in_flight().lock().unwrap();
         if set.contains(&key) {
@@ -77,10 +80,12 @@ pub fn fetch_into_library_cache(
 
     for (gacha_kind, lib_type) in pairs {
         if cached_url(&manifest.publisher_slug, &manifest.game_slug, gacha_kind).is_none()
-            && let Err(e) = fetch_first_match(&manifest.publisher_slug, &manifest.game_slug, gacha_kind) {
-                tracing::error!("{} fetch failed: {}", gacha_kind, e);
-                continue;
-            }
+            && let Err(e) =
+                fetch_first_match(&manifest.publisher_slug, &manifest.game_slug, gacha_kind)
+        {
+            tracing::error!("{} fetch failed: {}", gacha_kind, e);
+            continue;
+        }
 
         let gacha_dir = cache_dir_for(&manifest.publisher_slug, &manifest.game_slug);
         for ext in EXTENSIONS {
@@ -88,10 +93,17 @@ pub fn fetch_into_library_cache(
             if !src.exists() {
                 continue;
             }
-            let dst = library_dir.join(format!("{}_{}.{}", game_id, lib_type.suffix(), lib_type.extension()));
+            let dst = library_dir.join(format!(
+                "{}_{}.{}",
+                game_id,
+                lib_type.suffix(),
+                lib_type.extension()
+            ));
             match std::fs::copy(&src, &dst) {
                 Ok(_) => on_asset(lib_type),
-                Err(e) => tracing::error!("copy {} -> {} failed: {}", src.display(), dst.display(), e),
+                Err(e) => {
+                    tracing::error!("copy {} -> {} failed: {}", src.display(), dst.display(), e)
+                }
             }
             break;
         }

@@ -1,7 +1,7 @@
-use super::{interpolate, InputKind, Script, Step};
+use super::{InputKind, Script, Step, interpolate};
 use crate::library::Game;
 use crate::wine_tools::WineTool;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::io::{BufRead, Read, Write};
@@ -17,7 +17,10 @@ pub fn execute<F: FnMut(&str)>(
     values: &HashMap<String, String>,
     mut on_line: F,
 ) -> Result<ExecOutcome> {
-    let display_name = script.game.as_ref().map_or(&script.script.name, |g| &g.name);
+    let display_name = script
+        .game
+        .as_ref()
+        .map_or(&script.script.name, |g| &g.name);
     let slug = crate::media::slugify(display_name);
     let id = crate::library::generate_id();
 
@@ -31,7 +34,9 @@ pub fn execute<F: FnMut(&str)>(
         }
         None => crate::prefixes_dir().join(format!("{slug}-{id}")),
     };
-    let cache = crate::cache_dir().join("scripts").join(format!("{slug}-{id}"));
+    let cache = crate::cache_dir()
+        .join("scripts")
+        .join(format!("{slug}-{id}"));
     std::fs::create_dir_all(&cache)?;
 
     let mut vars: HashMap<String, String> = crate::template_vars::TemplateVars::global().into_map();
@@ -55,7 +60,10 @@ pub fn execute<F: FnMut(&str)>(
     vars.insert("cache".into(), cache.to_string_lossy().into_owned());
     vars.insert(
         "home".into(),
-        dirs::home_dir().unwrap_or_default().to_string_lossy().into_owned(),
+        dirs::home_dir()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned(),
     );
 
     let wine_version = match script.runner_input() {
@@ -125,7 +133,11 @@ pub fn execute<F: FnMut(&str)>(
                 on_line(&format!("game exe not found at {}", exe.display()));
             }
 
-            let runner = if spec.runner.is_empty() { "wine" } else { &spec.runner };
+            let runner = if spec.runner.is_empty() {
+                "wine"
+            } else {
+                &spec.runner
+            };
             let is_wine = runner == "wine";
             let mut game = Game::with_options(
                 spec.name.clone(),
@@ -139,11 +151,19 @@ pub fn execute<F: FnMut(&str)>(
                 game.launch.env.insert(k.clone(), interpolate(v, &vars)?);
             }
             for (k, v) in &spec.dll_overrides {
-                game.wine.dll_overrides.insert(k.clone(), interpolate(v, &vars)?);
+                game.wine
+                    .dll_overrides
+                    .insert(k.clone(), interpolate(v, &vars)?);
             }
-            ExecOutcome { game: Some(game), exe_found }
+            ExecOutcome {
+                game: Some(game),
+                exe_found,
+            }
         }
-        None => ExecOutcome { game: None, exe_found: true },
+        None => ExecOutcome {
+            game: None,
+            exe_found: true,
+        },
     };
 
     let _ = std::fs::remove_dir_all(&cache);
@@ -201,7 +221,9 @@ const TAR_DECODERS: &[(&str, TarDecoder)] = &[
     (".tar.gz", |r| Ok(Box::new(flate2::read::GzDecoder::new(r)))),
     (".tgz", |r| Ok(Box::new(flate2::read::GzDecoder::new(r)))),
     (".tar.xz", |r| Ok(Box::new(xz2::read::XzDecoder::new(r)))),
-    (".tar.zst", |r| Ok(Box::new(zstd::stream::read::Decoder::new(r)?))),
+    (".tar.zst", |r| {
+        Ok(Box::new(zstd::stream::read::Decoder::new(r)?))
+    }),
     (".tar", |r| Ok(Box::new(r))),
 ];
 
@@ -211,8 +233,8 @@ fn extract_archive(archive: &Path, dest: &Path) -> Result<()> {
         .and_then(|s| s.to_str())
         .unwrap_or_default()
         .to_lowercase();
-    let file = std::fs::File::open(archive)
-        .with_context(|| format!("opening {}", archive.display()))?;
+    let file =
+        std::fs::File::open(archive).with_context(|| format!("opening {}", archive.display()))?;
     let reader = std::io::BufReader::new(file);
     std::fs::create_dir_all(dest)?;
 
@@ -264,7 +286,12 @@ fn download_to<F: FnMut(&str)>(
             && decile > last_decile
         {
             last_decile = decile;
-            on_line(&format!("  {}% ({} / {} MiB)", decile * 10, done >> 20, total >> 20));
+            on_line(&format!(
+                "  {}% ({} / {} MiB)",
+                decile * 10,
+                done >> 20,
+                total >> 20
+            ));
         }
     }
     file.flush()?;

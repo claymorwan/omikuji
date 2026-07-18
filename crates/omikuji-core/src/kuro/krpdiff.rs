@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
@@ -45,14 +45,24 @@ impl Krpdiff {
         parse(&mut f, path.to_path_buf())
     }
 
-    pub fn apply(&self, old_root: &Path, out_root: &Path, mut on_bytes: impl FnMut(u64)) -> Result<()> {
+    pub fn apply(
+        &self,
+        old_root: &Path,
+        out_root: &Path,
+        mut on_bytes: impl FnMut(u64),
+    ) -> Result<()> {
         for fe in &self.old_files {
             let full = old_root.join(&fe.path);
             let actual = std::fs::metadata(&full)
                 .map_err(|e| anyhow!("old file missing {}: {}", full.display(), e))?
                 .len();
             if actual != fe.size {
-                bail!("old file size mismatch {}: expected {}, got {}", full.display(), fe.size, actual);
+                bail!(
+                    "old file size mismatch {}: expected {}, got {}",
+                    full.display(),
+                    fe.size,
+                    actual
+                );
             }
         }
 
@@ -93,7 +103,14 @@ impl Krpdiff {
                 read_pos = read_pos.rem_euclid(sz);
             }
             if c.gap > 0 {
-                pump(&mut *diff, &mut out, &mut rle, c.gap, &mut buf, &mut on_bytes)?;
+                pump(
+                    &mut *diff,
+                    &mut out,
+                    &mut rle,
+                    c.gap,
+                    &mut buf,
+                    &mut on_bytes,
+                )?;
             }
             if c.len > 0 {
                 old.seek_to(read_pos as u64);
@@ -103,11 +120,22 @@ impl Krpdiff {
         }
         let written = out.written();
         if written < self.new_ref_size {
-            pump(&mut *diff, &mut out, &mut rle, self.new_ref_size - written, &mut buf, &mut on_bytes)?;
+            pump(
+                &mut *diff,
+                &mut out,
+                &mut rle,
+                self.new_ref_size - written,
+                &mut buf,
+                &mut on_bytes,
+            )?;
         }
         out.finish()?;
         if out.written() != self.new_ref_size {
-            bail!("patched output size mismatch: expected {}, wrote {}", self.new_ref_size, out.written());
+            bail!(
+                "patched output size mismatch: expected {}, wrote {}",
+                self.new_ref_size,
+                out.written()
+            );
         }
         Ok(())
     }
@@ -200,7 +228,8 @@ impl RleState {
                 self.set_len -= step as u64;
                 i += step;
             } else {
-                let step = (self.copy_len.min((buf.len() - i) as u64)).min(code_buf.len() as u64) as usize;
+                let step =
+                    (self.copy_len.min((buf.len() - i) as u64)).min(code_buf.len() as u64) as usize;
                 self.code.read_exact(&mut code_buf[..step])?;
                 for (b, c) in buf[i..i + step].iter_mut().zip(&code_buf[..step]) {
                     *b = b.wrapping_add(*c);
@@ -227,7 +256,11 @@ impl OldConcat {
             segments.push((File::open(root.join(&fe.path))?, start, fe.size));
             start += fe.size;
         }
-        Ok(Self { segments, pos: 0, idx: 0 })
+        Ok(Self {
+            segments,
+            pos: 0,
+            idx: 0,
+        })
     }
 
     fn seek_to(&mut self, pos: u64) {
@@ -373,21 +406,43 @@ fn parse(f: &mut File, path: PathBuf) -> Result<Krpdiff> {
     let head_comp_size = read_packed(f, 0, None)?;
     let checksum_byte_size = read_packed(f, 0, None)?;
     if same_pair_count != 0 || execute_count != 0 {
-        bail!("unsupported krpdiff features: samePairs={}, executes={}", same_pair_count, execute_count);
+        bail!(
+            "unsupported krpdiff features: samePairs={}, executes={}",
+            same_pair_count,
+            execute_count
+        );
     }
 
     f.seek(SeekFrom::Current(checksum_byte_size as i64 * 4))?;
 
     let head_start = f.stream_position()?;
-    let head_bytes = if head_comp_size > 0 { head_comp_size } else { head_size };
+    let head_bytes = if head_comp_size > 0 {
+        head_comp_size
+    } else {
+        head_size
+    };
     let head = if head_comp_size > 0 {
         let mut dec = zstd::stream::read::Decoder::new(Read::by_ref(f).take(head_comp_size))?;
         dec.set_parameter(zstd::zstd_safe::DParameter::WindowLogMax(31))?;
-        parse_head(&mut dec, old_path_count, new_path_count, old_ref_count, new_ref_count)?
+        parse_head(
+            &mut dec,
+            old_path_count,
+            new_path_count,
+            old_ref_count,
+            new_ref_count,
+        )?
     } else {
-        parse_head(&mut Read::by_ref(f).take(head_size), old_path_count, new_path_count, old_ref_count, new_ref_count)?
+        parse_head(
+            &mut Read::by_ref(f).take(head_size),
+            old_path_count,
+            new_path_count,
+            old_ref_count,
+            new_ref_count,
+        )?
     };
-    f.seek(SeekFrom::Start(head_start + head_bytes + private_extern_size + extern_size))?;
+    f.seek(SeekFrom::Start(
+        head_start + head_bytes + private_extern_size + extern_size,
+    ))?;
 
     let magic13 = read_until(f, b'&', 16)?;
     if magic13 != "HDIFF13" {
@@ -424,11 +479,27 @@ fn parse(f: &mut File, path: PathBuf) -> Result<Krpdiff> {
         new_empty_files: head.new_empty_files,
         old_ref_size,
         new_ref_size,
-        covers_clip: Clip { offset: covers_off, size: cover_size, comp_size: cover_comp_size },
+        covers_clip: Clip {
+            offset: covers_off,
+            size: cover_size,
+            comp_size: cover_comp_size,
+        },
         cover_count,
-        rle_ctrl_clip: Clip { offset: ctrl_off, size: ctrl_size, comp_size: ctrl_comp_size },
-        rle_code_clip: Clip { offset: code_off, size: code_size, comp_size: code_comp_size },
-        diff_clip: Clip { offset: diff_off, size: diff_size, comp_size: diff_comp_size },
+        rle_ctrl_clip: Clip {
+            offset: ctrl_off,
+            size: ctrl_size,
+            comp_size: ctrl_comp_size,
+        },
+        rle_code_clip: Clip {
+            offset: code_off,
+            size: code_size,
+            comp_size: code_comp_size,
+        },
+        diff_clip: Clip {
+            offset: diff_off,
+            size: diff_size,
+            comp_size: diff_comp_size,
+        },
     })
 }
 
@@ -471,17 +542,29 @@ fn parse_head(
 
     let (old_files, _, _) = split_paths(&old_paths, &old_ref_idx, &old_sizes);
     let (new_files, new_dirs, new_empty_files) = split_paths(&new_paths, &new_ref_idx, &new_sizes);
-    Ok(Head { old_files, new_files, new_dirs, new_empty_files })
+    Ok(Head {
+        old_files,
+        new_files,
+        new_dirs,
+        new_empty_files,
+    })
 }
 
-fn split_paths(paths: &[String], ref_idx: &[u64], sizes: &[u64]) -> (Vec<FileEntry>, Vec<String>, Vec<String>) {
+fn split_paths(
+    paths: &[String],
+    ref_idx: &[u64],
+    sizes: &[u64],
+) -> (Vec<FileEntry>, Vec<String>, Vec<String>) {
     let mut files = Vec::with_capacity(ref_idx.len());
     let mut dirs = Vec::new();
     let mut empty_files = Vec::new();
     let mut next_ref = 0usize;
     for (i, path) in paths.iter().enumerate() {
         if next_ref < ref_idx.len() && i as u64 == ref_idx[next_ref] {
-            files.push(FileEntry { path: path.clone(), size: sizes[next_ref] });
+            files.push(FileEntry {
+                path: path.clone(),
+                size: sizes[next_ref],
+            });
             next_ref += 1;
         } else if path.is_empty() || path.ends_with('/') {
             dirs.push(path.clone());

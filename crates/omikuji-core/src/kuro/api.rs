@@ -5,7 +5,7 @@
 // the install source then walks resource[] and dowloads each entry to
 // install_path/{resource.dest} directly. no archive extraction phase.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use serde::Deserialize;
 
 use crate::gachas::manifest::GachaManifest;
@@ -40,7 +40,10 @@ impl ResourceInfo {
     }
 }
 
-pub async fn fetch_resource_info(manifest: &GachaManifest, edition_id: &str) -> Result<ResourceInfo> {
+pub async fn fetch_resource_info(
+    manifest: &GachaManifest,
+    edition_id: &str,
+) -> Result<ResourceInfo> {
     let url = super::index_url_from_manifest(manifest, edition_id)?;
 
     let resp = reqwest::get(&url)
@@ -77,8 +80,10 @@ pub async fn fetch_resource_info(manifest: &GachaManifest, edition_id: &str) -> 
             let cfg = data.default.config.clone().unwrap();
             (
                 cfg.version.unwrap_or_default(),
-                cfg.index_file.ok_or_else(|| anyhow!("nested config missing indexFile"))?,
-                cfg.base_url.ok_or_else(|| anyhow!("nested config missing baseUrl"))?,
+                cfg.index_file
+                    .ok_or_else(|| anyhow!("nested config missing indexFile"))?,
+                cfg.base_url
+                    .ok_or_else(|| anyhow!("nested config missing baseUrl"))?,
                 cfg.size,
                 cfg.un_compress_size,
                 cfg.patch_config
@@ -110,7 +115,11 @@ pub async fn fetch_resource_info(manifest: &GachaManifest, edition_id: &str) -> 
                 .clone()
                 .ok_or_else(|| anyhow!("flat shape missing `resourcesBasePath`"))?;
             // resourcesBasePath omits the trailing slash the downloader needs
-            let base_with_slash = if base.ends_with('/') { base } else { format!("{}/", base) };
+            let base_with_slash = if base.ends_with('/') {
+                base
+            } else {
+                format!("{}/", base)
+            };
             (v, resources, base_with_slash, 0u64, 0u64, Vec::new())
         }
     };
@@ -229,11 +238,14 @@ where
     use serde::de::Error;
     let v = serde_json::Value::deserialize(d)?;
     match v {
-        serde_json::Value::Number(n) => n
-            .as_u64()
-            .ok_or_else(|| D::Error::custom("size not a u64")),
+        serde_json::Value::Number(n) => {
+            n.as_u64().ok_or_else(|| D::Error::custom("size not a u64"))
+        }
         serde_json::Value::String(s) => s.parse().map_err(D::Error::custom),
-        other => Err(D::Error::custom(format!("size unexpected type: {:?}", other))),
+        other => Err(D::Error::custom(format!(
+            "size unexpected type: {:?}",
+            other
+        ))),
     }
 }
 

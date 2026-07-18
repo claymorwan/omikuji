@@ -10,7 +10,9 @@ static COMPONENTS: &[ComponentSpec] = &[
         source: Source::GithubRelease {
             asset_matcher: |n| n.ends_with("-zipapp.tar"),
         },
-        extract: ExtractStrategy::Tar { inner_path: "umu-run" },
+        extract: ExtractStrategy::Tar {
+            inner_path: "umu-run",
+        },
         dest: "umu-run",
         settings_key: SettingsKey::UmuRun,
         trigger: Trigger::Eager,
@@ -20,7 +22,9 @@ static COMPONENTS: &[ComponentSpec] = &[
         source: Source::GithubRelease {
             asset_matcher: |n| n.contains("linux64") && n.ends_with(".zip"),
         },
-        extract: ExtractStrategy::Zip { inner_path: "hpatchz" },
+        extract: ExtractStrategy::Zip {
+            inner_path: "hpatchz",
+        },
         dest: "hpatchz",
         settings_key: SettingsKey::Hpatchz,
         trigger: Trigger::OnDemand,
@@ -50,7 +54,9 @@ static COMPONENTS: &[ComponentSpec] = &[
         source: Source::GithubRelease {
             asset_matcher: |n| n.ends_with(".zip"),
         },
-        extract: ExtractStrategy::ZipAll { dest_subdir: "jadeite" },
+        extract: ExtractStrategy::ZipAll {
+            dest_subdir: "jadeite",
+        },
         dest: "jadeite/jadeite.exe",
         settings_key: SettingsKey::Jadeite,
         trigger: Trigger::OnDemand,

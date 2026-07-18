@@ -15,7 +15,10 @@ use std::io::{self, IsTerminal, Write};
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Cmd>,
-    #[arg(value_name = "FILE", help = "Windows executable to run via a wine runner + prefix picker")]
+    #[arg(
+        value_name = "FILE",
+        help = "Windows executable to run via a wine runner + prefix picker"
+    )]
     pub file: Option<String>,
 }
 

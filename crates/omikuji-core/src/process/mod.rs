@@ -5,8 +5,6 @@ use std::process::Stdio;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ProcessId(pub u64);
 
@@ -16,8 +14,7 @@ fn next_id() -> ProcessId {
     ProcessId(ID_COUNTER.fetch_add(1, std::sync::atomic::Ordering::SeqCst))
 }
 
-#[derive(Debug, Clone)]
-#[derive(Default)]
+#[derive(Debug, Clone, Default)]
 pub enum ProcessState {
     #[default]
     Stopped,
@@ -30,7 +27,6 @@ pub enum ProcessState {
         playtime_secs: u64,
     },
 }
-
 
 #[derive(Debug, Clone)]
 pub struct GameSession {
@@ -59,27 +55,38 @@ impl ProcessManager {
             .ok_or_else(|| anyhow::anyhow!("game not found in library"))?;
 
         if game.is_epic() {
-            let wine_exe = config.env.get("WINE").map(std::path::PathBuf::from).unwrap_or_else(|| std::path::PathBuf::from("wine"));
+            let wine_exe = config
+                .env
+                .get("WINE")
+                .map(std::path::PathBuf::from)
+                .unwrap_or_else(|| std::path::PathBuf::from("wine"));
             let _ = crate::launch::prepare_epic_prefix(&game, &wine_exe, &config.env);
         }
 
         // steam manages its own prefix, skip dll injection for it
         if game.runner.runner_type != "steam"
-            && let Err(e) = crate::dll_packs::inject_all(&game, &config.env) {
-                tracing::warn!("dll pack injection failed: {} (launching anyway)", e);
-            }
+            && let Err(e) = crate::dll_packs::inject_all(&game, &config.env)
+        {
+            tracing::warn!("dll pack injection failed: {} (launching anyway)", e);
+        }
 
         // download saves before the game opens its save files
-        if game.is_epic() && game.source.cloud_saves && !game.source.save_path.is_empty()
-            && let Err(e) = crate::epic::sync_saves_download(&game.source.app_id, &game.source.save_path) {
-                tracing::warn!("cloud save download failed: {} (launching anyway)", e);
-            }
+        if game.is_epic()
+            && game.source.cloud_saves
+            && !game.source.save_path.is_empty()
+            && let Err(e) =
+                crate::epic::sync_saves_download(&game.source.app_id, &game.source.save_path)
+        {
+            tracing::warn!("cloud save download failed: {} (launching anyway)", e);
+        }
 
         // drop stale in-memory log from the previous session before streaming new lines
         crate::game_logs::reset_log(&config.game_id);
 
         // save_game_logs is opt-in; we still run ther reader so the log viewer works
-        let save_to_disk = crate::ui_settings::UiSettings::load().behavior.save_game_logs;
+        let save_to_disk = crate::ui_settings::UiSettings::load()
+            .behavior
+            .save_game_logs;
         let log_path = if save_to_disk {
             tokio::fs::create_dir_all(&self.logs_dir).await.ok();
             self.logs_dir.join(format!(
@@ -89,7 +96,8 @@ impl ProcessManager {
             ))
         } else {
             // placeholder only, never opened
-            self.logs_dir.join(format!("{}_ephemeral.log", config.game_id))
+            self.logs_dir
+                .join(format!("{}_ephemeral.log", config.game_id))
         };
 
         let header = format!(
@@ -116,7 +124,7 @@ impl ProcessManager {
         cmd.stderr(Stdio::piped());
         cmd.stdin(Stdio::null());
 
-        // setsid makes the child the session leader so we can kill the entire tree (wine, proton, umu-run, the actual game) by sid later. 
+        // setsid makes the child the session leader so we can kill the entire tree (wine, proton, umu-run, the actual game) by sid later.
         // steam manages its own lifecycle, breaks with session detachment.
         #[cfg(unix)]
         if game.runner.runner_type != "steam" {
@@ -142,7 +150,11 @@ impl ProcessManager {
         let (log_tx, log_rx) = std::sync::mpsc::channel::<String>();
         {
             let game_id = config.game_id.clone();
-            let log_path_for_writer = if save_to_disk { Some(log_path.clone()) } else { None };
+            let log_path_for_writer = if save_to_disk {
+                Some(log_path.clone())
+            } else {
+                None
+            };
             std::thread::spawn(move || {
                 use std::io::Write;
                 let mut file = log_path_for_writer.as_ref().and_then(|p| {
@@ -218,10 +230,14 @@ impl ProcessManager {
                 }
 
                 // upload only after game has quit and released save files
-                if game.is_epic() && game.source.cloud_saves && !game.source.save_path.is_empty()
-                    && let Err(e) = crate::epic::sync_saves_upload(&game.source.app_id, &game.source.save_path) {
-                        tracing::warn!(pid, "cloud save upload failed: {}", e);
-                    }
+                if game.is_epic()
+                    && game.source.cloud_saves
+                    && !game.source.save_path.is_empty()
+                    && let Err(e) =
+                        crate::epic::sync_saves_upload(&game.source.app_id, &game.source.save_path)
+                {
+                    tracing::warn!(pid, "cloud save upload failed: {}", e);
+                }
             }
 
             let playtime_secs = started_at.elapsed().as_secs();
@@ -237,8 +253,11 @@ impl ProcessManager {
             }
 
             tracing::info!(
-                pid, "game '{}' exited with code {:?}, playtime: {}s",
-                game_id, exit_code, playtime_secs
+                pid,
+                "game '{}' exited with code {:?}, playtime: {}s",
+                game_id,
+                exit_code,
+                playtime_secs
             );
 
             crate::discord::clear();
@@ -254,7 +273,9 @@ impl ProcessManager {
                     .envs(&env)
                     .status();
                 match status {
-                    Ok(s) if !s.success() => tracing::warn!(pid, "post-exit script exited with: {}", s),
+                    Ok(s) if !s.success() => {
+                        tracing::warn!(pid, "post-exit script exited with: {}", s)
+                    }
                     Err(e) => tracing::error!(pid, "post-exit script failed: {}", e),
                     _ => {}
                 }
@@ -263,13 +284,18 @@ impl ProcessManager {
             match crate::library::Library::load_game_by_id(&game_id) {
                 Ok(Some(mut game)) => {
                     game.metadata.playtime += playtime_secs as f64 / 3600.0;
-                    game.metadata.last_played = chrono::Local::now().format("%b %-d, %Y").to_string();
+                    game.metadata.last_played =
+                        chrono::Local::now().format("%b %-d, %Y").to_string();
                     if let Err(e) = crate::library::Library::save_game_static(&game) {
                         tracing::error!(pid, "failed to save playtime: {}", e);
                     }
                 }
                 Ok(None) => {
-                    tracing::warn!(pid, "game '{}' not found on disk, skipping playtime save", game_id);
+                    tracing::warn!(
+                        pid,
+                        "game '{}' not found on disk, skipping playtime save",
+                        game_id
+                    );
                 }
                 Err(e) => {
                     tracing::error!(pid, "failed to load game for playtime save: {}", e);
@@ -287,7 +313,6 @@ impl ProcessManager {
             .find(|s| s.game_id == game_id && matches!(s.state, ProcessState::Running { .. }))
             .cloned()
     }
-
 }
 
 impl Default for ProcessManager {
@@ -441,7 +466,7 @@ pub fn stop_game(game_id: &str) -> bool {
 
     #[cfg(unix)]
     {
-        use nix::sys::signal::{kill, Signal};
+        use nix::sys::signal::{Signal, kill};
         use nix::unistd::Pid;
 
         if is_steam {
@@ -477,7 +502,11 @@ pub fn stop_game(game_id: &str) -> bool {
             }
 
             let kill_pids = gather();
-            tracing::warn!("game '{}' ignored SIGTERM, SIGKILLing {} survivors", game_id, kill_pids.len());
+            tracing::warn!(
+                "game '{}' ignored SIGTERM, SIGKILLing {} survivors",
+                game_id,
+                kill_pids.len()
+            );
             for p in &kill_pids {
                 let _ = kill(Pid::from_raw(*p as i32), Signal::SIGKILL);
             }
@@ -499,19 +528,33 @@ fn session_pids(sid: u32) -> Vec<u32> {
     let my_pid = std::process::id();
     let mut pids = Vec::new();
 
-    let Ok(entries) = std::fs::read_dir("/proc") else { return pids; };
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return pids;
+    };
 
     for entry in entries.flatten() {
         let name = entry.file_name();
-        let Some(name_str) = name.to_str() else { continue; };
-        let Ok(pid) = name_str.parse::<u32>() else { continue; };
-        if pid == my_pid { continue; }
+        let Some(name_str) = name.to_str() else {
+            continue;
+        };
+        let Ok(pid) = name_str.parse::<u32>() else {
+            continue;
+        };
+        if pid == my_pid {
+            continue;
+        }
 
-        let Ok(stat) = std::fs::read_to_string(entry.path().join("stat")) else { continue; };
-        let Some(rparen) = stat.rfind(')') else { continue; };
+        let Ok(stat) = std::fs::read_to_string(entry.path().join("stat")) else {
+            continue;
+        };
+        let Some(rparen) = stat.rfind(')') else {
+            continue;
+        };
         let fields: Vec<&str> = stat[rparen + 1..].split_whitespace().collect();
         // after ')': state[0], ppid[1], pgrp[2], session[3]
-        if fields.len() < 4 { continue; }
+        if fields.len() < 4 {
+            continue;
+        }
         if fields[3].parse::<u32>().ok() == Some(sid) {
             pids.push(pid);
         }
@@ -525,15 +568,25 @@ fn marker_pids(game_id: &str) -> Vec<u32> {
     let needle = format!("OMIKUJI_GAME_ID={game_id}");
     let mut pids = Vec::new();
 
-    let Ok(entries) = std::fs::read_dir("/proc") else { return pids; };
+    let Ok(entries) = std::fs::read_dir("/proc") else {
+        return pids;
+    };
 
     for entry in entries.flatten() {
         let name = entry.file_name();
-        let Some(name_str) = name.to_str() else { continue; };
-        let Ok(pid) = name_str.parse::<u32>() else { continue; };
-        if pid == my_pid { continue; }
+        let Some(name_str) = name.to_str() else {
+            continue;
+        };
+        let Ok(pid) = name_str.parse::<u32>() else {
+            continue;
+        };
+        if pid == my_pid {
+            continue;
+        }
 
-        let Ok(environ) = std::fs::read(entry.path().join("environ")) else { continue; };
+        let Ok(environ) = std::fs::read(entry.path().join("environ")) else {
+            continue;
+        };
         if environ.split(|b| *b == 0).any(|e| e == needle.as_bytes()) {
             pids.push(pid);
         }
@@ -543,10 +596,14 @@ fn marker_pids(game_id: &str) -> Vec<u32> {
 
 // i mean the launcher isnt even meant at all outside linux but well, do it now and forget it forever
 #[cfg(not(target_os = "linux"))]
-fn session_pids(_sid: u32) -> Vec<u32> { Vec::new() }
+fn session_pids(_sid: u32) -> Vec<u32> {
+    Vec::new()
+}
 
 #[cfg(not(target_os = "linux"))]
-fn marker_pids(_game_id: &str) -> Vec<u32> { Vec::new() }
+fn marker_pids(_game_id: &str) -> Vec<u32> {
+    Vec::new()
+}
 
 fn session_has_live_process(sid: u32) -> bool {
     !session_pids(sid).is_empty()

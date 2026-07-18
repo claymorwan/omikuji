@@ -2,7 +2,7 @@
 // v1 wraps the existing per-source modules; the translation to manifest-only calls can happen
 // later without changing the bridge or ui surface.
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use std::path::{Path, PathBuf};
 
 use super::manifest::GachaManifest;
@@ -60,7 +60,12 @@ pub fn build_app_id(manifest: &GachaManifest, edition_id: &str, voices: &[String
     if voices.is_empty() {
         format!("{}:{}", manifest.app_id_prefix, edition_id)
     } else {
-        format!("{}:{}:{}", manifest.app_id_prefix, edition_id, voices.join(","))
+        format!(
+            "{}:{}:{}",
+            manifest.app_id_prefix,
+            edition_id,
+            voices.join(",")
+        )
     }
 }
 
@@ -104,7 +109,9 @@ pub fn install_root_for(app_id: &str, exe: &Path) -> Option<PathBuf> {
     if !exe.ends_with(rel) {
         return None;
     }
-    exe.ancestors().nth(rel.components().count()).map(Path::to_path_buf)
+    exe.ancestors()
+        .nth(rel.components().count())
+        .map(Path::to_path_buf)
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -126,7 +133,11 @@ pub fn build_install_request(
         source,
         app_id,
         display_name,
-        banner_url: if banner_url.is_empty() { None } else { Some(banner_url) },
+        banner_url: if banner_url.is_empty() {
+            None
+        } else {
+            Some(banner_url)
+        },
         install_path,
         prefix_path,
         runner_version,
@@ -154,7 +165,11 @@ pub fn build_update_request(
         source,
         app_id,
         display_name,
-        banner_url: if banner_url.is_empty() { None } else { Some(banner_url) },
+        banner_url: if banner_url.is_empty() {
+            None
+        } else {
+            Some(banner_url)
+        },
         install_path,
         prefix_path,
         runner_version,
@@ -221,7 +236,9 @@ pub async fn check_for_update(
         HOYO_SOPHON => {
             let edition = hoyo_edition_from_id(edition_id).ok()?;
             let biz_id = hoyo_biz_id(manifest, edition_id).ok()?;
-            let info = crate::hoyo::update::check_for_update(&biz_id, &manifest.game_slug, edition).await.ok()??;
+            let info = crate::hoyo::update::check_for_update(&biz_id, &manifest.game_slug, edition)
+                .await
+                .ok()??;
             Some(GachaUpdateInfo {
                 manifest_id: manifest.id.clone(),
                 edition_id: edition_id.to_string(),
@@ -233,7 +250,9 @@ pub async fn check_for_update(
             })
         }
         GRYPHLINE_RESOURCE_PATCH => {
-            let info = crate::endfield::update::check_for_update(manifest, edition_id).await.ok()??;
+            let info = crate::endfield::update::check_for_update(manifest, edition_id)
+                .await
+                .ok()??;
             Some(GachaUpdateInfo {
                 manifest_id: manifest.id.clone(),
                 edition_id: edition_id.to_string(),
@@ -287,7 +306,9 @@ pub fn read_install_version(
         GRYPHLINE_RESOURCE_PATCH => {
             crate::endfield::read_install_version(install_path, &edition.data_folder)
         }
-        KURO_RESOURCE_INDEX => crate::kuro::read_install_version(install_path, &edition.data_folder),
+        KURO_RESOURCE_INDEX => {
+            crate::kuro::read_install_version(install_path, &edition.data_folder)
+        }
         _ => None,
     }
 }
@@ -364,7 +385,12 @@ fn hoyo_edition_from_id(id: &str) -> Result<crate::hoyo::HoyoEdition> {
 fn hoyo_voices_from_ids(ids: &[String]) -> Vec<crate::hoyo::VoiceLocale> {
     use crate::hoyo::VoiceLocale;
     ids.iter()
-        .filter_map(|id| VoiceLocale::all().iter().find(|v| v.api_name() == id).copied())
+        .filter_map(|id| {
+            VoiceLocale::all()
+                .iter()
+                .find(|v| v.api_name() == id)
+                .copied()
+        })
         .collect()
 }
 
@@ -376,5 +402,11 @@ fn hoyo_biz_id(manifest: &GachaManifest, edition_id: &str) -> Result<String> {
         .and_then(|e| e.strategy_config.get("biz_id"))
         .and_then(|v| v.as_str())
         .map(|s| s.to_string())
-        .ok_or_else(|| anyhow!("no biz_id in manifest {} for edition {}", manifest.id, edition_id))
+        .ok_or_else(|| {
+            anyhow!(
+                "no biz_id in manifest {} for edition {}",
+                manifest.id,
+                edition_id
+            )
+        })
 }

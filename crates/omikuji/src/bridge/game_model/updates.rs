@@ -98,15 +98,25 @@ impl super::qobject::GameModel {
             runner_version: String,
         }
 
-        let candidates: Vec<ScanCandidate> = self.library.game.iter()
-            .filter(|g| (g.source.kind == "epic" || g.source.kind == "gog") && !g.source.app_id.is_empty())
+        let candidates: Vec<ScanCandidate> = self
+            .library
+            .game
+            .iter()
+            .filter(|g| {
+                (g.source.kind == "epic" || g.source.kind == "gog") && !g.source.app_id.is_empty()
+            })
             .map(|g| {
                 let install_path = std::path::PathBuf::from(&g.metadata.exe)
                     .parent()
                     .map(|p| p.to_path_buf())
                     .unwrap_or_else(|| std::path::PathBuf::from(&g.metadata.exe));
-                let resolved = media::resolve_image(&g.metadata.id, &g.metadata.banner, &MediaType::Banner);
-                let banner_url = if resolved.is_empty() { None } else { Some(resolved) };
+                let resolved =
+                    media::resolve_image(&g.metadata.id, &g.metadata.banner, &MediaType::Banner);
+                let banner_url = if resolved.is_empty() {
+                    None
+                } else {
+                    Some(resolved)
+                };
                 let prefix_path = if g.wine.prefix.is_empty() {
                     None
                 } else {
@@ -135,11 +145,12 @@ impl super::qobject::GameModel {
                 let _ = omikuji_core::epic::updates::refresh_assets_cache();
             }
 
-            let existing_app_ids: std::collections::HashSet<String> = omikuji_core::downloads::manager()
-                .list()
-                .iter()
-                .map(|e| e.app_id.clone())
-                .collect();
+            let existing_app_ids: std::collections::HashSet<String> =
+                omikuji_core::downloads::manager()
+                    .list()
+                    .iter()
+                    .map(|e| e.app_id.clone())
+                    .collect();
 
             let mut epic_count: i32 = 0;
             let mut gog_count: i32 = 0;
@@ -151,8 +162,10 @@ impl super::qobject::GameModel {
                 let from_version = match candidate.source.as_str() {
                     "epic" => omikuji_core::epic::updates::find_update_for(&candidate.app_id)
                         .map(|i| i.from_version),
-                    "gog" => omikuji_core::gog::updates::blocking_check_gog_update(&candidate.app_id)
-                        .map(|i| i.from_version),
+                    "gog" => {
+                        omikuji_core::gog::updates::blocking_check_gog_update(&candidate.app_id)
+                            .map(|i| i.from_version)
+                    }
                     _ => None,
                 };
                 let Some(from_version) = from_version else {
@@ -206,13 +219,33 @@ impl super::qobject::GameModel {
             };
             resolved
         } else if game.source.kind == "epic" {
-            let resolved = media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
-            ("epic".to_string(), if resolved.is_empty() { None } else { Some(resolved) })
+            let resolved =
+                media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
+            (
+                "epic".to_string(),
+                if resolved.is_empty() {
+                    None
+                } else {
+                    Some(resolved)
+                },
+            )
         } else if game.source.kind == "gog" {
-            let resolved = media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
-            ("gog".to_string(), if resolved.is_empty() { None } else { Some(resolved) })
+            let resolved =
+                media::resolve_image(&game.metadata.id, &game.metadata.banner, &MediaType::Banner);
+            (
+                "gog".to_string(),
+                if resolved.is_empty() {
+                    None
+                } else {
+                    Some(resolved)
+                },
+            )
         } else {
-            tracing::error!("unsupported source.kind '{}' for game '{}'", game.source.kind, gid);
+            tracing::error!(
+                "unsupported source.kind '{}' for game '{}'",
+                game.source.kind,
+                gid
+            );
             return QString::from("");
         };
 
@@ -294,7 +327,14 @@ fn resolve_gacha_source(app_id: &str) -> Option<(String, Option<String>)> {
         }
     };
     let poster = omikuji_core::gachas::strategies::resolve_poster(&manifest);
-    Some((src, if poster.is_empty() { None } else { Some(poster) }))
+    Some((
+        src,
+        if poster.is_empty() {
+            None
+        } else {
+            Some(poster)
+        },
+    ))
 }
 
 fn build_download_request(

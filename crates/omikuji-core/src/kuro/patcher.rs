@@ -1,17 +1,17 @@
-use anyhow::{anyhow, bail, Result};
+use anyhow::{Result, anyhow, bail};
 use futures_util::StreamExt;
 use md5::{Digest, Md5};
 use std::collections::HashSet;
 use std::io::Read;
 use std::path::Path;
-use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
+use std::sync::atomic::AtomicU64;
 use std::time::Instant;
 
 use super::api::{self, PatchConfig, ResourceFile, ResourceInfo};
 use super::krpdiff::Krpdiff;
-use super::source::{download_one, sanitize_rel, PARALLEL_FILES};
-use crate::downloads::{check_control, set_status, ControlSignal, DownloadEntry, DownloadStatus};
+use super::source::{PARALLEL_FILES, download_one, sanitize_rel};
+use crate::downloads::{ControlSignal, DownloadEntry, DownloadStatus, check_control, set_status};
 
 pub(super) async fn run_patch_update(
     entry: &DownloadEntry,
@@ -82,10 +82,16 @@ pub(super) async fn run_patch_update(
             let install_root = install_root.clone();
             let out_root = out_root.clone();
             let dst_files = group.dst_files.clone();
-            tokio::task::spawn_blocking(move || apply_group(&diff_path, &install_root, &out_root, &dst_files))
+            tokio::task::spawn_blocking(move || {
+                apply_group(&diff_path, &install_root, &out_root, &dst_files)
+            })
         };
         if let Err(e) = apply.await? {
-            tracing::warn!("krpdiff group {} failed, its files fall back to full download: {}", group.dest, e);
+            tracing::warn!(
+                "krpdiff group {} failed, its files fall back to full download: {}",
+                group.dest,
+                e
+            );
             for f in &group.dst_files {
                 let _ = std::fs::remove_file(out_root.join(sanitize_rel(&f.dest)));
             }
@@ -101,7 +107,8 @@ pub(super) async fn run_patch_update(
         }
         let rel = sanitize_rel(&f.dest);
         let in_out = matches!(std::fs::metadata(out_root.join(&rel)), Ok(m) if m.len() == f.size);
-        let in_place = matches!(std::fs::metadata(install_root.join(&rel)), Ok(m) if m.len() == f.size);
+        let in_place =
+            matches!(std::fs::metadata(install_root.join(&rel)), Ok(m) if m.len() == f.size);
         if !in_out && !in_place {
             fallback.push(f.clone());
         }
@@ -113,7 +120,16 @@ pub(super) async fn run_patch_update(
             if check_control(&entry.id) != ControlSignal::None {
                 return Ok(false);
             }
-            download_one(&entry.id, f, &info.base_url, &out_root, &downloaded, total, start).await?;
+            download_one(
+                &entry.id,
+                f,
+                &info.base_url,
+                &out_root,
+                &downloaded,
+                total,
+                start,
+            )
+            .await?;
         }
         set_status(&entry.id, DownloadStatus::Patching);
     }
@@ -146,7 +162,12 @@ pub(super) async fn run_patch_update(
     Ok(true)
 }
 
-fn apply_group(diff: &Path, old_root: &Path, out_root: &Path, dst_files: &[ResourceFile]) -> Result<()> {
+fn apply_group(
+    diff: &Path,
+    old_root: &Path,
+    out_root: &Path,
+    dst_files: &[ResourceFile],
+) -> Result<()> {
     let kr = Krpdiff::open(diff)?;
     kr.apply(old_root, out_root, |_| {})?;
     for f in dst_files {
@@ -155,7 +176,12 @@ fn apply_group(diff: &Path, old_root: &Path, out_root: &Path, dst_files: &[Resou
             .map_err(|e| anyhow!("patched output missing {}: {}", f.dest, e))?
             .len();
         if size != f.size {
-            bail!("patched output {} size mismatch: expected {}, got {}", f.dest, f.size, size);
+            bail!(
+                "patched output {} size mismatch: expected {}, got {}",
+                f.dest,
+                f.size,
+                size
+            );
         }
         if !f.md5.is_empty() && file_md5(&path)? != f.md5.to_lowercase() {
             bail!("patched output {} md5 mismatch", f.dest);

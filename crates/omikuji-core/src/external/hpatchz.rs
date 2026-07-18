@@ -45,8 +45,6 @@ pub fn patch(file: &Path, patch: &Path, output: &Path) -> Result<()> {
         Ok(())
     } else {
         let err = String::from_utf8_lossy(&out.stderr);
-        Err(Error::other(
-            format!("hpatchz failed: {}", err.trim()),
-        ))
+        Err(Error::other(format!("hpatchz failed: {}", err.trim())))
     }
 }

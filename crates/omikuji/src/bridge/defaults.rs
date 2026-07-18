@@ -92,7 +92,11 @@ impl qobject::DefaultsBridge {
         cxx_qt_lib::QString::from(&json)
     }
 
-    fn update_field(mut self: Pin<&mut Self>, key: &cxx_qt_lib::QString, value: &cxx_qt_lib::QString) -> bool {
+    fn update_field(
+        mut self: Pin<&mut Self>,
+        key: &cxx_qt_lib::QString,
+        value: &cxx_qt_lib::QString,
+    ) -> bool {
         let k = key.to_string();
         let v = value.to_string();
         let d = &mut self.as_mut().rust_mut().get_mut().data;
@@ -156,13 +160,19 @@ impl qobject::DefaultsBridge {
 
 macro_rules! defaults_get {
     (str, $m:ident, $key:literal, $v:expr, $base:expr) => {
-        $m.insert(QString::from($key), QVariant::from(&QString::from(&*$v.clone().unwrap_or($base))));
+        $m.insert(
+            QString::from($key),
+            QVariant::from(&QString::from(&*$v.clone().unwrap_or($base))),
+        );
     };
     (bool, $m:ident, $key:literal, $v:expr, $base:expr) => {
         $m.insert(QString::from($key), QVariant::from(&$v.unwrap_or($base)));
     };
     (int, $m:ident, $key:literal, $v:expr, $base:expr) => {
-        $m.insert(QString::from($key), QVariant::from(&($v.unwrap_or($base) as i32)));
+        $m.insert(
+            QString::from($key),
+            QVariant::from(&($v.unwrap_or($base) as i32)),
+        );
     };
     (json, $m:ident, $key:literal, $v:expr, $base:expr) => {
         if let Ok(json) = serde_json::to_string(&$v) {

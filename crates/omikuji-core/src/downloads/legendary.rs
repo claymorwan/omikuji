@@ -1,7 +1,7 @@
 // epic games installs via the legendary cli
 // https://github.com/derrod/legendary
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use std::path::PathBuf;
 use std::process::Stdio;
@@ -9,7 +9,7 @@ use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::{Child, Command};
 
 use super::proc_tree::shutdown;
-use super::{check_control, report_progress, ControlSignal, DownloadEntry, DownloadSource};
+use super::{ControlSignal, DownloadEntry, DownloadSource, check_control, report_progress};
 
 pub struct LegendarySource;
 
@@ -58,16 +58,20 @@ impl DownloadSource for LegendarySource {
         let base_path_str = base_path.to_string_lossy().to_string();
 
         if let Some(info) = crate::epic::find_installed_info(&entry.app_id)
-            && !info.install_path.exists() {
-                tracing::warn!("stale installed.json entry for {} - clearing before reinstall", entry.app_id);
-                let _ = Command::new(&legendary)
-                    .arg("-y")
-                    .arg("uninstall")
-                    .arg(&entry.app_id)
-                    .arg("--keep-files")
-                    .output()
-                    .await;
-            }
+            && !info.install_path.exists()
+        {
+            tracing::warn!(
+                "stale installed.json entry for {} - clearing before reinstall",
+                entry.app_id
+            );
+            let _ = Command::new(&legendary)
+                .arg("-y")
+                .arg("uninstall")
+                .arg(&entry.app_id)
+                .arg("--keep-files")
+                .output()
+                .await;
+        }
 
         if let Err(e) = std::fs::create_dir_all(&entry.install_path) {
             return Err(anyhow!(
@@ -152,16 +156,17 @@ async fn run_with_progress(mut child: Child, entry: &DownloadEntry) -> Result<()
     let mut control_tick = tokio::time::interval(std::time::Duration::from_millis(250));
     control_tick.tick().await;
 
-    let adjusted = |pct: f64, dl: u64, total: u64, reusable: u64, speed: u64| -> (f64, u64, u64, u64) {
-        if reusable > 0 && total > 0 {
-            let base = reusable as f64 / total as f64;
-            let adj_pct = (base + (1.0 - base) * pct / 100.0) * 100.0;
-            let adj_dl = (adj_pct / 100.0 * total as f64) as u64;
-            (adj_pct, adj_dl, total, speed)
-        } else {
-            (pct, dl, total, speed)
-        }
-    };
+    let adjusted =
+        |pct: f64, dl: u64, total: u64, reusable: u64, speed: u64| -> (f64, u64, u64, u64) {
+            if reusable > 0 && total > 0 {
+                let base = reusable as f64 / total as f64;
+                let adj_pct = (base + (1.0 - base) * pct / 100.0) * 100.0;
+                let adj_dl = (adj_pct / 100.0 * total as f64) as u64;
+                (adj_pct, adj_dl, total, speed)
+            } else {
+                (pct, dl, total, speed)
+            }
+        };
 
     loop {
         tokio::select! {
@@ -226,10 +231,12 @@ fn parse_into(
     let mut changed = false;
 
     if let Some(total) = parse_total_size(line)
-        && total > 0 && *total_bytes == 0 {
-            *total_bytes = total;
-            changed = true;
-        }
+        && total > 0
+        && *total_bytes == 0
+    {
+        *total_bytes = total;
+        changed = true;
+    }
 
     if let Some(p) = parse_percent(line) {
         *pct = p;
@@ -288,7 +295,12 @@ fn parse_percent(line: &str) -> Option<f64> {
 
 // first match wins (raw rate)
 fn parse_speed(line: &str) -> Option<u64> {
-    for (unit, mult) in &[("MiB/s", 1024.0 * 1024.0), ("MB/s", 1_000_000.0), ("KiB/s", 1024.0), ("KB/s", 1000.0)] {
+    for (unit, mult) in &[
+        ("MiB/s", 1024.0 * 1024.0),
+        ("MB/s", 1_000_000.0),
+        ("KiB/s", 1024.0),
+        ("KB/s", 1000.0),
+    ] {
         if let Some(idx) = line.find(unit) {
             let prefix = line[..idx].trim_end();
             let num_start = prefix
@@ -322,14 +334,23 @@ fn parse_downloaded(line: &str) -> Option<(u64, u64)> {
 
 fn unit_multiplier(s: &str) -> Option<f64> {
     // longest prefix first so "GiB" beats "B"
-    if s.starts_with("GiB") { Some(1024.0 * 1024.0 * 1024.0) }
-    else if s.starts_with("MiB") { Some(1024.0 * 1024.0) }
-    else if s.starts_with("KiB") { Some(1024.0) }
-    else if s.starts_with("GB") { Some(1_000_000_000.0) }
-    else if s.starts_with("MB") { Some(1_000_000.0) }
-    else if s.starts_with("KB") { Some(1000.0) }
-    else if s.starts_with('B') { Some(1.0) }
-    else { None }
+    if s.starts_with("GiB") {
+        Some(1024.0 * 1024.0 * 1024.0)
+    } else if s.starts_with("MiB") {
+        Some(1024.0 * 1024.0)
+    } else if s.starts_with("KiB") {
+        Some(1024.0)
+    } else if s.starts_with("GB") {
+        Some(1_000_000_000.0)
+    } else if s.starts_with("MB") {
+        Some(1_000_000.0)
+    } else if s.starts_with("KB") {
+        Some(1000.0)
+    } else if s.starts_with('B') {
+        Some(1.0)
+    } else {
+        None
+    }
 }
 
 fn unit_multiplier_from_text(s: &str) -> Option<f64> {
@@ -351,7 +372,6 @@ fn parse_size(s: &str) -> Option<u64> {
     let mult = unit_multiplier(rest)?;
     Some((num * mult) as u64)
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -387,7 +407,8 @@ mod tests {
 
     #[test]
     fn parse_reusable_size_on_resume() {
-        let line = "[cli] INFO: Reusable size: 0.00 MiB (chunks) / 3882.77 MiB (unchanged / skipped)";
+        let line =
+            "[cli] INFO: Reusable size: 0.00 MiB (chunks) / 3882.77 MiB (unchanged / skipped)";
         let mut reusable: u64 = 0;
         parse_reusable(line, &mut reusable);
         assert_eq!(reusable, (3882.77 * 1024.0 * 1024.0) as u64);
@@ -395,7 +416,8 @@ mod tests {
 
     #[test]
     fn parse_reusable_size_both_parts() {
-        let line = "[cli] INFO: Reusable size: 512.00 MiB (chunks) / 1024.00 MiB (unchanged / skipped)";
+        let line =
+            "[cli] INFO: Reusable size: 512.00 MiB (chunks) / 1024.00 MiB (unchanged / skipped)";
         let mut reusable: u64 = 0;
         parse_reusable(line, &mut reusable);
         assert_eq!(reusable, (512.0 + 1024.0) as u64 * 1024 * 1024);

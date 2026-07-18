@@ -161,8 +161,8 @@ impl super::qobject::GameModel {
         prefix_path: &QString,
     ) -> QString {
         use omikuji_core::library::{
-            GraphicsConfig, LaunchConfig, Metadata, RunnerConfig, SourceConfig,
-            SystemConfig, WineConfig,
+            GraphicsConfig, LaunchConfig, Metadata, RunnerConfig, SourceConfig, SystemConfig,
+            WineConfig,
         };
 
         let mid = manifest_id.to_string();
@@ -183,9 +183,12 @@ impl super::qobject::GameModel {
         };
         let app_id = omikuji_core::gachas::strategies::build_app_id(&manifest, &eid, &[]);
 
-        if self.library.game.iter().any(|g| {
-            g.source.kind == "gacha" && g.source.app_id == app_id
-        }) {
+        if self
+            .library
+            .game
+            .iter()
+            .any(|g| g.source.kind == "gacha" && g.source.app_id == app_id)
+        {
             tracing::info!("already in library: {}", app_id);
             return QString::default();
         }
@@ -228,7 +231,8 @@ impl super::qobject::GameModel {
             return QString::default();
         }
 
-        let tools = omikuji_core::components::gacha_tools(&manifest.publisher_slug, &manifest.launch_patch);
+        let tools =
+            omikuji_core::components::gacha_tools(&manifest.publisher_slug, &manifest.launch_patch);
         if !tools.is_empty() {
             tokio::spawn(async move {
                 let _ = omikuji_core::components::ensure(&tools).await;
@@ -253,12 +257,17 @@ impl super::qobject::GameModel {
             }
             tracing::info!(
                 "detected version {} for {}/{} {}",
-                version, manifest.publisher_slug, manifest.game_slug, edition.id
+                version,
+                manifest.publisher_slug,
+                manifest.game_slug,
+                edition.id
             );
         } else {
             tracing::warn!(
                 "couldn't detect version on disk for {}/{} {}, update check skipped until next install",
-                manifest.publisher_slug, manifest.game_slug, edition.id
+                manifest.publisher_slug,
+                manifest.game_slug,
+                edition.id
             );
         }
 
@@ -276,10 +285,7 @@ impl super::qobject::GameModel {
 
         self.as_mut().insert_game_sorted(game);
 
-        tracing::info!(
-            "imported '{}' ({}) as id '{}'",
-            display_s, app_id, game_id
-        );
+        tracing::info!("imported '{}' ({}) as id '{}'", display_s, app_id, game_id);
         QString::from(&game_id)
     }
 }

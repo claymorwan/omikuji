@@ -1,13 +1,13 @@
 use cxx_qt::{CxxQtType, Threading};
 use cxx_qt_lib::{QByteArray, QModelIndex, QString, QVariant};
+use lazy_static::lazy_static;
+use omikuji_core::downloads::{self, DownloadRequest};
+use omikuji_core::epic::{EpicGame, EpicStore};
 use std::collections::HashSet;
 use std::path::PathBuf;
 use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use lazy_static::lazy_static;
-use omikuji_core::epic::{EpicStore, EpicGame};
-use omikuji_core::downloads::{self, DownloadRequest};
 
 lazy_static! {
     static ref EPIC_STORE: Arc<Mutex<EpicStore>> = Arc::new(Mutex::new(EpicStore::new()));
@@ -28,8 +28,7 @@ pub mod qobject {
         include!("cxx-qt-lib/qbytearray.h");
         type QByteArray = cxx_qt_lib::QByteArray;
         include!("cxx-qt-lib/qhash.h");
-        type QHash_i32_QByteArray =
-            cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
+        type QHash_i32_QByteArray = cxx_qt_lib::QHash<cxx_qt_lib::QHashPair_i32_QByteArray>;
         include!("cxx-qt-lib/qmap.h");
         type QMap_QString_QVariant = cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant>;
     }
@@ -157,9 +156,18 @@ impl qobject::EpicModel {
         roles.insert_clone(&(EpicRoles::Banner as i32), &QByteArray::from("banner"));
         roles.insert_clone(&(EpicRoles::Coverart as i32), &QByteArray::from("coverart"));
         roles.insert_clone(&(EpicRoles::Icon as i32), &QByteArray::from("icon"));
-        roles.insert_clone(&(EpicRoles::IsInstalled as i32), &QByteArray::from("isInstalled"));
-        roles.insert_clone(&(EpicRoles::HasLibraryEntry as i32), &QByteArray::from("hasLibraryEntry"));
-        roles.insert_clone(&(EpicRoles::InstallPath as i32), &QByteArray::from("installPath"));
+        roles.insert_clone(
+            &(EpicRoles::IsInstalled as i32),
+            &QByteArray::from("isInstalled"),
+        );
+        roles.insert_clone(
+            &(EpicRoles::HasLibraryEntry as i32),
+            &QByteArray::from("hasLibraryEntry"),
+        );
+        roles.insert_clone(
+            &(EpicRoles::InstallPath as i32),
+            &QByteArray::from("installPath"),
+        );
         roles
     }
 
@@ -174,9 +182,15 @@ impl qobject::EpicModel {
         match role {
             r if r == EpicRoles::AppName as i32 => QVariant::from(&QString::from(&game.app_name)),
             r if r == EpicRoles::Title as i32 => QVariant::from(&QString::from(&game.title)),
-            r if r == EpicRoles::Banner as i32 => QVariant::from(&QString::from(game.banner.as_deref().unwrap_or(""))),
-            r if r == EpicRoles::Coverart as i32 => QVariant::from(&QString::from(game.coverart.as_deref().unwrap_or(""))),
-            r if r == EpicRoles::Icon as i32 => QVariant::from(&QString::from(game.icon.as_deref().unwrap_or(""))),
+            r if r == EpicRoles::Banner as i32 => {
+                QVariant::from(&QString::from(game.banner.as_deref().unwrap_or("")))
+            }
+            r if r == EpicRoles::Coverart as i32 => {
+                QVariant::from(&QString::from(game.coverart.as_deref().unwrap_or("")))
+            }
+            r if r == EpicRoles::Icon as i32 => {
+                QVariant::from(&QString::from(game.icon.as_deref().unwrap_or("")))
+            }
             r if r == EpicRoles::IsInstalled as i32 => QVariant::from(&game.is_installed),
             r if r == EpicRoles::HasLibraryEntry as i32 => {
                 QVariant::from(&self.rust().imported.contains(&game.app_name))
@@ -315,8 +329,8 @@ impl qobject::EpicModel {
                     .unwrap_or_default();
 
                     let _ = qt_thread.queue(move |mut obj: Pin<&mut qobject::EpicModel>| {
-                        let unchanged = obj.as_ref().games == games
-                            && obj.as_ref().imported == imported;
+                        let unchanged =
+                            obj.as_ref().games == games && obj.as_ref().imported == imported;
                         if !unchanged {
                             obj.as_mut().begin_reset_model();
                             let rust = obj.as_mut().rust_mut().get_mut();
@@ -351,10 +365,7 @@ impl qobject::EpicModel {
             return QString::default();
         };
 
-        let banner_url = game
-            .coverart
-            .clone()
-            .or(game.banner.clone());
+        let banner_url = game.coverart.clone().or(game.banner.clone());
 
         let prefix = prefix_path.to_string();
 
@@ -364,7 +375,11 @@ impl qobject::EpicModel {
             display_name: game.title.clone(),
             banner_url,
             install_path: PathBuf::from(install_path.to_string()),
-            prefix_path: if prefix.is_empty() { None } else { Some(PathBuf::from(prefix)) },
+            prefix_path: if prefix.is_empty() {
+                None
+            } else {
+                Some(PathBuf::from(prefix))
+            },
             runner_version: runner_version.to_string(),
             temp_dir: None,
             kind: omikuji_core::downloads::DownloadKind::Install,
@@ -376,17 +391,40 @@ impl qobject::EpicModel {
         QString::from(&id)
     }
 
-    pub fn get_game_at(&self, index: i32) -> cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant> {
+    pub fn get_game_at(
+        &self,
+        index: i32,
+    ) -> cxx_qt_lib::QMap<cxx_qt_lib::QMapPair_QString_QVariant> {
         let mut m = cxx_qt_lib::QMap::<cxx_qt_lib::QMapPair_QString_QVariant>::default();
         let i = index as usize;
-        let Some(g) = self.rust().games.get(i) else { return m };
+        let Some(g) = self.rust().games.get(i) else {
+            return m;
+        };
 
-        m.insert(QString::from("appName"), QVariant::from(&QString::from(&g.app_name)));
-        m.insert(QString::from("title"), QVariant::from(&QString::from(&g.title)));
-        m.insert(QString::from("banner"), QVariant::from(&QString::from(g.banner.as_deref().unwrap_or(""))));
-        m.insert(QString::from("coverart"), QVariant::from(&QString::from(g.coverart.as_deref().unwrap_or(""))));
-        m.insert(QString::from("icon"), QVariant::from(&QString::from(g.icon.as_deref().unwrap_or(""))));
-        m.insert(QString::from("isInstalled"), QVariant::from(&g.is_installed));
+        m.insert(
+            QString::from("appName"),
+            QVariant::from(&QString::from(&g.app_name)),
+        );
+        m.insert(
+            QString::from("title"),
+            QVariant::from(&QString::from(&g.title)),
+        );
+        m.insert(
+            QString::from("banner"),
+            QVariant::from(&QString::from(g.banner.as_deref().unwrap_or(""))),
+        );
+        m.insert(
+            QString::from("coverart"),
+            QVariant::from(&QString::from(g.coverart.as_deref().unwrap_or(""))),
+        );
+        m.insert(
+            QString::from("icon"),
+            QVariant::from(&QString::from(g.icon.as_deref().unwrap_or(""))),
+        );
+        m.insert(
+            QString::from("isInstalled"),
+            QVariant::from(&g.is_installed),
+        );
         m.insert(
             QString::from("hasLibraryEntry"),
             QVariant::from(&self.rust().imported.contains(&g.app_name)),
@@ -396,7 +434,10 @@ impl qobject::EpicModel {
             .as_ref()
             .map(|p| p.to_string_lossy().to_string())
             .unwrap_or_default();
-        m.insert(QString::from("installPath"), QVariant::from(&QString::from(&install_path)));
+        m.insert(
+            QString::from("installPath"),
+            QVariant::from(&QString::from(&install_path)),
+        );
         m
     }
 }

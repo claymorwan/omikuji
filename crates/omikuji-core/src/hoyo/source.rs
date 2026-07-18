@@ -2,12 +2,12 @@
 // voice packs encoded in runner_version as comma-separated locale names:
 // "en-us,ja-jp" (empty = no voice packs, just game files)
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use async_trait::async_trait;
 use futures_util::StreamExt;
 use std::path::Path;
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::sophon;
 use super::{HoyoEdition, VoiceLocale};
@@ -18,7 +18,10 @@ struct ParsedHoyoApp {
     display_name: String,
     edition: HoyoEdition,
 }
-use crate::downloads::{check_control, report_progress, set_status, ControlSignal, DownloadEntry, DownloadKind, DownloadSource, DownloadStatus};
+use crate::downloads::{
+    ControlSignal, DownloadEntry, DownloadKind, DownloadSource, DownloadStatus, check_control,
+    report_progress, set_status,
+};
 
 pub struct HoyoSource;
 
@@ -28,7 +31,7 @@ impl DownloadSource for HoyoSource {
         let from_version = match &entry.kind {
             DownloadKind::Update { from_version } => from_version.clone(),
             DownloadKind::Install | DownloadKind::Repair => {
-                return Err(anyhow!("update() called on a non-update entry"))
+                return Err(anyhow!("update() called on a non-update entry"));
             }
         };
 
@@ -64,7 +67,9 @@ impl DownloadSource for HoyoSource {
         let Some(diff_key) = matched_tag else {
             tracing::warn!(
                 "no diff path from {} to {} for {}, falling back to full reinstall",
-                from_version, target_version, parsed.display_name
+                from_version,
+                target_version,
+                parsed.display_name
             );
             return self.install(entry).await;
         };
@@ -100,14 +105,17 @@ impl DownloadSource for HoyoSource {
                 (rep.current, rep.total.max(1))
             };
             total_bytes_arc_cb.store(total, Ordering::SeqCst);
-            let pct = if total > 0 { (done as f64 / total as f64) * 100.0 } else { 0.0 };
+            let pct = if total > 0 {
+                (done as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            };
             report_progress(&id_cb, pct, done, total, 0);
         });
 
         let id_cancel = id.clone();
-        let is_cancelled: sophon::patcher::CancelFn = Arc::new(move || {
-            !matches!(check_control(&id_cancel), ControlSignal::None)
-        });
+        let is_cancelled: sophon::patcher::CancelFn =
+            Arc::new(move || !matches!(check_control(&id_cancel), ControlSignal::None));
 
         let game_diff = diffs
             .get_for("game")
@@ -202,17 +210,24 @@ impl DownloadSource for HoyoSource {
                 (rep.current, rep.total.max(1))
             };
             total_bytes_arc_cb.store(total, Ordering::SeqCst);
-            let pct = if total > 0 { (done as f64 / total as f64) * 100.0 } else { 0.0 };
+            let pct = if total > 0 {
+                (done as f64 / total as f64) * 100.0
+            } else {
+                0.0
+            };
             let elapsed = start.elapsed().as_secs_f64().max(0.001);
-            let bps_basis = if rep.bytes_session > 0 { rep.bytes_session } else { done };
+            let bps_basis = if rep.bytes_session > 0 {
+                rep.bytes_session
+            } else {
+                done
+            };
             let bps = (bps_basis as f64 / elapsed) as u64;
             report_progress(&id_cb, pct, done, total, bps);
         });
 
         let id_cancel = id.clone();
-        let is_cancelled: sophon::patcher::CancelFn = Arc::new(move || {
-            !matches!(check_control(&id_cancel), ControlSignal::None)
-        });
+        let is_cancelled: sophon::patcher::CancelFn =
+            Arc::new(move || !matches!(check_control(&id_cancel), ControlSignal::None));
 
         sophon::installer::apply_install(
             &entries,
@@ -258,7 +273,15 @@ pub async fn download_file(
     base_offset: u64,
     total_bytes: u64,
 ) -> Result<()> {
-    download_file_conn(url, dest, entry_id, base_offset, total_bytes, NUM_CONNECTIONS).await
+    download_file_conn(
+        url,
+        dest,
+        entry_id,
+        base_offset,
+        total_bytes,
+        NUM_CONNECTIONS,
+    )
+    .await
 }
 
 async fn download_file_conn(
@@ -283,17 +306,21 @@ async fn download_file_conn(
         .unwrap_or_default();
 
     if max_connections <= 1 {
-        return download_file_simple(url, dest, 0, entry_id, base_offset, total_bytes, &client).await;
+        return download_file_simple(url, dest, 0, entry_id, base_offset, total_bytes, &client)
+            .await;
     }
 
-    let probe = client.get(url)
+    let probe = client
+        .get(url)
         .header("Range", "bytes=0-0")
         .header("Accept-Encoding", "identity")
-        .send().await
+        .send()
+        .await
         .map_err(|e| anyhow!("size probe failed: {e}"))?;
 
     let probed_size = if probe.status() == reqwest::StatusCode::PARTIAL_CONTENT {
-        probe.headers()
+        probe
+            .headers()
             .get(reqwest::header::CONTENT_RANGE)
             .and_then(|v| v.to_str().ok())
             .and_then(|s| s.rsplit('/').next())
@@ -307,13 +334,23 @@ async fn download_file_conn(
         Some(s) if s > 0 => s,
         _ => {
             tracing::debug!("range probe returned no size, falling back to single stream");
-            return download_file_simple(url, dest, 0, entry_id, base_offset, total_bytes, &client).await;
+            return download_file_simple(url, dest, 0, entry_id, base_offset, total_bytes, &client)
+                .await;
         }
     };
 
     if file_size < 10 * 1024 * 1024 {
         let _ = std::fs::remove_file(parts_path(dest));
-        return download_file_simple(url, dest, file_size, entry_id, base_offset, total_bytes, &client).await;
+        return download_file_simple(
+            url,
+            dest,
+            file_size,
+            entry_id,
+            base_offset,
+            total_bytes,
+            &client,
+        )
+        .await;
     }
 
     let mut pieces: Vec<(u64, u64)> = Vec::new();
@@ -328,17 +365,23 @@ async fn download_file_conn(
 
     if completed.len() == pieces.len()
         && let Ok(meta) = std::fs::metadata(dest)
-            && meta.len() == file_size {
-                tracing::debug!("already downloaded: {}", dest.display());
-                return Ok(());
-            }
+        && meta.len() == file_size
+    {
+        tracing::debug!("already downloaded: {}", dest.display());
+        return Ok(());
+    }
 
-    if completed.is_empty() && !parts_path(dest).exists()
+    if completed.is_empty()
+        && !parts_path(dest).exists()
         && let Ok(meta) = std::fs::metadata(dest)
-            && meta.len() == file_size {
-                tracing::debug!("already downloaded (no journal, size matches): {}", dest.display());
-                return Ok(());
-            }
+        && meta.len() == file_size
+    {
+        tracing::debug!(
+            "already downloaded (no journal, size matches): {}",
+            dest.display()
+        );
+        return Ok(());
+    }
 
     {
         let f = std::fs::OpenOptions::new()
@@ -354,7 +397,9 @@ async fn download_file_conn(
         .append(true)
         .open(parts_path(dest));
 
-    let resumed_bytes: u64 = pieces.iter().enumerate()
+    let resumed_bytes: u64 = pieces
+        .iter()
+        .enumerate()
         .filter(|(i, _)| completed.contains(i))
         .map(|(_, (s, e))| e - s + 1)
         .sum();
@@ -391,19 +436,25 @@ async fn download_file_conn(
                 }
                 let (start, end) = pieces[idx];
 
-                let resp = client.get(&url)
+                let resp = client
+                    .get(&url)
                     .header("Range", format!("bytes={start}-{end}"))
                     .header("Accept-Encoding", "identity")
-                    .send().await
+                    .send()
+                    .await
                     .map_err(|e| anyhow!("worker {worker_id} piece {idx} request failed: {e}"))?;
 
                 if resp.status() != reqwest::StatusCode::PARTIAL_CONTENT {
-                    return Err(anyhow!("worker {worker_id} piece {idx}: expected 206, got {}", resp.status()));
+                    return Err(anyhow!(
+                        "worker {worker_id} piece {idx}: expected 206, got {}",
+                        resp.status()
+                    ));
                 }
 
                 let file = tokio::fs::OpenOptions::new()
                     .write(true)
-                    .open(&dest).await?;
+                    .open(&dest)
+                    .await?;
                 let mut file = tokio::io::BufWriter::with_capacity(256 * 1024, file);
                 file.seek(std::io::SeekFrom::Start(start)).await?;
 
@@ -413,7 +464,8 @@ async fn download_file_conn(
                         file.flush().await?;
                         return Ok(());
                     }
-                    let chunk = chunk.map_err(|e| anyhow!("worker {worker_id} piece {idx} stream error: {e}"))?;
+                    let chunk = chunk
+                        .map_err(|e| anyhow!("worker {worker_id} piece {idx} stream error: {e}"))?;
                     file.write_all(&chunk).await?;
                     downloaded.fetch_add(chunk.len() as u64, Ordering::Relaxed);
                 }
@@ -430,7 +482,11 @@ async fn download_file_conn(
                     );
                 }
                 if let Err(e) = mark_part_complete(&dest, idx) {
-                    tracing::warn!("failed to update parts journal for {}: {}", dest.display(), e);
+                    tracing::warn!(
+                        "failed to update parts journal for {}: {}",
+                        dest.display(),
+                        e
+                    );
                 }
             }
         }));
@@ -448,7 +504,11 @@ async fn download_file_conn(
             let dl = progress_downloaded.load(Ordering::Relaxed);
             let now = std::time::Instant::now();
             let elapsed = now.duration_since(last_time).as_secs_f64();
-            let speed = if elapsed > 0.0 { (dl.saturating_sub(last_bytes) as f64 / elapsed) as u64 } else { 0 };
+            let speed = if elapsed > 0.0 {
+                (dl.saturating_sub(last_bytes) as f64 / elapsed) as u64
+            } else {
+                0
+            };
             let overall = base_offset + dl;
             let pct = (overall as f64 / total_bytes as f64) * 100.0;
             report_progress(&progress_entry_id, pct, overall, total_bytes, speed);
@@ -512,10 +572,18 @@ async fn download_file_simple(
         req = req.header("Range", format!("bytes={}-", existing));
     }
 
-    let resp = req.send().await.map_err(|e| anyhow!("download failed: {e}"))?;
+    let resp = req
+        .send()
+        .await
+        .map_err(|e| anyhow!("download failed: {e}"))?;
     let status = resp.status();
     let content_len = resp.content_length();
-    tracing::debug!("simple download: status={}, content-length={:?}, url={}", status, content_len, url);
+    tracing::debug!(
+        "simple download: status={}, content-length={:?}, url={}",
+        status,
+        content_len,
+        url
+    );
 
     if status == reqwest::StatusCode::RANGE_NOT_SATISFIABLE && existing > 0 {
         tracing::debug!("already fully downloaded: {}", dest.display());
@@ -528,7 +596,10 @@ async fn download_file_simple(
     }
 
     let raw_file = if resumed {
-        tokio::fs::OpenOptions::new().append(true).open(dest).await?
+        tokio::fs::OpenOptions::new()
+            .append(true)
+            .open(dest)
+            .await?
     } else {
         tokio::fs::File::create(dest).await?
     };
@@ -564,40 +635,48 @@ async fn download_file_simple(
     }
 
     file.flush().await?;
-    tracing::debug!("simple download done: {} chunks, {} bytes written", chunk_count, downloaded);
+    tracing::debug!(
+        "simple download done: {} chunks, {} bytes written",
+        chunk_count,
+        downloaded
+    );
     Ok(())
 }
 
 pub fn extract_archive(archive_path: &Path, dest: &Path, entry_id: Option<&str>) -> Result<()> {
     std::fs::create_dir_all(dest)?;
 
-    let ext = archive_path.extension().and_then(|e| e.to_str()).unwrap_or("");
+    let ext = archive_path
+        .extension()
+        .and_then(|e| e.to_str())
+        .unwrap_or("");
 
     if ext == "zip"
-        && let Ok(bin) = which::which("unzip") {
-            let output = std::process::Command::new(&bin)
-                .arg("-o")
-                .arg("-q")
-                .arg(archive_path)
-                .arg("-d")
-                .arg(dest)
-                .stdout(std::process::Stdio::piped())
-                .stderr(std::process::Stdio::piped())
-                .output()
-                .map_err(|e| anyhow!("failed to run unzip: {}", e))?;
+        && let Ok(bin) = which::which("unzip")
+    {
+        let output = std::process::Command::new(&bin)
+            .arg("-o")
+            .arg("-q")
+            .arg(archive_path)
+            .arg("-d")
+            .arg(dest)
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .output()
+            .map_err(|e| anyhow!("failed to run unzip: {}", e))?;
 
-            if output.status.success() {
-                return Ok(());
-            }
-            let stderr = String::from_utf8_lossy(&output.stderr);
-            tracing::warn!("unzip failed, falling back to 7z: {}", stderr.trim());
+        if output.status.success() {
+            return Ok(());
         }
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        tracing::warn!("unzip failed, falling back to 7z: {}", stderr.trim());
+    }
 
     let bin = which::which("7z")
         .or_else(|_| which::which("7za"))
-        .map_err(|_| anyhow!(
-            "7z not found — install p7zip-full (apt), 7zip (pacman), or p7zip (dnf)"
-        ))?;
+        .map_err(|_| {
+            anyhow!("7z not found — install p7zip-full (apt), 7zip (pacman), or p7zip (dnf)")
+        })?;
 
     let mut child = std::process::Command::new(&bin)
         .arg("x")
@@ -624,7 +703,8 @@ pub fn extract_archive(archive_path: &Path, dest: &Path, entry_id: Option<&str>)
                 Ok(n) => {
                     let text = String::from_utf8_lossy(&buf[..n]);
                     for cap in text.split('%') {
-                        let num_str = cap.trim_end()
+                        let num_str = cap
+                            .trim_end()
                             .chars()
                             .rev()
                             .take_while(|c| c.is_ascii_digit() || *c == '.')
@@ -633,12 +713,14 @@ pub fn extract_archive(archive_path: &Path, dest: &Path, entry_id: Option<&str>)
                             .rev()
                             .collect::<String>();
                         if let Ok(pct) = num_str.parse::<f64>()
-                            && pct != last_pct && (0.0..=100.0).contains(&pct) {
-                                last_pct = pct;
-                                if let Some(id) = entry_id {
-                                    report_progress(id, pct, 0, 0, 0);
-                                }
+                            && pct != last_pct
+                            && (0.0..=100.0).contains(&pct)
+                        {
+                            last_pct = pct;
+                            if let Some(id) = entry_id {
+                                report_progress(id, pct, 0, 0, 0);
                             }
+                        }
                     }
                 }
                 Err(_) => break,
@@ -670,7 +752,13 @@ fn parse_app_id(app_id: &str) -> Result<ParsedHoyoApp> {
         .find(|e| e.id == edition_id)
         .and_then(|e| e.strategy_config.get("biz_id"))
         .and_then(|v| v.as_str())
-        .ok_or_else(|| anyhow!("no biz_id in manifest for {} edition {}", manifest.id, edition_id))?
+        .ok_or_else(|| {
+            anyhow!(
+                "no biz_id in manifest for {} edition {}",
+                manifest.id,
+                edition_id
+            )
+        })?
         .to_string();
 
     Ok(ParsedHoyoApp {
@@ -729,7 +817,11 @@ fn mark_part_complete(dest: &Path, idx: usize) -> std::io::Result<()> {
     f.flush()
 }
 
-fn scratch_dir_for(app_id: &str, install_path: &Path, temp_dir: Option<&Path>) -> std::path::PathBuf {
+fn scratch_dir_for(
+    app_id: &str,
+    install_path: &Path,
+    temp_dir: Option<&Path>,
+) -> std::path::PathBuf {
     let safe_id = app_id.replace(':', "-");
     match temp_dir {
         Some(p) => p.join(format!(".omikuji-dl-{}", safe_id)),
@@ -744,10 +836,7 @@ pub fn inspect_hoyo_temp(app_id: &str, install_path: &Path, temp_dir: Option<&Pa
     let prefix = format!(".omikuji-dl-{}", app_id.replace(':', "-"));
     let parent = match temp_dir {
         Some(p) => p.to_path_buf(),
-        None => install_path
-            .parent()
-            .unwrap_or(install_path)
-            .to_path_buf(),
+        None => install_path.parent().unwrap_or(install_path).to_path_buf(),
     };
     if !parent.exists() {
         return (0, 0);
@@ -759,7 +848,9 @@ pub fn inspect_hoyo_temp(app_id: &str, install_path: &Path, temp_dir: Option<&Pa
         return (0, 0);
     };
     for entry in entries.flatten() {
-        let Ok(name) = entry.file_name().into_string() else { continue };
+        let Ok(name) = entry.file_name().into_string() else {
+            continue;
+        };
         if !name.starts_with(&prefix) {
             continue;
         }
@@ -767,17 +858,20 @@ pub fn inspect_hoyo_temp(app_id: &str, install_path: &Path, temp_dir: Option<&Pa
         if !dir.is_dir() {
             continue;
         }
-        let Ok(children) = std::fs::read_dir(&dir) else { continue };
+        let Ok(children) = std::fs::read_dir(&dir) else {
+            continue;
+        };
         for c in children.flatten() {
             let p = c.path();
             if p.extension().and_then(|s| s.to_str()) == Some("parts") {
                 continue;
             }
             if let Ok(meta) = std::fs::metadata(&p)
-                && meta.is_file() {
-                    bytes += meta.len();
-                    segments += 1;
-                }
+                && meta.is_file()
+            {
+                bytes += meta.len();
+                segments += 1;
+            }
         }
     }
     (bytes, segments)

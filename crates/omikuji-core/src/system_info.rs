@@ -57,7 +57,10 @@ pub fn report(app_version: &str, qt_version: &str) -> String {
     }
 
     fields.push(("Qt".into(), qt_version.to_string()));
-    fields.push(("Flatpak".into(), if flatpak() { "yes" } else { "no" }.into()));
+    fields.push((
+        "Flatpak".into(),
+        if flatpak() { "yes" } else { "no" }.into(),
+    ));
 
     let pad = fields.iter().map(|(k, _)| k.len()).max().unwrap_or(0) + 1 + 5;
     let mut out = String::new();
@@ -152,7 +155,10 @@ fn ram() -> String {
     if let Ok(info) = std::fs::read_to_string("/proc/meminfo") {
         for line in info.lines() {
             if let Some(rest) = line.strip_prefix("MemTotal:")
-                && let Some(kb) = rest.split_whitespace().next().and_then(|n| n.parse::<f64>().ok())
+                && let Some(kb) = rest
+                    .split_whitespace()
+                    .next()
+                    .and_then(|n| n.parse::<f64>().ok())
             {
                 return format!("{:.1} GiB", kb / 1024.0 / 1024.0);
             }
@@ -199,7 +205,15 @@ fn enumerate() -> Vec<Gpu> {
             let uuid = format_uuid(&ids.device_uuid);
             let loader = loader_for(driver.driver_id, vendor_id).to_string();
 
-            out.push(Gpu { name, driver: driver_str, vendor_id, device_id, nvidia, uuid, loader });
+            out.push(Gpu {
+                name,
+                driver: driver_str,
+                vendor_id,
+                device_id,
+                nvidia,
+                uuid,
+                loader,
+            });
         }
     }
 
@@ -280,7 +294,11 @@ fn format_uuid(b: &[u8; 16]) -> String {
 }
 
 fn c_array_to_string(arr: &[c_char]) -> String {
-    let bytes: Vec<u8> = arr.iter().take_while(|&&c| c != 0).map(|&c| c as u8).collect();
+    let bytes: Vec<u8> = arr
+        .iter()
+        .take_while(|&&c| c != 0)
+        .map(|&c| c as u8)
+        .collect();
     String::from_utf8_lossy(&bytes).into_owned()
 }
 

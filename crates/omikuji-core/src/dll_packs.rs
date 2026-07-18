@@ -69,7 +69,10 @@ pub fn inject_all(game: &Game, env: &HashMap<String, String>) -> Result<()> {
         ensure_prefix_bootstrapped(&prefix, &wine_exe, variant, env)?;
     }
     if !system32.exists() {
-        tracing::warn!("prefix bootstrap left no system32, skipping injection for {}", prefix.display());
+        tracing::warn!(
+            "prefix bootstrap left no system32, skipping injection for {}",
+            prefix.display()
+        );
         return Ok(());
     }
     let syswow64 = prefix.join("drive_c").join("windows").join("syswow64");
@@ -135,7 +138,10 @@ pub fn inject_all(game: &Game, env: &HashMap<String, String>) -> Result<()> {
     let nvapi_active = state.active.iter().any(|(n, t)| {
         !t.is_empty()
             && t != "disabled"
-            && state.layers.iter().any(|s| s.name == *n && s.kind == "dxvk_nvapi")
+            && state
+                .layers
+                .iter()
+                .any(|s| s.name == *n && s.kind == "dxvk_nvapi")
     });
     if nvapi_active && is_64bit {
         if let Some(nvidia_wine_dir) = find_nvidia_wine_dir() {
@@ -152,7 +158,11 @@ pub fn inject_all(game: &Game, env: &HashMap<String, String>) -> Result<()> {
                 }
             }
             if copied {
-                tracing::info!("copied nvngx from {} -> {}", nvidia_wine_dir.display(), system32.display());
+                tracing::info!(
+                    "copied nvngx from {} -> {}",
+                    nvidia_wine_dir.display(),
+                    system32.display()
+                );
                 if let Err(e) = set_ngx_registry(&wine_exe, variant, env) {
                     tracing::error!("ngx registry set failed: {}", e);
                 }
@@ -179,10 +189,11 @@ fn copy_dll_dir(from: &Path, to: &Path) -> Result<()> {
             .extension()
             .map(|e| e.eq_ignore_ascii_case(OsStr::new("dll")))
             .unwrap_or(false)
-            && let Some(file_name) = path.file_name() {
-                let dest = to.join(file_name);
-                std::fs::copy(&path, &dest)?;
-            }
+            && let Some(file_name) = path.file_name()
+        {
+            let dest = to.join(file_name);
+            std::fs::copy(&path, &dest)?;
+        }
     }
     Ok(())
 }

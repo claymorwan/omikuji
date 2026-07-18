@@ -91,8 +91,7 @@ fn send_activity(activity: Activity) -> Result<()> {
 fn clear_activity_inner() -> Result<()> {
     let mut guard = client_cell().lock().unwrap();
     if let Some(c) = guard.as_mut() {
-        c.clear_activity()
-            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        c.clear_activity().map_err(|e| anyhow::anyhow!("{}", e))?;
     }
     Ok(())
 }
@@ -122,9 +121,6 @@ fn image_url_for(game: &Game) -> Option<String> {
     let result = crate::media::sgdb_icon_url(&game.metadata.name)
         .ok()
         .flatten();
-    url_cache()
-        .lock()
-        .unwrap()
-        .insert(key, result.clone());
+    url_cache().lock().unwrap().insert(key, result.clone());
     result
 }

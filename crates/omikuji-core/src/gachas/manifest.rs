@@ -109,14 +109,18 @@ fn walk_manifests(root: &std::path::Path) -> Vec<GachaManifest> {
         if !pub_path.is_dir() {
             continue;
         }
-        let Ok(games) = std::fs::read_dir(&pub_path) else { continue };
+        let Ok(games) = std::fs::read_dir(&pub_path) else {
+            continue;
+        };
         for game_entry in games.flatten() {
             let game_path = game_entry.path();
             if !game_path.is_dir() {
                 continue;
             }
             let manifest_path = game_path.join("manifest.json");
-            let Ok(data) = std::fs::read_to_string(&manifest_path) else { continue };
+            let Ok(data) = std::fs::read_to_string(&manifest_path) else {
+                continue;
+            };
             match serde_json::from_str::<GachaManifest>(&data) {
                 Ok(m) if m.schema_version == SCHEMA_VERSION => out.push(m),
                 Ok(m) => tracing::warn!(

@@ -30,7 +30,12 @@ pub struct LaunchConfig {
 }
 
 impl LaunchConfig {
-    fn from_game(game: &Game, command: Vec<String>, env: HashMap<String, String>, working_dir: PathBuf) -> Self {
+    fn from_game(
+        game: &Game,
+        command: Vec<String>,
+        env: HashMap<String, String>,
+        working_dir: PathBuf,
+    ) -> Self {
         let vars = TemplateVars::for_game(game);
         Self {
             command: command.into_iter().map(|c| vars.expand(&c)).collect(),
@@ -66,7 +71,11 @@ impl WineVariant {
         } else if looks_like_proton(version) {
             WineVariant::Proton
         } else if let Some(rest) = version.strip_prefix("steam:") {
-            if looks_like_proton(rest) { WineVariant::Proton } else { WineVariant::WineGE }
+            if looks_like_proton(rest) {
+                WineVariant::Proton
+            } else {
+                WineVariant::WineGE
+            }
         } else {
             WineVariant::WineGE
         }
@@ -133,7 +142,10 @@ fn validate_exe(game: &Game) -> Result<()> {
                 anyhow::bail!("Game executable not found at `{}`", exe.display());
             }
             if !is_executable(exe) {
-                anyhow::bail!("`{}` is not executable. Mark it executable (chmod +x) and try again.", exe.display());
+                anyhow::bail!(
+                    "`{}` is not executable. Mark it executable (chmod +x) and try again.",
+                    exe.display()
+                );
             }
             Ok(())
         }
@@ -161,13 +173,17 @@ fn assemble_launch(game: &Game) -> Result<LaunchConfig> {
     let mut env = build_env(game, variant, &wine_exe, EnvPurpose::Session);
 
     if variant == WineVariant::Proton
-        && let Err(e) = crate::desktop::ensure_steam_icon(game) {
-            tracing::warn!("dock icon link failed for {}: {}", game.metadata.name, e);
-        }
+        && let Err(e) = crate::desktop::ensure_steam_icon(game)
+    {
+        tracing::warn!("dock icon link failed for {}: {}", game.metadata.name, e);
+    }
 
     let mut command = if game.is_epic() {
-        let legendary = crate::downloads::legendary::find_legendary()
-            .ok_or_else(|| anyhow::Error::new(ComponentMissing { name: "Legendary".to_string() }))?;
+        let legendary = crate::downloads::legendary::find_legendary().ok_or_else(|| {
+            anyhow::Error::new(ComponentMissing {
+                name: "Legendary".to_string(),
+            })
+        })?;
         let prefix = resolve_prefix(game);
         // legendary wants the source app_id, falling back to metadata.id for games impoted before the source section existed
         let app_id = if !game.source.app_id.is_empty() {
@@ -300,7 +316,10 @@ fn build_flatpak_launch(game: &Game, working_dir: PathBuf) -> Result<LaunchConfi
         anyhow::bail!("Flatpak runner requires an Application ID (e.g. org.foo.App)");
     }
     if appid.matches('.').count() < 2 {
-        anyhow::bail!("Flatpak Application ID must look like tld.domain.app, got: {}", appid);
+        anyhow::bail!(
+            "Flatpak Application ID must look like tld.domain.app, got: {}",
+            appid
+        );
     }
 
     let mut command = vec!["flatpak".to_string(), "run".to_string()];
@@ -428,15 +447,22 @@ pub fn spawn(config: &LaunchConfig) -> Result<std::process::Child> {
     cmd.stdout(Stdio::null());
     cmd.stderr(Stdio::null());
 
-    let child = cmd.spawn()
+    let child = cmd
+        .spawn()
         .with_context(|| format!("failed to spawn: {}", config.command[0]))?;
 
     Ok(child)
 }
 
-fn apply_kv_sets(sets: &[crate::ui_settings::KvSet], ids: &[String], mut apply: impl FnMut(&str, &str)) {
+fn apply_kv_sets(
+    sets: &[crate::ui_settings::KvSet],
+    ids: &[String],
+    mut apply: impl FnMut(&str, &str),
+) {
     for id in ids {
-        let Some(set) = sets.iter().find(|s| &s.id == id) else { continue };
+        let Some(set) = sets.iter().find(|s| &s.id == id) else {
+            continue;
+        };
         for pair in &set.vars {
             if !pair.key.trim().is_empty() {
                 apply(&pair.key, &pair.value);
@@ -463,7 +489,10 @@ fn game_env_pairs(game: &Game) -> Vec<(String, String)> {
 }
 
 fn append_dll_override(env: &mut HashMap<String, String>, entry: &str) {
-    let existing = env.get("WINEDLLOVERRIDES").map(|s| s.as_str()).unwrap_or("");
+    let existing = env
+        .get("WINEDLLOVERRIDES")
+        .map(|s| s.as_str())
+        .unwrap_or("");
     let new_value = if existing.is_empty() {
         entry.to_string()
     } else {
@@ -478,7 +507,12 @@ pub enum EnvPurpose {
     Tool,
 }
 
-pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path, purpose: EnvPurpose) -> HashMap<String, String> {
+pub fn build_env(
+    game: &Game,
+    variant: WineVariant,
+    wine_exe: &Path,
+    purpose: EnvPurpose,
+) -> HashMap<String, String> {
     let mut env = HashMap::new();
 
     for (k, v) in std::env::vars() {
@@ -488,33 +522,57 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path, purpose: En
     env.insert("WINEDEBUG".to_string(), String::new());
 
     let prefix = resolve_prefix(game);
-    env.insert("WINEPREFIX".to_string(), prefix.to_string_lossy().to_string());
+    env.insert(
+        "WINEPREFIX".to_string(),
+        prefix.to_string_lossy().to_string(),
+    );
     env.insert("WINEARCH".to_string(), game.wine.prefix_arch.clone());
     env.insert("WINE".to_string(), wine_exe.to_string_lossy().to_string());
 
     if variant == WineVariant::Proton {
         let proton_path = if game.wine.version.starts_with("steam:") {
-            let steam_version = game.wine.version.strip_prefix("steam:").unwrap_or(&game.wine.version);
-            crate::steam::local::resolve_or_default_proton(Some(steam_version))
-                .unwrap_or_default()
+            let steam_version = game
+                .wine
+                .version
+                .strip_prefix("steam:")
+                .unwrap_or(&game.wine.version);
+            crate::steam::local::resolve_or_default_proton(Some(steam_version)).unwrap_or_default()
         } else {
             crate::runners::installed_runner_dir(&game.wine.version)
                 .unwrap_or_else(|| crate::runners_dir().join(&game.wine.version))
         };
-        env.insert("PROTONPATH".to_string(), proton_path.to_string_lossy().to_string());
+        env.insert(
+            "PROTONPATH".to_string(),
+            proton_path.to_string_lossy().to_string(),
+        );
         env.insert("PROTON_VERB".to_string(), "run".to_string());
-        env.insert("GAMEID".to_string(), format!("umu-{}", crate::steam::synthetic_appid(&game.metadata.id)));
+        env.insert(
+            "GAMEID".to_string(),
+            format!("umu-{}", crate::steam::synthetic_appid(&game.metadata.id)),
+        );
     }
 
-    env.insert("WINEESYNC".to_string(), if game.wine.esync { "1" } else { "0" }.to_string());
-    env.insert("WINEFSYNC".to_string(), if game.wine.fsync { "1" } else { "0" }.to_string());
+    env.insert(
+        "WINEESYNC".to_string(),
+        if game.wine.esync { "1" } else { "0" }.to_string(),
+    );
+    env.insert(
+        "WINEFSYNC".to_string(),
+        if game.wine.fsync { "1" } else { "0" }.to_string(),
+    );
 
     if variant == WineVariant::Proton {
         let ntsync = game.wine.ntsync;
-        env.insert("PROTON_USE_NTSYNC".to_string(), if ntsync { "1" } else { "0" }.to_string());
+        env.insert(
+            "PROTON_USE_NTSYNC".to_string(),
+            if ntsync { "1" } else { "0" }.to_string(),
+        );
 
         // Proton 11+ uses PROTON_NO_NTSYNC to disable NTSync as seen in cachyos-proton 11.0-20260428
-        env.insert("PROTON_NO_NTSYNC".to_string(), if ntsync { "0" } else { "1" }.to_string());
+        env.insert(
+            "PROTON_NO_NTSYNC".to_string(),
+            if ntsync { "0" } else { "1" }.to_string(),
+        );
     }
 
     if game.wine.dxvk {
@@ -556,7 +614,10 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path, purpose: En
     }
 
     if !game.wine.dll_overrides.is_empty() {
-        let custom: Vec<String> = game.wine.dll_overrides.iter()
+        let custom: Vec<String> = game
+            .wine
+            .dll_overrides
+            .iter()
             .map(|(k, v)| format!("{}={}", k, v))
             .collect();
         for entry in custom {
@@ -572,7 +633,10 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path, purpose: En
     }
 
     if game.is_epic() {
-        env.insert("LEGENDARY_WRAPPER_EXE".to_string(), "C:\\windows\\command\\EpicGamesLauncher.exe".to_string());
+        env.insert(
+            "LEGENDARY_WRAPPER_EXE".to_string(),
+            "C:\\windows\\command\\EpicGamesLauncher.exe".to_string(),
+        );
     }
 
     env.extend(game_env_pairs(game));
@@ -580,7 +644,11 @@ pub fn build_env(game: &Game, variant: WineVariant, wine_exe: &Path, purpose: En
     env
 }
 
-pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path, env: &HashMap<String, String>) -> Result<()> {
+pub fn prepare_epic_prefix(
+    game: &Game,
+    wine_exe: &Path,
+    env: &HashMap<String, String>,
+) -> Result<()> {
     let prefix = resolve_prefix(game);
 
     // spoof the epic launcher registry key so games that check for it dont bail early
@@ -590,7 +658,12 @@ pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path, env: &HashMap<String, S
     if WineVariant::from_version(&game.wine.version) == WineVariant::Proton {
         cmd.env("PROTON_VERB", "waitforexitandrun");
     }
-    cmd.args(["reg", "add", "HKEY_CLASSES_ROOT\\com.epicgames.launcher", "/f"]);
+    cmd.args([
+        "reg",
+        "add",
+        "HKEY_CLASSES_ROOT\\com.epicgames.launcher",
+        "/f",
+    ]);
     cmd.stdout(Stdio::null());
     cmd.stderr(Stdio::null());
 
@@ -606,9 +679,10 @@ pub fn prepare_epic_prefix(game: &Game, wine_exe: &Path, env: &HashMap<String, S
         } else {
             let dest_file = dest_dir.join("EpicGamesLauncher.exe");
             if !dest_file.exists()
-                && let Err(e) = std::fs::copy(&dummy_src, &dest_file) {
-                    tracing::error!("failed to copy dummy EpicGamesLauncher.exe: {}", e);
-                }
+                && let Err(e) = std::fs::copy(&dummy_src, &dest_file)
+            {
+                tracing::error!("failed to copy dummy EpicGamesLauncher.exe: {}", e);
+            }
         }
     }
 
@@ -630,18 +704,17 @@ pub fn resolve_wine_exe(variant: WineVariant, version: &str) -> Result<PathBuf> 
     }
 
     match variant {
-        WineVariant::System => {
-            Ok(PathBuf::from("wine"))
-        }
-        WineVariant::WineGE => {
-            crate::runners::installed_runner_dir(version)
-                .map(|d| d.join("bin").join("wine"))
-                .filter(|p| p.exists())
-                .ok_or_else(|| anyhow::anyhow!("Runner `{}` not found.", version))
-        }
+        WineVariant::System => Ok(PathBuf::from("wine")),
+        WineVariant::WineGE => crate::runners::installed_runner_dir(version)
+            .map(|d| d.join("bin").join("wine"))
+            .filter(|p| p.exists())
+            .ok_or_else(|| anyhow::anyhow!("Runner `{}` not found.", version)),
         WineVariant::Proton => {
-            let umu_run = find_umu_run()
-                .ok_or_else(|| anyhow::Error::new(ComponentMissing { name: "umu-run".to_string() }))?;
+            let umu_run = find_umu_run().ok_or_else(|| {
+                anyhow::Error::new(ComponentMissing {
+                    name: "umu-run".to_string(),
+                })
+            })?;
 
             let has_files = crate::runners::installed_runner_dir(version)
                 .map(|d| d.join("files").exists())
@@ -658,8 +731,11 @@ pub fn resolve_wine_exe(variant: WineVariant, version: &str) -> Result<PathBuf> 
 fn resolve_steam_runner(version: &str) -> Result<PathBuf> {
     crate::steam::local::find_proton_install(version)
         .ok_or_else(|| anyhow::anyhow!("Runner `{}` not found.", version))?;
-    find_umu_run()
-        .ok_or_else(|| anyhow::Error::new(ComponentMissing { name: "umu-run".to_string() }))
+    find_umu_run().ok_or_else(|| {
+        anyhow::Error::new(ComponentMissing {
+            name: "umu-run".to_string(),
+        })
+    })
 }
 
 fn find_executable_in_paths(names: &[&str], extra_paths: &[&str]) -> Option<PathBuf> {
@@ -741,7 +817,10 @@ fn build_steam_command(appid: &str, args: &[String]) -> Vec<String> {
         return cmd;
     }
 
-    vec!["xdg-open".to_string(), format!("steam://rungameid/{}", appid)]
+    vec![
+        "xdg-open".to_string(),
+        format!("steam://rungameid/{}", appid),
+    ]
 }
 
 #[cfg(unix)]
@@ -799,15 +878,18 @@ pub fn resolve_prefix(game: &Game) -> PathBuf {
     let prefix = prefix_path_for(game);
     if game.wine.prefix.is_empty()
         && !prefix.exists()
-        && let Err(e) = std::fs::create_dir_all(&prefix) {
-            tracing::error!("failed to create prefix dir: {}", e);
-        }
+        && let Err(e) = std::fs::create_dir_all(&prefix)
+    {
+        tracing::error!("failed to create prefix dir: {}", e);
+    }
     prefix
 }
 
 fn resolve_working_dir(game: &Game) -> PathBuf {
     if game.launch.working_dir.is_empty() {
-        game.metadata.exe.parent()
+        game.metadata
+            .exe
+            .parent()
             .map(|p| p.to_path_buf())
             .unwrap_or_else(|| PathBuf::from("."))
     } else {
@@ -831,10 +913,19 @@ mod tests {
     fn test_wine_variant_from_version() {
         assert_eq!(WineVariant::from_version(""), WineVariant::System);
         assert_eq!(WineVariant::from_version("system"), WineVariant::System);
-        assert_eq!(WineVariant::from_version("wine-ge-9-5"), WineVariant::WineGE);
+        assert_eq!(
+            WineVariant::from_version("wine-ge-9-5"),
+            WineVariant::WineGE
+        );
         assert_eq!(WineVariant::from_version("lutris-7.2"), WineVariant::WineGE);
-        assert_eq!(WineVariant::from_version("GE-Proton10-34"), WineVariant::Proton);
-        assert_eq!(WineVariant::from_version("Proton-9-0-4"), WineVariant::Proton);
+        assert_eq!(
+            WineVariant::from_version("GE-Proton10-34"),
+            WineVariant::Proton
+        );
+        assert_eq!(
+            WineVariant::from_version("Proton-9-0-4"),
+            WineVariant::Proton
+        );
     }
 
     fn game(version: &str, ntsync: bool) -> Game {
@@ -846,20 +937,47 @@ mod tests {
 
     #[test]
     fn test_ntsync_env_for_proton() {
-        let enabled = build_env(&game("Proton-9-0-4", true), WineVariant::Proton, Path::new("wine"), EnvPurpose::Session);
-        assert_eq!(enabled.get("PROTON_USE_NTSYNC").map(String::as_str), Some("1"));
-        assert_eq!(enabled.get("PROTON_NO_NTSYNC").map(String::as_str), Some("0"));
+        let enabled = build_env(
+            &game("Proton-9-0-4", true),
+            WineVariant::Proton,
+            Path::new("wine"),
+            EnvPurpose::Session,
+        );
+        assert_eq!(
+            enabled.get("PROTON_USE_NTSYNC").map(String::as_str),
+            Some("1")
+        );
+        assert_eq!(
+            enabled.get("PROTON_NO_NTSYNC").map(String::as_str),
+            Some("0")
+        );
 
-        let disabled = build_env(&game("Proton-9-0-4", false), WineVariant::Proton, Path::new("wine"), EnvPurpose::Session);
-        assert_eq!(disabled.get("PROTON_USE_NTSYNC").map(String::as_str), Some("0"));
-        assert_eq!(disabled.get("PROTON_NO_NTSYNC").map(String::as_str), Some("1"));
+        let disabled = build_env(
+            &game("Proton-9-0-4", false),
+            WineVariant::Proton,
+            Path::new("wine"),
+            EnvPurpose::Session,
+        );
+        assert_eq!(
+            disabled.get("PROTON_USE_NTSYNC").map(String::as_str),
+            Some("0")
+        );
+        assert_eq!(
+            disabled.get("PROTON_NO_NTSYNC").map(String::as_str),
+            Some("1")
+        );
     }
 
     #[test]
     fn test_ntsync_env_not_added_for_non_proton() {
         let inherited_use = std::env::var_os("PROTON_USE_NTSYNC").is_some();
         let inherited_no = std::env::var_os("PROTON_NO_NTSYNC").is_some();
-        let env = build_env(&game("wine-ge-9-5", true), WineVariant::WineGE, Path::new("wine"), EnvPurpose::Session);
+        let env = build_env(
+            &game("wine-ge-9-5", true),
+            WineVariant::WineGE,
+            Path::new("wine"),
+            EnvPurpose::Session,
+        );
 
         if !inherited_use {
             assert!(!env.contains_key("PROTON_USE_NTSYNC"));
@@ -868,5 +986,4 @@ mod tests {
             assert!(!env.contains_key("PROTON_NO_NTSYNC"));
         }
     }
-
 }

@@ -83,7 +83,11 @@ pub struct LogHighlighterRust {
 fn parse_hex_color(s: &str) -> Option<QColor> {
     let hex = s.strip_prefix('#')?;
     let v = u32::from_str_radix(hex, 16).ok()?;
-    let (r, g, b) = (((v >> 16) & 0xff) as i32, ((v >> 8) & 0xff) as i32, (v & 0xff) as i32);
+    let (r, g, b) = (
+        ((v >> 16) & 0xff) as i32,
+        ((v >> 8) & 0xff) as i32,
+        (v & 0xff) as i32,
+    );
     match hex.len() {
         6 => Some(QColor::from_rgba(r, g, b, 255)),
         8 => Some(QColor::from_rgba(r, g, b, ((v >> 24) & 0xff) as i32)),
@@ -94,7 +98,11 @@ fn parse_hex_color(s: &str) -> Option<QColor> {
 fn wine_channel(line: &str) -> &str {
     let t = line.trim_start();
     match t.split_once(':') {
-        Some((id, rest)) if !id.is_empty() && id.len() <= 8 && id.bytes().all(|b| b.is_ascii_hexdigit()) => rest,
+        Some((id, rest))
+            if !id.is_empty() && id.len() <= 8 && id.bytes().all(|b| b.is_ascii_hexdigit()) =>
+        {
+            rest
+        }
         _ => t,
     }
 }
@@ -138,7 +146,9 @@ impl qobject::LogHighlighter {
     }
 
     fn attach(mut self: Pin<&mut Self>, doc: *mut qobject::QQuickTextDocument) {
-        let Some(doc) = (unsafe { doc.as_ref() }) else { return };
+        let Some(doc) = (unsafe { doc.as_ref() }) else {
+            return;
+        };
         let inner = doc.text_document();
         unsafe { self.as_mut().set_document(inner) };
     }

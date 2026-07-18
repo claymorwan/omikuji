@@ -10,7 +10,7 @@
 // "globalgamemanagers" is held until the very end so the intall stays atomically "old"
 // until all other files are patched. a crash mid-update leaves the game in a consistent state.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use futures_util::stream::{self, StreamExt};
 use md5::{Digest, Md5};
 use reqwest::header::RANGE;
@@ -18,8 +18,8 @@ use std::fs::File;
 use std::io::{Cursor, Read, Seek, SeekFrom, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use super::api::{DownloadInfo, SophonDiff};
 use super::manifest::fetch_patch_manifest;
@@ -176,7 +176,9 @@ fn file_md5(path: &Path) -> std::io::Result<String> {
 }
 
 fn check_file(path: &Path, expected_size: u64, expected_md5: &str) -> std::io::Result<bool> {
-    let Ok(meta) = std::fs::metadata(path) else { return Ok(false) };
+    let Ok(meta) = std::fs::metadata(path) else {
+        return Ok(false);
+    };
     if meta.len() != expected_size {
         return Ok(false);
     }
@@ -185,9 +187,10 @@ fn check_file(path: &Path, expected_size: u64, expected_md5: &str) -> std::io::R
 
 fn ensure_parent(path: &Path) -> std::io::Result<()> {
     if let Some(parent) = path.parent()
-        && !parent.exists() {
-            std::fs::create_dir_all(parent)?;
-        }
+        && !parent.exists()
+    {
+        std::fs::create_dir_all(parent)?;
+    }
     Ok(())
 }
 
@@ -231,10 +234,10 @@ fn parse_hdiff13_header<R: Read + Seek>(reader: &mut R) -> std::io::Result<(bool
         return Err(std::io::Error::other("not HDIFF13"));
     }
     // header ends at the first 0x00 byte
-    let header_start = buf
-        .iter()
-        .position(|b| *b == 0)
-        .ok_or_else(|| std::io::Error::other("HDIFF13: no header terminator"))? as u64;
+    let header_start =
+        buf.iter()
+            .position(|b| *b == 0)
+            .ok_or_else(|| std::io::Error::other("HDIFF13: no header terminator"))? as u64;
     let mut cursor = Cursor::new(&buf[..]);
     cursor.seek(SeekFrom::Start(header_start))?;
     // skip 10 varints
@@ -355,13 +358,14 @@ async fn try_download_once(task: &FileTask, out: &Path) -> Result<()> {
         .map_err(|e| anyhow!("GET {} http error: {}", url, e))?;
 
     if let Some(len) = resp.content_length()
-        && len != task.patch_length {
-            return Err(anyhow!(
-                "content-length {} != expected {}",
-                len,
-                task.patch_length
-            ));
-        }
+        && len != task.patch_length
+    {
+        return Err(anyhow!(
+            "content-length {} != expected {}",
+            len,
+            task.patch_length
+        ));
+    }
 
     let mut file = tokio::fs::File::create(out)
         .await
@@ -371,7 +375,9 @@ async fn try_download_once(task: &FileTask, out: &Path) -> Result<()> {
     while let Some(chunk) = stream.next().await {
         let chunk = chunk.map_err(|e| anyhow!("stream error: {}", e))?;
         use tokio::io::AsyncWriteExt;
-        file.write_all(&chunk).await.map_err(|e| anyhow!("write: {}", e))?;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| anyhow!("write: {}", e))?;
         written += chunk.len() as u64;
     }
     use tokio::io::AsyncWriteExt;
@@ -423,20 +429,28 @@ fn apply_file_task_blocking(
         let _ = std::fs::copy(&orig, &tmp_src).map_err(|e| anyhow!("copy orig to tmp: {}", e))?;
         hpatchz::patch(&tmp_src, &artifact, &tmp_out).map_err(|e| anyhow!("hpatchz: {}", e))?;
 
-        finalize_file(&tmp_out, &effective_target, task.asset_size, &task.asset_hash_md5)?;
+        finalize_file(
+            &tmp_out,
+            &effective_target,
+            task.asset_size,
+            &task.asset_hash_md5,
+        )?;
 
         let _ = std::fs::remove_file(&tmp_src);
         let _ = std::fs::remove_file(&tmp_out);
     } else {
         let mut f = File::open(&artifact).map_err(|e| anyhow!("open artifact: {}", e))?;
         let blob_path = match parse_hdiff13_header(&mut f) {
-            Ok((is_compressed, inner_size)) => {
-                unwrap_hdiff13(&artifact, is_compressed, inner_size)
-                    .map_err(|e| anyhow!("unwrap HDIFF13: {}", e))?
-            }
+            Ok((is_compressed, inner_size)) => unwrap_hdiff13(&artifact, is_compressed, inner_size)
+                .map_err(|e| anyhow!("unwrap HDIFF13: {}", e))?,
             Err(_) => artifact.clone(),
         };
-        finalize_file(&blob_path, &effective_target, task.asset_size, &task.asset_hash_md5)?;
+        finalize_file(
+            &blob_path,
+            &effective_target,
+            task.asset_size,
+            &task.asset_hash_md5,
+        )?;
         if blob_path != artifact {
             let _ = std::fs::remove_file(&blob_path);
         }
@@ -473,7 +487,10 @@ pub async fn apply_update(
         );
     }
     if tasks.is_empty() {
-        return Ok(PatchOutcome { files_patched: 0, files_deleted: 0 });
+        return Ok(PatchOutcome {
+            files_patched: 0,
+            files_deleted: 0,
+        });
     }
 
     let bytes_total: u64 = tasks.iter().map(|t| t.patch_length).sum();
@@ -503,7 +520,8 @@ pub async fn apply_update(
                     if is_cancelled() {
                         return Err(anyhow!("cancelled"));
                     }
-                    download_artifact(&task, &patches_dir, &bytes_done, &on_progress, bytes_total).await
+                    download_artifact(&task, &patches_dir, &bytes_done, &on_progress, bytes_total)
+                        .await
                 }
             })
             .buffer_unordered(PARALLEL_DOWNLOADS)
@@ -602,5 +620,8 @@ pub async fn apply_update(
 
     let _ = std::fs::remove_dir_all(&files_dir);
 
-    Ok(PatchOutcome { files_patched: patched.load(Ordering::SeqCst), files_deleted: deleted })
+    Ok(PatchOutcome {
+        files_patched: patched.load(Ordering::SeqCst),
+        files_deleted: deleted,
+    })
 }

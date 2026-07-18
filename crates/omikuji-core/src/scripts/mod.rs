@@ -1,12 +1,12 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 mod exec;
 mod remote;
-pub use exec::{execute, ExecOutcome};
-pub use remote::{fetch_base, fetch_index, install_remote, RemoteScript};
+pub use exec::{ExecOutcome, execute};
+pub use remote::{RemoteScript, fetch_base, fetch_index, install_remote};
 
 pub const BUILTIN_VARS: &[&str] = &["prefix", "cache", "home"];
 
@@ -144,7 +144,10 @@ impl Script {
                 bail!("game.exe is empty");
             }
             if !matches!(game.runner.as_str(), "" | "wine" | "native") {
-                bail!("game.runner \"{}\" is not supported (wine, native)", game.runner);
+                bail!(
+                    "game.runner \"{}\" is not supported (wine, native)",
+                    game.runner
+                );
             }
         }
 
@@ -169,23 +172,45 @@ impl Script {
             }
             match input.kind {
                 InputKind::Prefix if !matches!(input.picker.as_str(), "" | "list" | "path") => {
-                    bail!("prefix input \"{}\" has unknown picker \"{}\"", input.id, input.picker)
+                    bail!(
+                        "prefix input \"{}\" has unknown picker \"{}\"",
+                        input.id,
+                        input.picker
+                    )
                 }
                 InputKind::Prefix => {}
                 _ if !input.picker.is_empty() => {
-                    bail!("picker is only valid on prefix inputs (input \"{}\")", input.id)
+                    bail!(
+                        "picker is only valid on prefix inputs (input \"{}\")",
+                        input.id
+                    )
                 }
                 _ => {}
             }
         }
-        if self.inputs.iter().filter(|i| i.kind == InputKind::Prefix).count() > 1 {
+        if self
+            .inputs
+            .iter()
+            .filter(|i| i.kind == InputKind::Prefix)
+            .count()
+            > 1
+        {
             bail!("more than one prefix input");
         }
-        if self.inputs.iter().filter(|i| i.kind == InputKind::Runner).count() > 1 {
+        if self
+            .inputs
+            .iter()
+            .filter(|i| i.kind == InputKind::Runner)
+            .count()
+            > 1
+        {
             bail!("more than one runner input");
         }
         if self.runner_input().is_some()
-            && self.game.as_ref().is_some_and(|g| !g.wine_version.is_empty())
+            && self
+                .game
+                .as_ref()
+                .is_some_and(|g| !g.wine_version.is_empty())
         {
             bail!("declare a runner input or game.wine_version, not both");
         }
@@ -348,7 +373,10 @@ pub fn remove_script(dir: &Path) -> Result<()> {
     let root = crate::scripts_dir().canonicalize()?;
     let target = dir.canonicalize()?;
     if target.parent().and_then(Path::parent) != Some(root.as_path()) {
-        bail!("refusing to remove {}: not an installed script dir", dir.display());
+        bail!(
+            "refusing to remove {}: not an installed script dir",
+            dir.display()
+        );
     }
     std::fs::remove_dir_all(&target)?;
     if let Some(author_dir) = target.parent() {
@@ -431,7 +459,12 @@ d3d11 = "n,b"
         assert!(s.has_shell());
         assert_eq!(s.prefix_input().unwrap().id, "prefix");
         assert_eq!(s.game.as_ref().unwrap().dll_overrides["d3d11"], "n,b");
-        assert!(Script::parse(SAMPLE.split("[game]").next().unwrap()).unwrap().game.is_none());
+        assert!(
+            Script::parse(SAMPLE.split("[game]").next().unwrap())
+                .unwrap()
+                .game
+                .is_none()
+        );
     }
 
     #[test]
@@ -440,20 +473,43 @@ d3d11 = "n,b"
             ("${installer}", "${nope}", "nope"),
             ("id = \"installer\"", "id = \"quality\"", "duplicate"),
             ("id = \"installer\"", "id = \"cache\"", "reserved"),
-            ("id = \"prefix\"\nkind = \"prefix\"", "id = \"prefix\"\nkind = \"text\"", "reserved"),
-            ("[game]\nname", "[game]\nrunner = \"gamecube\"\nname", "runner"),
-            ("kind = \"file\"", "kind = \"file\"\npicker = \"path\"", "picker"),
+            (
+                "id = \"prefix\"\nkind = \"prefix\"",
+                "id = \"prefix\"\nkind = \"text\"",
+                "reserved",
+            ),
+            (
+                "[game]\nname",
+                "[game]\nrunner = \"gamecube\"\nname",
+                "runner",
+            ),
+            (
+                "kind = \"file\"",
+                "kind = \"file\"\npicker = \"path\"",
+                "picker",
+            ),
             ("options = [\"low\", \"high\"]\n", "", "options"),
-            ("id = \"installer\"\nkind = \"file\"", "id = \"installer\"\nkind = \"prefix\"", "prefix input"),
+            (
+                "id = \"installer\"\nkind = \"file\"",
+                "id = \"installer\"\nkind = \"prefix\"",
+                "prefix input",
+            ),
         ];
         for (from, to, expect) in breakages {
-            let err = Script::parse(&SAMPLE.replace(from, to)).unwrap_err().to_string();
+            let err = Script::parse(&SAMPLE.replace(from, to))
+                .unwrap_err()
+                .to_string();
             assert!(err.contains(expect), "{err}");
         }
         let both = SAMPLE
             .replace("kind = \"file\"", "kind = \"runner\"")
             .replace("[game]\nname", "[game]\nwine_version = \"system\"\nname");
-        assert!(Script::parse(&both).unwrap_err().to_string().contains("not both"));
+        assert!(
+            Script::parse(&both)
+                .unwrap_err()
+                .to_string()
+                .contains("not both")
+        );
         assert!(interpolate("${broken", &HashMap::new()).is_err());
     }
 }

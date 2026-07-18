@@ -43,7 +43,11 @@ impl qobject::UiSettingsBridge {
     fn apply_card_flow(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
         let v = value.to_string();
         let allowed = matches!(v.as_str(), "left" | "center" | "right");
-        let final_v = if allowed { value.clone() } else { cxx_qt_lib::QString::from("center") };
+        let final_v = if allowed {
+            value.clone()
+        } else {
+            cxx_qt_lib::QString::from("center")
+        };
         self.as_mut().set_card_flow(final_v);
         self.persist();
     }
@@ -51,7 +55,11 @@ impl qobject::UiSettingsBridge {
     fn apply_card_sort(mut self: Pin<&mut Self>, value: &cxx_qt_lib::QString) {
         let v = value.to_string();
         let allowed = matches!(v.as_str(), "default" | "a-z" | "z-a" | "custom");
-        let final_v = if allowed { value.clone() } else { cxx_qt_lib::QString::from("default") };
+        let final_v = if allowed {
+            value.clone()
+        } else {
+            cxx_qt_lib::QString::from("default")
+        };
         self.as_mut().set_card_sort(final_v);
         self.persist();
     }
@@ -92,7 +100,9 @@ impl qobject::UiSettingsBridge {
         } else {
             self.font_family.to_string()
         };
-        if let Ok(c) = std::ffi::CString::new(family) { unsafe { omikuji_set_app_font(c.as_ptr()) } }
+        if let Ok(c) = std::ffi::CString::new(family) {
+            unsafe { omikuji_set_app_font(c.as_ptr()) }
+        }
     }
 
     fn color_override(&self, token: &cxx_qt_lib::QString) -> cxx_qt_lib::QString {
@@ -101,7 +111,11 @@ impl qobject::UiSettingsBridge {
         cxx_qt_lib::QString::from(&val)
     }
 
-    fn set_color_override(mut self: Pin<&mut Self>, token: &cxx_qt_lib::QString, hex: &cxx_qt_lib::QString) {
+    fn set_color_override(
+        mut self: Pin<&mut Self>,
+        token: &cxx_qt_lib::QString,
+        hex: &cxx_qt_lib::QString,
+    ) {
         let key = token.to_string();
         let val = hex.to_string();
         let map = &mut self.as_mut().rust_mut().get_mut().color_overrides;
@@ -115,7 +129,8 @@ impl qobject::UiSettingsBridge {
     }
 
     fn overrides_json(&self) -> cxx_qt_lib::QString {
-        let json = serde_json::to_string(&self.color_overrides).unwrap_or_else(|_| "{}".to_string());
+        let json =
+            serde_json::to_string(&self.color_overrides).unwrap_or_else(|_| "{}".to_string());
         cxx_qt_lib::QString::from(&json)
     }
 
@@ -169,8 +184,12 @@ fn list_system_fonts() -> Vec<String> {
     let output = std::process::Command::new("fc-list")
         .args([":scalable=true:fontformat=TrueType", "family"])
         .output();
-    let Ok(out) = output else { return Vec::new(); };
-    if !out.status.success() { return Vec::new(); }
+    let Ok(out) = output else {
+        return Vec::new();
+    };
+    if !out.status.success() {
+        return Vec::new();
+    }
     let mut set = std::collections::BTreeSet::new();
     for line in String::from_utf8_lossy(&out.stdout).lines() {
         if let Some(name) = line.split(',').next() {

@@ -14,54 +14,63 @@ impl super::qobject::GameModel {
 
         // pre-launch update check. network errors are intentionally swallowed so a hiccup doesnt block the user from playing.
         if game.source.kind == "gacha"
-            && let Some(info) = blocking_check_gacha_update(&game.source.app_id) {
-                omikuji_core::process::notify_update_required(
-                    omikuji_core::process::UpdateNotification {
-                        game_id: game.metadata.id.clone(),
-                        app_id: game.source.app_id.clone(),
-                        from_version: info.from_version,
-                        to_version: info.to_version,
-                        download_size: info.download_size,
-                        can_diff: info.can_diff,
-                        delta_supported: info.delta_supported,
-                    },
-                );
-                return false;
-            }
+            && let Some(info) = blocking_check_gacha_update(&game.source.app_id)
+        {
+            omikuji_core::process::notify_update_required(
+                omikuji_core::process::UpdateNotification {
+                    game_id: game.metadata.id.clone(),
+                    app_id: game.source.app_id.clone(),
+                    from_version: info.from_version,
+                    to_version: info.to_version,
+                    download_size: info.download_size,
+                    can_diff: info.can_diff,
+                    delta_supported: info.delta_supported,
+                },
+            );
+            return false;
+        }
 
         if game.source.kind == "epic"
-            && omikuji_core::ui_settings::UiSettings::load().behavior.auto_check_epic_updates_on_launch
-            && let Some(info) = omikuji_core::epic::updates::blocking_check_epic_update(&game.source.app_id) {
-                omikuji_core::process::notify_update_required(
-                    omikuji_core::process::UpdateNotification {
-                        game_id: game.metadata.id.clone(),
-                        app_id: game.source.app_id.clone(),
-                        from_version: info.from_version,
-                        to_version: info.to_version,
-                        download_size: info.download_size,
-                        can_diff: true,
-                        delta_supported: true,
-                    },
-                );
-                return false;
-            }
+            && omikuji_core::ui_settings::UiSettings::load()
+                .behavior
+                .auto_check_epic_updates_on_launch
+            && let Some(info) =
+                omikuji_core::epic::updates::blocking_check_epic_update(&game.source.app_id)
+        {
+            omikuji_core::process::notify_update_required(
+                omikuji_core::process::UpdateNotification {
+                    game_id: game.metadata.id.clone(),
+                    app_id: game.source.app_id.clone(),
+                    from_version: info.from_version,
+                    to_version: info.to_version,
+                    download_size: info.download_size,
+                    can_diff: true,
+                    delta_supported: true,
+                },
+            );
+            return false;
+        }
 
         if game.source.kind == "gog"
-            && omikuji_core::ui_settings::UiSettings::load().behavior.auto_check_gog_updates_on_launch
-            && let Some(info) = omikuji_core::gog::updates::blocking_check_gog_update(&game.source.app_id) {
-                omikuji_core::process::notify_update_required(
-                    omikuji_core::process::UpdateNotification {
-                        game_id: game.metadata.id.clone(),
-                        app_id: game.source.app_id.clone(),
-                        from_version: info.from_version,
-                        to_version: info.to_version,
-                        download_size: info.download_size,
-                        can_diff: true,
-                        delta_supported: true,
-                    },
-                );
-                return false;
-            }
+            && omikuji_core::ui_settings::UiSettings::load()
+                .behavior
+                .auto_check_gog_updates_on_launch
+            && let Some(info) =
+                omikuji_core::gog::updates::blocking_check_gog_update(&game.source.app_id)
+        {
+            omikuji_core::process::notify_update_required(
+                omikuji_core::process::UpdateNotification {
+                    game_id: game.metadata.id.clone(),
+                    app_id: game.source.app_id.clone(),
+                    from_version: info.from_version,
+                    to_version: info.to_version,
+                    download_size: info.download_size,
+                    can_diff: true,
+                    delta_supported: true,
+                },
+            );
+            return false;
+        }
 
         self.try_spawn_launch(game)
     }
@@ -160,13 +169,11 @@ impl super::qobject::GameModel {
             }
         } else {
             let game = game.clone();
-            std::thread::spawn(move || {
-                match omikuji_core::launch::prepare_launch(&game) {
-                    Ok(config) => spawn_launch_thread(config),
-                    Err(e) => {
-                        tracing::error!("failed to build launch config: {}", e);
-                        notify_launch_failed(game.metadata.id.clone(), &e);
-                    }
+            std::thread::spawn(move || match omikuji_core::launch::prepare_launch(&game) {
+                Ok(config) => spawn_launch_thread(config),
+                Err(e) => {
+                    tracing::error!("failed to build launch config: {}", e);
+                    notify_launch_failed(game.metadata.id.clone(), &e);
                 }
             });
             true
@@ -205,14 +212,12 @@ impl super::qobject::GameModel {
                 omikuji_core::notifications::info(&display_name, format!("Opened {}", tool_label));
             }
             Err(e) => {
-                omikuji_core::process::notify_error(
-                    omikuji_core::process::ErrorNotification {
-                        game_id: game_id_owned,
-                        title: format!("{} failed", tool_label),
-                        message: format!("{}", e),
-                        action: omikuji_core::process::ErrorAction::OpenGameSettings,
-                    },
-                );
+                omikuji_core::process::notify_error(omikuji_core::process::ErrorNotification {
+                    game_id: game_id_owned,
+                    title: format!("{} failed", tool_label),
+                    message: format!("{}", e),
+                    action: omikuji_core::process::ErrorAction::OpenGameSettings,
+                });
             }
         });
     }
@@ -233,7 +238,8 @@ impl super::qobject::GameModel {
             tracing::warn!("game '{}' not found", id);
             return;
         };
-        let Some(tool) = omikuji_core::wine_tools::WineTool::from_command_line(&command.to_string())
+        let Some(tool) =
+            omikuji_core::wine_tools::WineTool::from_command_line(&command.to_string())
         else {
             return;
         };
@@ -267,14 +273,17 @@ impl super::qobject::GameModel {
     }
 
     pub fn expand_global_vars(&self, text: &QString) -> QString {
-        QString::from(&omikuji_core::template_vars::TemplateVars::global().expand(&text.to_string()))
+        QString::from(
+            &omikuji_core::template_vars::TemplateVars::global().expand(&text.to_string()),
+        )
     }
 
     pub fn expand_game_vars(&self, game_id: &QString, text: &QString) -> QString {
         let id = game_id.to_string();
         match self.library.game.iter().find(|g| g.metadata.id == id) {
             Some(game) => QString::from(
-                &omikuji_core::template_vars::TemplateVars::for_game(game).expand(&text.to_string()),
+                &omikuji_core::template_vars::TemplateVars::for_game(game)
+                    .expand(&text.to_string()),
             ),
             None => text.clone(),
         }
@@ -304,7 +313,10 @@ impl super::qobject::GameModel {
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_else(|| exe.clone());
         std::thread::spawn(move || {
-            match omikuji_core::wine_tools::run(&game, omikuji_core::wine_tools::WineTool::RunExe(path)) {
+            match omikuji_core::wine_tools::run(
+                &game,
+                omikuji_core::wine_tools::WineTool::RunExe(path),
+            ) {
                 Ok(_child) => {
                     omikuji_core::notifications::info(
                         &display_name,
@@ -312,14 +324,12 @@ impl super::qobject::GameModel {
                     );
                 }
                 Err(e) => {
-                    omikuji_core::process::notify_error(
-                        omikuji_core::process::ErrorNotification {
-                            game_id: game_id_owned,
-                            title: "Couldn't run executable".to_string(),
-                            message: format!("`{}` failed: {}", file_label, e),
-                            action: omikuji_core::process::ErrorAction::OpenGameSettings,
-                        },
-                    );
+                    omikuji_core::process::notify_error(omikuji_core::process::ErrorNotification {
+                        game_id: game_id_owned,
+                        title: "Couldn't run executable".to_string(),
+                        message: format!("`{}` failed: {}", file_label, e),
+                        action: omikuji_core::process::ErrorAction::OpenGameSettings,
+                    });
                 }
             }
         });
@@ -444,20 +454,22 @@ fn spawn_launch_thread(config: omikuji_core::launch::LaunchConfig) {
         rt.block_on(async {
             match omikuji_core::process::launch_game(&config).await {
                 Ok(proc_id) => {
-                    tracing::info!("game '{}' launched, process id: {:?}", config.game_name, proc_id);
+                    tracing::info!(
+                        "game '{}' launched, process id: {:?}",
+                        config.game_name,
+                        proc_id
+                    );
                     tracing::debug!("logs: {}", logs_dir.display());
                 }
                 Err(e) => {
                     tracing::error!("failed to launch '{}': {}", config.game_name, e);
                     omikuji_core::process::notify_game_exited(&config.game_id);
-                    omikuji_core::process::notify_error(
-                        omikuji_core::process::ErrorNotification {
-                            game_id: config.game_id.clone(),
-                            title: "Couldn't launch".to_string(),
-                            message: e.to_string(),
-                            action: omikuji_core::process::ErrorAction::OpenGameSettings,
-                        },
-                    );
+                    omikuji_core::process::notify_error(omikuji_core::process::ErrorNotification {
+                        game_id: config.game_id.clone(),
+                        title: "Couldn't launch".to_string(),
+                        message: e.to_string(),
+                        action: omikuji_core::process::ErrorAction::OpenGameSettings,
+                    });
                 }
             }
         });
@@ -466,7 +478,10 @@ fn spawn_launch_thread(config: omikuji_core::launch::LaunchConfig) {
 
 fn notify_launch_failed(game_id: String, e: &omikuji_core::anyhow::Error) {
     omikuji_core::process::notify_game_exited(&game_id);
-    let action = if e.downcast_ref::<omikuji_core::launch::ComponentMissing>().is_some() {
+    let action = if e
+        .downcast_ref::<omikuji_core::launch::ComponentMissing>()
+        .is_some()
+    {
         omikuji_core::process::ErrorAction::OpenGlobalSettings
     } else {
         omikuji_core::process::ErrorAction::OpenGameSettings

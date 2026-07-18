@@ -125,7 +125,9 @@ pub fn system_wine_paths() -> HashMap<String, PathBuf> {
     if let Ok(entries) = std::fs::read_dir("/usr/lib") {
         for entry in entries.flatten() {
             let dir = entry.path();
-            let Some(name) = dir.file_name().and_then(|n| n.to_str()) else { continue };
+            let Some(name) = dir.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
             if name.starts_with("wine-") && !paths.contains_key(name) {
                 let wine_bin = dir.join("bin/wine");
                 if wine_bin.is_file() {
@@ -157,7 +159,10 @@ pub fn list_gpus() -> Vec<(String, String)> {
     if let Ok(output) = Command::new("lspci").output() {
         let stdout = String::from_utf8_lossy(&output.stdout);
         for line in stdout.lines() {
-            if line.contains("VGA") || line.contains("3D controller") || line.contains("Display controller") {
+            if line.contains("VGA")
+                || line.contains("3D controller")
+                || line.contains("Display controller")
+            {
                 let parts: Vec<&str> = line.splitn(2, ':').collect();
                 if parts.len() >= 2 {
                     let desc = parts[1].trim();
@@ -175,13 +180,13 @@ pub fn list_gpus() -> Vec<(String, String)> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_runners_dir() {
         let dir = runners_dir();
         assert!(dir.to_string_lossy().contains("omikuji"));
     }
-    
+
     #[test]
     fn test_list_gpus() {
         let gpus = list_gpus();

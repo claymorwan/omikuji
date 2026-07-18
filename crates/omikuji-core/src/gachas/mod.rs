@@ -1,4 +1,3 @@
-
 pub mod art;
 pub mod manifest;
 pub mod remote;

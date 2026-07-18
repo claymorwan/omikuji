@@ -18,15 +18,18 @@ impl SteamApi {
             API_BASE, self.api_key, steamid
         );
 
-        let resp = reqwest::blocking::get(&url)
-            .with_context(|| "requesting steam api".to_string())?;
+        let resp =
+            reqwest::blocking::get(&url).with_context(|| "requesting steam api".to_string())?;
 
         if !resp.status().is_success() {
-            anyhow::bail!("steam api returned {}: {}", resp.status(), resp.text().unwrap_or_default());
+            anyhow::bail!(
+                "steam api returned {}: {}",
+                resp.status(),
+                resp.text().unwrap_or_default()
+            );
         }
 
-        let data: ApiResponse = resp.json()
-            .with_context(|| "parsing steam api response")?;
+        let data: ApiResponse = resp.json().with_context(|| "parsing steam api response")?;
 
         Ok(data.response.games.unwrap_or_default())
     }
@@ -62,28 +65,28 @@ impl SteamGame {
     pub fn store_url(&self) -> String {
         format!("https://store.steampowered.com/app/{}", self.appid)
     }
-    
+
     pub fn capsule_image_url(&self) -> String {
         format!(
             "https://cdn.akamai.steamstatic.com/steam/apps/{}/capsule_184x69.jpg",
             self.appid
         )
     }
-    
+
     pub fn library_image_url(&self) -> String {
         format!(
             "https://cdn.steamstatic.com/steam/apps/{}/library_600x900.jpg",
             self.appid
         )
     }
-    
+
     pub fn header_image_url(&self) -> String {
         format!(
             "https://cdn.cloudflare.steamstatic.com/steam/apps/{}/header.jpg",
             self.appid
         )
     }
-    
+
     pub fn icon_url(&self) -> Option<String> {
         self.img_icon_url.as_ref().map(|hash| {
             format!(
@@ -114,7 +117,7 @@ mod tests {
             content_descriptorids: None,
             has_leaderboards: None,
         };
-        
+
         assert!(game.store_url().contains("730"));
         assert!(game.capsule_image_url().contains("730"));
         assert!(game.library_image_url().contains("730"));

@@ -77,9 +77,17 @@ pub fn run(mut on_line: impl FnMut(String)) -> Result<()> {
         nest_layers(&components_root, &mut on_line)?;
     }
     move_runners(
-        runners_custom.clone().unwrap_or_else(|| base.join("runners")),
-        runners_custom.clone().unwrap_or_else(|| components_root.join("runners")),
-        if runners_custom.is_some() { "" } else { "components/runners/" },
+        runners_custom
+            .clone()
+            .unwrap_or_else(|| base.join("runners")),
+        runners_custom
+            .clone()
+            .unwrap_or_else(|| components_root.join("runners")),
+        if runners_custom.is_some() {
+            ""
+        } else {
+            "components/runners/"
+        },
         &mut on_line,
     )?;
     move_gog(&mut on_line)?;

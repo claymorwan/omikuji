@@ -1,5 +1,5 @@
 use super::Script;
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use std::path::PathBuf;
 
@@ -20,7 +20,11 @@ pub struct RemoteScript {
 }
 
 pub fn fetch_base() -> String {
-    crate::settings::get().scripts.fetch_url.trim_end_matches('/').to_string()
+    crate::settings::get()
+        .scripts
+        .fetch_url
+        .trim_end_matches('/')
+        .to_string()
 }
 
 fn client() -> Result<reqwest::blocking::Client> {
@@ -56,9 +60,18 @@ pub fn install_remote(entry: &RemoteScript) -> Result<PathBuf> {
         bail!("scripts fetch url is not configured");
     }
     if !plain_name(&entry.author) || !plain_name(&entry.slug) {
-        bail!("refusing suspicious script path {}/{}", entry.author, entry.slug);
+        bail!(
+            "refusing suspicious script path {}/{}",
+            entry.author,
+            entry.slug
+        );
     }
-    let toml_name = entry.toml.rsplit('/').next().unwrap_or_default().to_string();
+    let toml_name = entry
+        .toml
+        .rsplit('/')
+        .next()
+        .unwrap_or_default()
+        .to_string();
     if !plain_name(&toml_name) {
         bail!("refusing suspicious script file name {toml_name}");
     }
@@ -78,7 +91,12 @@ pub fn install_remote(entry: &RemoteScript) -> Result<PathBuf> {
     std::fs::write(&toml_path, &text)?;
 
     if !entry.icon.is_empty() {
-        let icon_name = entry.icon.rsplit('/').next().unwrap_or_default().to_string();
+        let icon_name = entry
+            .icon
+            .rsplit('/')
+            .next()
+            .unwrap_or_default()
+            .to_string();
         if plain_name(&icon_name) {
             let fetched = client()?
                 .get(format!("{base}/{}", entry.icon))
