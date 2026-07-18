@@ -147,7 +147,7 @@ Item {
         visible: false
         x: 0
         y: 0
-        width: button.width
+        width: 0
         // clamp against the window not the popup parent, so a small dialog card doestn shrink the dropdown to nothing
         height: {
             if (!visible) return 0
@@ -251,15 +251,91 @@ Item {
                             font.weight: Font.Medium
                         }
 
-                        Text {
+                        Item {
+                            id: labelClip
                             visible: !optionRow.isHeader
                             anchors.left: parent.left
                             anchors.leftMargin: 8
+                            anchors.right: parent.right
+                            anchors.rightMargin: 8
                             anchors.verticalCenter: parent.verticalCenter
-                            text: modelData.label
-                            color: index === root.currentIndex ? theme.accent : theme.text
-                            font.pixelSize: theme.type.body.size
-                            font.weight: index === root.currentIndex ? Font.Medium : Font.Normal
+                            height: optionText.implicitHeight
+                            clip: true
+
+                            readonly property real overflow: Math.max(0, optionText.implicitWidth - width)
+                            property real pan: 0
+                            property bool manualPan: false
+                            readonly property color bg: !optionRow.isHeader && optionMouse.containsMouse
+                                ? (index === root.currentIndex
+                                    ? theme.mix(popup.color, theme.accent, 0.18)
+                                    : theme.mix(popup.color, theme.text, 0.14))
+                                : popup.color
+
+                            function panBy(delta) {
+                                manualPan = true
+                                pan = Math.max(0, Math.min(overflow, pan + delta))
+                            }
+                            function reset() {
+                                manualPan = false
+                                pan = 0
+                            }
+
+                            Text {
+                                id: optionText
+                                x: -Math.round(labelClip.pan)
+                                text: modelData.label
+                                color: index === root.currentIndex ? theme.accent : theme.text
+                                font.pixelSize: theme.type.body.size
+                                font.weight: index === root.currentIndex ? Font.Medium : Font.Normal
+                            }
+
+                            SequentialAnimation {
+                                running: optionMouse.containsMouse && labelClip.overflow > 0 && !labelClip.manualPan
+                                loops: Animation.Infinite
+                                PauseAnimation { duration: 350 }
+                                NumberAnimation {
+                                    target: labelClip
+                                    property: "pan"
+                                    to: labelClip.overflow
+                                    duration: Math.max(300, labelClip.overflow * 16)
+                                }
+                                PauseAnimation { duration: 650 }
+                                NumberAnimation {
+                                    target: labelClip
+                                    property: "pan"
+                                    to: 0
+                                    duration: Math.max(300, labelClip.overflow * 16)
+                                }
+                                PauseAnimation { duration: 450 }
+                            }
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: 16
+                                opacity: labelClip.pan > 1 ? 1 : 0
+                                gradient: Gradient {
+                                    orientation: Gradient.Horizontal
+                                    GradientStop { position: 0.0; color: labelClip.bg }
+                                    GradientStop { position: 1.0; color: theme.alpha(labelClip.bg, 0) }
+                                }
+                                Behavior on opacity { NumberAnimation { duration: 120 } }
+                            }
+
+                            Rectangle {
+                                anchors.right: parent.right
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: 16
+                                opacity: labelClip.overflow > 0 && labelClip.pan < labelClip.overflow - 1 ? 1 : 0
+                                gradient: Gradient {
+                                    orientation: Gradient.Horizontal
+                                    GradientStop { position: 0.0; color: theme.alpha(labelClip.bg, 0) }
+                                    GradientStop { position: 1.0; color: labelClip.bg }
+                                }
+                                Behavior on opacity { NumberAnimation { duration: 120 } }
+                            }
                         }
 
                         MouseArea {
@@ -273,6 +349,21 @@ Item {
                                 root.currentIndex = index
                                 root.selected(root.options[index].value)
                                 popup.close()
+                            }
+                            onContainsMouseChanged: if (!containsMouse) labelClip.reset()
+                            onWheel: (wheel) => {
+                                if (optionRow.isHeader || labelClip.overflow <= 0) {
+                                    wheel.accepted = false
+                                    return
+                                }
+                                var d = wheel.angleDelta.x
+                                if (d === 0 && ((wheel.modifiers & Qt.ShiftModifier) || !popupFlick.interactive))
+                                    d = wheel.angleDelta.y
+                                if (d === 0) {
+                                    wheel.accepted = false
+                                    return
+                                }
+                                labelClip.panBy(-d * 0.5)
                             }
                         }
                     }
